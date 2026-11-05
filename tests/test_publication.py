@@ -26,3 +26,22 @@ def test_secret_patterns_do_not_print_values():
 def test_emoji_is_rejected_without_literal_emoji_in_test_source():
     assert 'emoji or decorative pictograph' in content_problems(chr(0x1F600).encode())
     assert content_problems(b'Local music analysis with no secrets') == []
+
+
+def test_removed_secret_still_blocks_history_publication(tmp_path, monkeypatch):
+    import subprocess
+    import scripts.check_publication as publication
+    def run(*args):
+        subprocess.run([publication.GIT,*args],cwd=tmp_path,check=True,capture_output=True)
+    run('init')
+    run('config','user.name','Publication test')
+    run('config','user.email','test@users.noreply.github.com')
+    file=tmp_path/'package.json'
+    file.write_text('gh'+'p_'+'A'*30,encoding='utf-8')
+    run('add','package.json');run('commit','-m','Fixture with fake credential')
+    file.write_text('{}',encoding='utf-8')
+    run('add','package.json');run('commit','-m','Remove fixture credential')
+    monkeypatch.setattr(publication,'ROOT',tmp_path)
+    result=publication.scan('HEAD')
+    assert not result['passed']
+    assert any(f['reason']=='GitHub token' for f in result['findings'])

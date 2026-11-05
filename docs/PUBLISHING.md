@@ -14,7 +14,7 @@ Der gesamte Testmusikordner bleibt ausgeschlossen, einschließlich aller Unteror
 2. `python scripts/check_publication.py` ausführen. Die Prüfung liest die tatsächlich vorgemerkten Git-Inhalte.
 3. Relevante Tests und Buildprüfungen ausführen.
 4. Commit mit einer Projektidentität und einer GitHub-noreply-Adresse erstellen. Keine persönliche E-Mail-Adresse verwenden.
-5. `python scripts/check_publication.py --ref HEAD` ausführen. Diese Prüfung kontrolliert zusätzlich die E-Mail-Adressen der Commit-Historie.
+5. `python scripts/check_publication.py --ref HEAD` ausführen. Diese Prüfung kontrolliert auch frühere Dateiversionen und E-Mail-Adressen in der erreichbaren Commit-Historie. Ein später gelöschtes Geheimnis blockiert die Veröffentlichung weiterhin.
 6. Den geprüften Commit übertragen und den GitHub-Stand kontrollieren.
 
 Optional lokal `git config core.hooksPath .githooks` setzen. Der enthaltene pre-push-Hook wiederholt die Prüfung. Ein CI-Schritt prüft veröffentlichte Commits zusätzlich; dieser ersetzt die Kontrolle vor dem Upload nicht.

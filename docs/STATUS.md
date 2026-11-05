@@ -14,7 +14,7 @@ Stand: erste MVP-Version; Windows mit NVIDIA-CUDA geprüft.
 - Analyse-Cachetreffer am echten Song nachgewiesen; kein erneuter Modellaufruf. Audio- und komplette Analyseergebnisse haben separate Cacheeinträge.
 - LRCLIB-Liveabfrage mit öffentlichen Testmetadaten: HTTP 200, synchronisierter Text vorhanden.
 - faster-whisper `base`: Offline-Inferenz auf CPU. Drei Sekunden Stille erzeugen keine Segmente; ein 20-sekündiger Gesangsausschnitt erzeugt vier zeitlich markierte Segmente. Wortgenauigkeit wurde nicht quantitativ bewertet. Whisper-CUDA wurde nicht getestet.
-- **12 Analyse-/API-Tests, 4 Veröffentlichungsprüfungen und 2 Frontend-Tests bestanden**. Backend umfasst echte Formatdekodierung, Tags, Range-Audio, Originschutz, LRC-Instrumentalpausen, Vergleichsberechnung, Cache und Fehlerfälle. Ein Starlette-Testclient-Deprecation-Hinweis ist noch vorhanden; kein Testfehler.
+- **12 Analyse-/API-Tests, 5 Veröffentlichungsprüfungen und 2 Frontend-Tests bestanden**. Backend umfasst echte Formatdekodierung, Tags, Range-Audio, Originschutz, LRC-Instrumentalpausen, Vergleichsberechnung, Cache und Fehlerfälle. Ein Starlette-Testclient-Deprecation-Hinweis ist noch vorhanden; kein Testfehler.
 - npm-Sicherheitsprüfung nach Vitest-Update: **0 gemeldete Schwachstellen** zum Prüfzeitpunkt.
 - Python-Quelldateien mit compileall geprüft.
 - Nativer Windows-Build mit MSVC, Windows SDK und projektlokalem Rust erfolgreich.

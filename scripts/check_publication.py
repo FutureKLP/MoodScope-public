@@ -28,7 +28,7 @@ PATTERNS = {
     'literal credential': re.compile(r'''(?i)(?:api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[=:]\s*["'][A-Za-z0-9_./+\-=]{12,}["']'''),
     'personal Windows path': re.compile(r'(?i)[a-z]:[\\/]+Users[\\/]+[^\\/\s"\']+'),
     'personal Unix path': re.compile(r'/(?:home|Users)/[A-Za-z0-9_.-]+/'),
-    'email address': re.compile(r'\b[A-Za-z0-9._%+-]+@(?!users\.noreply\.github\.com\b)[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'),
+    'email address': re.compile(r'\b(?!noreply@github\.com\b)[A-Za-z0-9._%+-]+@(?!users\.noreply\.github\.com\b)[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'),
 }
 
 
@@ -61,14 +61,30 @@ def content_problems(raw):
 
 
 def scan(ref=None):
-    command=('ls-tree','-rz','--name-only',ref) if ref else ('ls-files','--cached','-z')
-    names=[name.decode('utf-8') for name in git(*command).split(b'\0') if name]
+    names=[name.decode('utf-8') for name in git('ls-files','--cached','-z').split(b'\0') if name]
+    objects=[]
+    if ref:
+        for commit in git('rev-list',ref).decode().splitlines():
+            for row in git('ls-tree','-rz',commit).split(b'\0'):
+                if not row: continue
+                info,name=row.split(b'\t',1)
+                mode,kind,sha=info.decode().split()
+                objects.append((name.decode('utf-8'),sha,kind))
+        names=[name.decode('utf-8') for name in git('ls-tree','-rz','--name-only',ref).split(b'\0') if name]
+    else:
+        objects=[(name,None,'blob') for name in names]
     findings=[]
-    for name in names:
+    visited=set()
+    for name,sha,kind in objects:
+        identity=(name,sha)
+        if identity in visited: continue
+        visited.add(identity)
         issue=path_problem(name)
         if issue:
             findings.append({'file':name,'reason':issue});continue
-        raw=git('show',f'{ref}:{name}' if ref else f':{name}')
+        if kind!='blob':
+            findings.append({'file':name,'reason':'unexpected Git object type'});continue
+        raw=git('cat-file','blob',sha) if sha else git('show',f':{name}')
         if name.startswith('src-tauri/icons/') and name.endswith(('.png','.ico')):
             # Only project-generated icon images are allowed binary assets.
             if not (raw.startswith(b'\x89PNG\r\n\x1a\n') or raw.startswith(b'\0\0\1\0')):
@@ -77,9 +93,11 @@ def scan(ref=None):
         for issue in content_problems(raw): findings.append({'file':name,'reason':issue})
     if ref:
         authors=git('log',ref,'--format=%ae%n%ce').decode('utf-8')
-        if any(email and not email.endswith('@users.noreply.github.com') for email in authors.splitlines()):
+        if any(email and not (email.endswith('@users.noreply.github.com') or email=='noreply@github.com')
+               for email in authors.splitlines()):
             findings.append({'file':'Git commit metadata','reason':'non-noreply email'})
-    return {'passed':not findings,'files_checked':len(names),'findings':findings}
+    return {'passed':not findings,'files_checked':len(names),
+            'historical_versions_checked':len(visited) if ref else 0,'findings':findings}
 
 
 if __name__=='__main__':
