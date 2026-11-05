@@ -12,11 +12,13 @@ Lokale KI bleibt auch bei Internetverbindung der Standard. Audio und Lyrics werd
 
 ## Nachgewiesene Prüfungen dieses Zwischenstands
 
-- 53 Python-Tests vor den letzten zusätzlichen Interpretationstests bestanden; weitere Prüfungen laufen.
-- 7 Frontend-Tests bestanden.
+- 59 Python-Tests bestanden, einschließlich Cache-Wiedererkennung, erzwungener Neuanalyse, gezielter Cache-Löschung, Geheimnisschutz, Backend-Versionsprüfung und begründeter Interpretation.
+- 9 Frontend-Tests bestanden, einschließlich Schutz vor vorzeitigem Freigeben paralleler Vorgänge und Überschreiben noch nicht geladener Notizen.
 - Produktionsbuild der Oberfläche und nativer Windows-Build 0.2 im getrennten Buildordner bestanden.
 - Öffentliche Einzeltracks von YouTube und SoundCloud tatsächlich importiert. Ein zuvor verwendetes YouTube-Testvideo war nicht mehr verfügbar; ein anderer öffentlicher Testlink funktionierte.
 - CLAP-Ensemble, XLM-EMO mit Kontext, Instrumenthinweise und Qwen 1.5B auf CUDA offline ausgeführt.
+- Vollständiger isolierter Offline-Durchlauf mit echten Modellen: Analyse, Cachetreffer ohne erneute Audioinferenz, Instrumenthinweise, Zeilendeutung, Löschen von fünf Analyse-Cacheeinträgen bei erhaltenen eigenen Notizen und anschließende erzwungene Neuanalyse bestanden.
+- Browser: öffentlicher YouTube-Link bis zur echten lokalen CUDA-Analyse; danach Bibliotheksöffnung aus Cache und eigene Notiz nach vollständigem Neuladen erhalten.
 - Eigenes kleines Diagnose-Set mit zwölf deutschen/englischen Textfällen: Einzelzeilen- und Kontextmodell jeweils 75 % korrekte Valenzrichtung. Das belegt keinen allgemeinen Genauigkeitsgewinn.
 
 ## Noch nicht als vollständig geprüft ausgeben

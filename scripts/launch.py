@@ -13,7 +13,11 @@ ROOT=Path(__file__).resolve().parents[1]
 def ready():
     try:
         with urlopen('http://127.0.0.1:8765/api/health',timeout=2) as response:
-            return json.load(response).get('status')=='ok'
+            state=json.load(response)
+            if state.get('status')!='ok': return False
+            if state.get('version')!='0.2.0':
+                raise RuntimeError('Ein älteres Backend läuft auf Port 8765. Den bisherigen MoodScope-Dienst beenden und erneut starten.')
+            return True
     except (OSError,ValueError):
         return False
 
@@ -22,7 +26,7 @@ def main():
     os.chdir(ROOT)
     binary='moodscope.exe' if os.name=='nt' else 'moodscope'
     candidates=[ROOT/'src-tauri'/'target'/'v02'/'release'/binary,ROOT/'src-tauri'/'target'/'release'/binary]
-    exe=next((p for p in candidates if p.exists()),candidates[0])
+    exe=max((p for p in candidates if p.exists()),key=lambda p:p.stat().st_mtime,default=candidates[0])
     if not exe.exists():
         raise SystemExit('Native App fehlt. Zuerst: npm run tauri build -- --no-bundle')
     backend=None

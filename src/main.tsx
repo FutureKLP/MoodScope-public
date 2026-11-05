@@ -29,11 +29,12 @@ export function App(){
   const [view,setView]=useState('timeline'),[mode,setMode]=useState<'local'|'cloud'>('local'),[consent,setConsent]=useState(false),[link,setLink]=useState('');
   const audio=useRef<HTMLAudioElement>(null),file=useRef<HTMLInputElement>(null),lrcFile=useRef<HTMLInputElement>(null);
   const mounted=useRef(true);
+  const pendingOperations=useRef(0);
   useEffect(()=>{if(audio.current)audio.current.volume=.8},[]);
   useEffect(()=>{mounted.current=true;api('/health').then(r=>setDevice(r.device==='cuda'?'NVIDIA CUDA':'CPU lokal')).catch(()=>setDevice('Backend offline'));return()=>{mounted.current=false}},[]);
   useEffect(()=>{let id=0; const tick=()=>{if(audio.current)setTime(audio.current.currentTime);id=requestAnimationFrame(tick)};id=requestAnimationFrame(tick);return()=>cancelAnimationFrame(id)},[]);
   useEffect(()=>{const el=document.querySelector('.lyric-row.active');el?.scrollIntoView({behavior:'smooth',block:'nearest'})},[activeLine(result?.lyrics||[],time)]);
-  async function perform(action:()=>Promise<void>){setError('');setBusy(true);try{await action()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{if(mounted.current)setBusy(false)}}
+  async function perform(action:()=>Promise<void>){setError('');pendingOperations.current++;setBusy(true);try{await action()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{pendingOperations.current=Math.max(0,pendingOperations.current-1);if(mounted.current)setBusy(pendingOperations.current>0)}}
   async function importAudio(f:File){await perform(async()=>{
     setMessage('Audio wird importiert …');setProgress(0);
     const body=new FormData();body.append('file',f);

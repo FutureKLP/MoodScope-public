@@ -10,8 +10,11 @@ const notes={interpretation:'',instruments:'',personnel:'',genre:'',bpm:null};
 const stored={audio:[{start:0,end:5,valence:.2,scores:{},confidence:.3}],lyrics:[],split:null,warnings:[],cached:true,
   device:'cpu',mode:'local',method:'test fixture',models:{audio:'test',lyrics:'test'},source_lyrics:'[00:01.00]Authored sentence\n[00:03.00]'};
 let requests:Array<{path:string;body:any}>;
+let pendingJob:Promise<any>|null;
+let pendingNotes:Promise<any>|null;
 beforeEach(()=>{
   requests=[];
+  pendingJob=null;pendingNotes=null;
   vi.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});
   Element.prototype.scrollIntoView=vi.fn();
   vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
@@ -22,7 +25,9 @@ beforeEach(()=>{
     if(path==='/health')value={device:'cpu'};
     else if(path==='/tracks')value=track;
     else if(path.startsWith('/tracks/test-song/analysis'))value=stored;
-    else if(path==='/tracks/test-song/notes')value=body||notes;
+    else if(path==='/tracks/test-song/notes')value=body||await(pendingNotes||Promise.resolve(notes));
+    else if(path==='/tracks/link')value={job_id:'test-import'};
+    else if(path==='/jobs/test-import')value=await(pendingJob||Promise.resolve({status:'done',progress:100,result:track}));
     else if(path==='/library')value={tracks:[{...track,analysis_modes:['local']}]};
     else if(path==='/models')value={models:[]};
     else if(path==='/settings')value={cloud:{configured:false,free_project_confirmed:false}};
@@ -70,5 +75,31 @@ describe('workspace flows',()=>{
     await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
     expect(await screen.findByLabelText('Gemini API-Key')).toBeTruthy();
     expect(requests.some(r=>r.path==='/settings/cloud')).toBe(false);
+  });
+
+  it('keeps mutations disabled when another tab loads during a running import',async()=>{
+    let finish:(value:any)=>void=()=>{};
+    pendingJob=new Promise(resolve=>{finish=resolve});
+    render(<App/>);
+    await userEvent.type(screen.getByLabelText('YouTube- oder SoundCloud-Link'),'https://youtu.be/BaW_jenozKc');
+    await userEvent.click(screen.getByRole('button',{name:'Link importieren'}));
+    await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
+    await screen.findByLabelText('Gemini API-Key');
+    expect(screen.getByRole('button',{name:'+ Song importieren'}).hasAttribute('disabled')).toBe(true);
+    finish({status:'done',progress:100,message:'Import complete',result:track});
+    await waitFor(()=>expect(screen.getByRole('button',{name:'+ Song importieren'}).hasAttribute('disabled')).toBe(false));
+  });
+
+  it('does not let delayed note loading overwrite a user edit',async()=>{
+    let finish:(value:any)=>void=()=>{};
+    pendingNotes=new Promise(resolve=>{finish=resolve});
+    render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    await userEvent.click(screen.getByRole('button',{name:'Interpretation'}));
+    expect(screen.getByLabelText('Meine eigene Interpretation').hasAttribute('disabled')).toBe(true);
+    finish({...notes,interpretation:'Previously saved note'});
+    await waitFor(()=>expect((screen.getByLabelText('Meine eigene Interpretation') as HTMLTextAreaElement).value).toBe('Previously saved note'));
+    expect(screen.getByLabelText('Meine eigene Interpretation').hasAttribute('disabled')).toBe(false);
   });
 });

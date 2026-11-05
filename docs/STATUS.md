@@ -1,38 +1,33 @@
 # Tatsächlich geprüfter Stand
 
-Stand: erste MVP-Version; Windows mit NVIDIA-CUDA geprüft.
+Entwicklungsversion 0.2; Windows mit NVIDIA-CUDA geprüft. Funktionsumfang und Startanleitung stehen in der [README](../README.md), weitere Nachweise in den [Versionshinweisen](RELEASE-0.2.md).
 
-## Funktioniert und wurde ausgeführt
+## Ausgeführte Prüfungen
 
-- React/TypeScript-Produktionsbuild (`npm run build`).
-- Nativer Tauri-Windows-Releasebuild (`npm run tauri build -- --no-bundle`); EXE unter `src-tauri/target/release/moodscope.exe`, etwa 8,7 MB. Fenster geöffnet, Oberfläche gerendert, lokale CUDA-Verbindung angezeigt. Der Browser-Ablauf wurde vollständig geprüft; der native Dateidialog wurde geöffnet. Während der nativen Prüfung wurde außerdem ein Song mit Kurve im Fenster sichtbar; die komplette native Bediensequenz wurde nicht als reproduzierbarer UI-Test aufgezeichnet.
-- MP3, WAV und FLAC tatsächlich durch FFmpeg dekodiert; Wiedergabe als normalisiertes WAV inklusive HTTP-Range/Seeking.
-- Automatischer Analysebeginn nach Import und automatische LRCLIB-Suche anhand von Song-Tags; im Browser mit echter MP3 geprüft.
-- LRC-Import/-Parsing, Zeitsynchronisierung, zwei SVG-Kurven, Player, Springen zur Biggest-Split-Stelle. Kalibrierton: Play/Pause und Seeking im Browser geprüft.
-- CLAP und XLM-EMO mit tatsächlicher Modellinferenz auf CUDA. Zusätzlich beide Modelle bei `HF_HUB_OFFLINE=1` vollständig aus dem lokalen Cache ausgeführt.
-- Vollständiger lokaler MP3-Songtest mit synchronisierten Lyrics und echter CUDA-Inferenz bestanden. Namen, Inhalte und Ergebnisse der privaten Testdateien werden nicht veröffentlicht.
-- Analyse-Cachetreffer am echten Song nachgewiesen; kein erneuter Modellaufruf. Audio- und komplette Analyseergebnisse haben separate Cacheeinträge.
-- LRCLIB-Liveabfrage mit öffentlichen Testmetadaten: HTTP 200, synchronisierter Text vorhanden.
-- faster-whisper `base`: Offline-Inferenz auf CPU. Drei Sekunden Stille erzeugen keine Segmente; ein 20-sekündiger Gesangsausschnitt erzeugt vier zeitlich markierte Segmente. Wortgenauigkeit wurde nicht quantitativ bewertet. Whisper-CUDA wurde nicht getestet.
-- **12 Analyse-/API-Tests, 5 Veröffentlichungsprüfungen und 2 Frontend-Tests bestanden**. Backend umfasst echte Formatdekodierung, Tags, Range-Audio, Originschutz, LRC-Instrumentalpausen, Vergleichsberechnung, Cache und Fehlerfälle. Ein Starlette-Testclient-Deprecation-Hinweis ist noch vorhanden; kein Testfehler.
-- npm-Sicherheitsprüfung nach Vitest-Update: **0 gemeldete Schwachstellen** zum Prüfzeitpunkt.
-- Python-Quelldateien mit compileall geprüft.
-- Nativer Windows-Build mit MSVC, Windows SDK und projektlokalem Rust erfolgreich.
+- 59 Python-Tests und 9 Frontend-Tests bestanden. Ein Starlette-Testclient-Deprecation-Hinweis bleibt vorhanden.
+- React/TypeScript-Produktionsbuild und nativer Tauri-Windows-Releasebuild bestanden. Neuer Build unter `src-tauri/target/v02/release/moodscope.exe`; der Starter berücksichtigt auch den normalen Releaseordner.
+- MP3, WAV und FLAC durch FFmpeg dekodiert; Stereo-WAV-Wiedergabe mit Range-Anfragen und Seeking. Player, Lautstärke, zwei Kurven, Lyrics-Synchronisierung und Biggest-Split-Sprung wurden geprüft.
+- Echte lokale CLAP- und XLM-EMO-Inferenz auf CUDA, auch vollständig offline. Private Songtests und ihre Ergebnisse werden nicht veröffentlicht.
+- Vollständiger isolierter Offline-Modelltest mit selbst erzeugtem Kalibrieraudio und selbst geschriebenen Lyrics: Analyse, Cache-Wiederverwendung ohne neue Audioinferenz, Songdetails, Instrumenthinweise, Qwen-Zeilendeutung, Cache-Löschung bei erhaltenen eigenen Notizen und erzwungene Neuanalyse bestanden. Reproduzierbar mit `python -m scripts.smoke_pipeline` nach Einrichtung der Modelle.
+- Automatische Wiedererkennung, konservativer Metadaten-/Audiovergleich, getrennte Modellversionen, gezielte Cache-Löschung und Notizenspeicherung durch API-Tests geprüft.
+- Öffentliche YouTube- und SoundCloud-Einzeltracks tatsächlich importiert. Ein öffentlicher YouTube-Track wurde zusätzlich über die Browseroberfläche importiert und lokal auf CUDA analysiert. Bibliotheksöffnung lud den Cache; eine eigene Notiz überstand vollständiges Neuladen.
+- LRCLIB-Liveabfrage erfolgreich. faster-whisper `base` offline auf CPU: Stille ohne Segmente und kurzer Gesangsausschnitt mit vier zeitmarkierten Segmenten; keine quantitative Wortgenauigkeitsprüfung.
+- Zwölf selbst geschriebene deutsche/englische Textfälle: Einzelzeilen- und Kontextmodell jeweils 75 % richtige Valenzrichtung. Kein Nachweis allgemein höherer Song-Genauigkeit.
+- Veröffentlichungsschutz prüft ausgewählten Quellcode und erreichbare Git-Historie auf ausgeschlossene Daten, typische Geheimnisse, persönliche Pfade/E-Mail-Adressen und dekorative Emojis. Private Musik, Lyrics, Modellantworten und Schlüssel gehören nicht ins Repository.
 
-Testdaten und vollständige Modell-/Lyrics-Ausgaben bleiben ausschließlich unter dem ignorierten `data/`-Ordner. Nutzermusik unter `for test only music files/` bleibt unverändert und ist von Git ausgeschlossen. Keine Audiodatei wurde an einen Analysedienst hochgeladen.
+Der Browser lehnte den lokalen Kalibrierdatei-Upload trotz anschließender Nutzerfreigabe weiterhin ab. Dieser Bedienpfad wurde in der aktuellen Browserrunde ausgelassen. Die separate isolierte Modellprüfung und der öffentliche Linkimport ersetzen keinen erneuten Browser-Dateidialogtest. Ein früherer MVP-Dateiimport war erfolgreich geprüft worden.
 
-## Grenzen / noch offen
+## Grenzen
 
-- CLAP ist ein allgemeines vortrainiertes Audio/Text-Modell mit Zero-Shot-Musikprompts, kein speziell auf musikalische Valenz trainierter Regressor. XLM-EMO ist für Social-Media-Text trainiert. Die Valenzachsen sind heuristisch aus echten Modellwahrscheinlichkeiten projiziert und nicht gegeneinander kalibriert. Die App weist darauf hin.
-- Kein fertiger eigenständiger Endkundeninstaller: Native EXE und Projektstarter funktionieren zusammen mit `.venv`, Python-Dienst und Modellcache. Ein gebündelter Python-Sidecar, Installer-Integration, Signierung und Update-Verteilung fehlen.
-- Linux-Start-/Setupskripte und Windows/Linux-CI sind vorbereitet. Kein Linux-Build und kein CI-Lauf wurden in dieser Sitzung ausgeführt. Windows 10 wurde nicht separat getestet.
-- Whisper transkribiert den gesamten Mix ohne Vocal-Separation; keine garantierte Gesangs- oder Zeitstempelqualität. GPU-Inferenz über CTranslate2 benötigt passende CUDA/cuDNN-Bibliotheken; der funktionierende Standard ist CPU.
-- LRCLIB ist ein externer Dienst und kann fehlen, falsche Versionen liefern oder nur unsynchronisierten Text liefern. Keine Treffer werden als Fehler/Hinweis behandelt, ohne Lyrics zu erfinden. Whisper ist bewusst zuschaltbar.
-- Kein Videoexport. FFmpeg ist für Import und spätere Exportarbeit verfügbar.
-- Kein Abbruchknopf für laufende Analyse, kein Modellmanagement-Dialog und keine dauerhafte Songbibliothek in der Oberfläche. Dateien und Analyseergebnisse werden jedoch persistent gecacht.
-- Maximal 250 MB Upload und 30 Minuten dekodierte Laufzeit. Mono-Wiedergabe im MVP.
+- CLAP ist ein allgemeines vortrainiertes Audio/Text-Modell; XLM-EMO wurde auf Social-Media-Text trainiert. Valenzprojektion, Kontextmischung und Trennschärfe sind keine wissenschaftlich kalibrierte Song-Emotionsmessung.
+- Qwen 1.5B wurde tatsächlich lokal ausgeführt. Textdeutungen können falsch sein; akustische Begründungen werden separat aus vorhandenen Mess-/Modellwerten formuliert. Nicht alle angebotenen Modellvarianten wurden heruntergeladen oder qualitativ verglichen.
+- Optionales Gemini wurde ohne eigenen Schlüssel nicht live ausgeführt. Vertragstests prüfen Adapter und Einwilligung; kostenlose Kontingente und Abrechnungsstatus sind keine Garantie der App. Standard bleibt lokale KI, auch online.
+- Windows 10 und Linux wurden nicht lokal ausgeführt. Startskripte und CI-Konfiguration sind vorbereitet; daraus folgt kein bestandener Zielsystem- oder CI-Lauf.
+- Whisper läuft standardmäßig auf CPU. Gesang und Zeitstempel sind nicht garantiert; keine Vocal-Separation. Whisper-CUDA wurde nicht geprüft.
+- LRCLIB kann falsche, unvollständige oder keine Lyrics liefern; ungetakteter Text wird nicht künstlich synchronisiert. Linkplattformen können einzelne Inhalte sperren oder löschen.
+- Kein eigenständiger Installer mit Python-Sidecar, keine Signierung/Updates und kein Videoexport. Die native EXE benötigt die eingerichtete Projektumgebung samt Backend.
+- Kein Abbruch laufender Analyse. Maximal 250 MB Import und 30 Minuten dekodierte Laufzeit; API-Audio maximal zehn Minuten.
 
 ## Reproduzierbarkeit
 
-JavaScript-Abhängigkeiten: `package-lock.json`. Rust: `src-tauri/Cargo.lock`. Python: `backend/requirements.txt`; zusätzlich `backend/requirements.local-lock.txt` als Snapshot der lokal installierten venv-Pakete. Der Snapshot ist kein plattformübergreifender Komplettlock und enthält nicht die geerbte PyTorch-/NumPy-Installation. Die Emotionsmodelle sind auf konkrete Hugging-Face-Commitrevisionen festgelegt. Cache-Pipelineversionen werden bei semantischen Änderungen angehoben.
-
+JavaScript: `package-lock.json`; Rust: `src-tauri/Cargo.lock`; Python: `backend/requirements.txt` plus lokaler Paketsnapshot `backend/requirements.local-lock.txt`. Der Snapshot enthält nicht die geerbte PyTorch-/NumPy-Installation und ist kein universeller Plattformlock. Standard-Emotionsmodelle sind auf Hugging-Face-Revisionen festgelegt. Modellwahl und Pipelineversion fließen in Analyse-Cacheschlüssel ein.

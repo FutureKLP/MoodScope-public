@@ -20,10 +20,12 @@ if ($Desktop) {
             }
             if (!$health) { throw 'Backend konnte nicht gestartet werden.' }
         }
-        if (Test-Path 'src-tauri\target\v02\release\moodscope.exe') {
-            Start-Process -FilePath "$projectRoot\src-tauri\target\v02\release\moodscope.exe" -WorkingDirectory $projectRoot -Wait -WindowStyle Normal
-        } elseif (Test-Path 'src-tauri\target\release\moodscope.exe') {
-            Start-Process -FilePath "$projectRoot\src-tauri\target\release\moodscope.exe" -WorkingDirectory $projectRoot -Wait -WindowStyle Normal
+        if ($health.status -ne 'ok' -or $health.version -ne '0.2.0') {
+            throw 'Unpassendes Backend auf Port 8765. Bisherigen MoodScope-Dienst beenden und erneut starten.'
+        }
+        $nativeApp = @('src-tauri\target\v02\release\moodscope.exe','src-tauri\target\release\moodscope.exe') | Where-Object { Test-Path $_ } | Get-Item | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($nativeApp) {
+            Start-Process -FilePath $nativeApp.FullName -WorkingDirectory $projectRoot -Wait -WindowStyle Normal
         } else { & npm.cmd run tauri dev }
     } finally { if ($service) { Stop-Process -Id $service.Id -ErrorAction SilentlyContinue } }
 } else {

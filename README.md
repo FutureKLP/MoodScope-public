@@ -85,7 +85,7 @@ npm run tauri build -- --no-bundle
 
 Nach einem nativen Build kann auch **Start-MoodScope.cmd** per Doppelklick verwendet werden. Der Starter verwendet die projektlokale Python-Umgebung und startet den lokalen Backend-Dienst bei Bedarf. Eine separat gestartete EXE braucht diesen Dienst ebenfalls.
 
-Auf einem bereits eingerichteten Entwicklungsrechner kann ein separater Build unter `src-tauri/target/v02/release/` liegen. Der Projektstarter bevorzugt diesen, falls vorhanden; andernfalls wird `src-tauri/target/release/` verwendet. Eine bereits geöffnete ältere App muss für die neue Oberfläche neu gestartet werden.
+Auf einem bereits eingerichteten Entwicklungsrechner kann ein separater Build unter `src-tauri/target/v02/release/` liegen. Der Projektstarter wählt die neuere EXE aus diesem Ordner und `src-tauri/target/release/`. Eine bereits geöffnete ältere App und ihr Backend müssen für Version 0.2 neu gestartet werden; ein älterer Dienst wird vom Starter erkannt.
 
 ## Installation und Start unter Linux
 
@@ -153,6 +153,7 @@ npm run build
 # Optionale echte Modellprüfungen:
 .venv\Scripts\python.exe -m scripts.smoke_models
 .venv\Scripts\python.exe -m scripts.evaluate_local
+.venv\Scripts\python.exe -m scripts.smoke_pipeline
 ```
 
 Echte Modelltests können Gewichte laden und GPU-Zeit benötigen. Normale Unit-/API-/DOM-Tests verwenden für gezielte Fehler- und UI-Fälle Mocks; solche Testwerte erscheinen nicht in der produktiven App. Die laufend aktualisierten Nachweise und Grenzen stehen in [docs/STATUS.md](docs/STATUS.md) und [docs/RELEASE-0.2.md](docs/RELEASE-0.2.md).

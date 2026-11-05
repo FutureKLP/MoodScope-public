@@ -26,7 +26,7 @@ from . import cloud, links, catalog, insights, library
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
-app = FastAPI(title='MoodScope local analysis', version='0.1.0')
+app = FastAPI(title='MoodScope local analysis', version='0.2.0')
 ORIGINS = ['http://127.0.0.1:1420', 'http://localhost:1420', 'tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost', 'http://127.0.0.1:8765']
 app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=['GET','POST'], allow_headers=['Content-Type'])
 executor = ThreadPoolExecutor(max_workers=1)
