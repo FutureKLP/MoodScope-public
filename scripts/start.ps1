@@ -20,7 +20,9 @@ if ($Desktop) {
             }
             if (!$health) { throw 'Backend konnte nicht gestartet werden.' }
         }
-        if (Test-Path 'src-tauri\target\release\moodscope.exe') {
+        if (Test-Path 'src-tauri\target\v02\release\moodscope.exe') {
+            Start-Process -FilePath "$projectRoot\src-tauri\target\v02\release\moodscope.exe" -WorkingDirectory $projectRoot -Wait -WindowStyle Normal
+        } elseif (Test-Path 'src-tauri\target\release\moodscope.exe') {
             Start-Process -FilePath "$projectRoot\src-tauri\target\release\moodscope.exe" -WorkingDirectory $projectRoot -Wait -WindowStyle Normal
         } else { & npm.cmd run tauri dev }
     } finally { if ($service) { Stop-Process -Id $service.Id -ErrorAction SilentlyContinue } }

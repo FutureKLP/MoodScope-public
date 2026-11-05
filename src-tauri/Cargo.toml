@@ -1,6 +1,6 @@
 [package]
 name = "moodscope"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local music and lyrics emotion analysis"
 edition = "2021"
 

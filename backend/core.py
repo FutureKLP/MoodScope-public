@@ -2,6 +2,17 @@
 import re
 
 
+def analysis_grid(duration: float, hop: float = 5.) -> list[dict]:
+    if duration <= 0 or hop <= 0:
+        raise ValueError('Duration and hop must be positive')
+    rows=[]
+    start=0.
+    while start<duration:
+        rows.append({'start':start,'end':min(duration,start+hop)})
+        start+=hop
+    return rows
+
+
 def parse_lrc(text: str, duration: float) -> list[dict]:
     offset_match = re.search(r"\[offset:([+-]?\d+)\]", text, re.I)
     offset = int(offset_match[1]) / 1000 if offset_match else 0
@@ -27,9 +38,10 @@ def biggest_split(audio: list[dict], lyrics: list[dict]) -> dict | None:
     for a in audio:
         spans = [(max(0., min(a['end'], l['end']) - max(a['start'], l['start'])), l) for l in lyrics]
         covered = sum(w for w, _ in spans)
-        if covered <= 0:
+        if covered < .5 * (a['end']-a['start']) or covered <= 0:
             continue
         value = sum(w * l['valence'] for w, l in spans) / covered
         candidates.append({"start": a['start'], "end": a['end'], "audio": a['valence'],
-                           "lyric": value, "gap": abs(a['valence'] - value)})
+                           "lyric": value, "gap": abs(a['valence'] - value),
+                           "lyric_coverage":min(1.,covered/(a['end']-a['start']))})
     return max(candidates, key=lambda x: x['gap']) if candidates else None

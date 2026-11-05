@@ -10,6 +10,8 @@ from fastapi.testclient import TestClient
 def client(tmp_path, monkeypatch):
     module = importlib.import_module('backend.app')
     monkeypatch.setattr(module, 'DATA', tmp_path)
+    with module.job_lock:module.jobs.clear()
+    module.cloud.configure('',False)
     return TestClient(module.app)
 
 
@@ -26,6 +28,7 @@ def test_import_real_audio_and_serve_normalized_file(client):
     assert response.status_code == 200, response.text
     metadata = response.json()
     assert metadata['duration'] == pytest.approx(1)
+    assert metadata['channels']==2
     audio = client.get(f"/api/tracks/{metadata['id']}/audio")
     assert audio.status_code == 200
     assert audio.content[:4] == b'RIFF'
@@ -105,3 +108,67 @@ def test_analysis_error_is_visible(client, monkeypatch):
     module.run_job('failure',metadata['id'],module.AnalyzeRequest())
     assert module.jobs['failure']['status']=='error'
     assert 'model unavailable' in module.jobs['failure']['message']
+
+
+def test_personal_notes_persist_separately_from_analysis(client):
+    metadata=client.post('/api/tracks',files={'file':('silence.wav',wav_bytes())}).json()
+    route=f"/api/tracks/{metadata['id']}/notes"
+    notes={'interpretation':'My own interpretation','personnel':'Manually verified','instruments':'piano','genre':'test','bpm':120}
+    assert client.post(route,json=notes).status_code==200
+    assert client.get(route).json()==notes
+    assert client.post(route,json={**notes,'bpm':-1}).status_code==422
+
+
+def test_keys_never_return_in_settings_or_validation_errors(client):
+    key='test'+'key-'+'X'*25
+    response=client.post('/api/settings/cloud',json={'api_key':key,'free_project_confirmed':True})
+    assert response.status_code==200
+    assert key not in response.text
+    assert key not in client.get('/api/settings').text
+    invalid=client.post('/api/settings/cloud',json={'api_key':key*100,'free_project_confirmed':True})
+    assert invalid.status_code==422
+    assert key not in invalid.text
+    assert client.post('/api/settings/cloud',json={}).json()['configured'] is False
+
+
+def test_cloud_mode_needs_key_and_upload_permission(client):
+    identity=client.post('/api/tracks',files={'file':('silence.wav',wav_bytes())}).json()['id']
+    route=f'/api/tracks/{identity}/analyze'
+    assert client.post(route,json={'mode':'cloud'}).status_code==422
+    assert client.post(route,json={'mode':'cloud','upload_consent':True}).status_code==422
+
+
+def test_cloud_job_never_calls_local_models(client,monkeypatch):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('silence.wav',wav_bytes())}).json()['id']
+    def forbidden(*args):raise AssertionError('Local model must not run in cloud mode')
+    monkeypatch.setattr(module.engines,'audio',forbidden)
+    monkeypatch.setattr(module.engines,'lyrics',forbidden)
+    monkeypatch.setattr(module.engines,'transcribe',forbidden)
+    monkeypatch.setattr(module.engines,'device',forbidden)
+    monkeypatch.setattr(module.cloud,'audio_mood',lambda *a:[{'start':0,'end':1,'valence':.2,'scores':{}}])
+    monkeypatch.setattr(module.cloud,'lyric_mood',lambda *a:[])
+    module.jobs['cloud']={'status':'running'}
+    module.run_job('cloud',identity,module.AnalyzeRequest(mode='cloud',upload_consent=True,whisper=True))
+    assert module.jobs['cloud']['status']=='done',module.jobs['cloud']
+    assert module.jobs['cloud']['result']['device']=='API'
+
+
+def test_model_catalog_rejects_arbitrary_models(client):
+    result=client.get('/api/models')
+    assert result.status_code==200
+    assert len(result.json()['models'])>=5
+    assert client.post('/api/models/download',json={'model_id':'untrusted/model'}).status_code==422
+    assert client.post('/api/models/select',json={'model_id':'untrusted/model'}).status_code==422
+
+
+def test_busy_jobs_are_not_lost(client):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('silence.wav',wav_bytes())}).json()['id']
+    module.jobs['active']={'status':'running','message':'working'}
+    assert client.post(f'/api/tracks/{identity}/analyze',json={}).status_code==409
+    assert client.get('/api/jobs/active').json()['message']=='working'
+
+
+def test_invalid_link_fails_before_downloader(client):
+    assert client.post('/api/tracks/link',json={'url':'https://127.0.0.1/music'}).status_code==422

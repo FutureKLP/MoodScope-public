@@ -28,3 +28,15 @@ def test_split_uses_duration_weighted_overlap():
     assert result['lyric'] == pytest.approx(-.6)
     assert result['gap'] == pytest.approx(1.6)
     assert biggest_split(audio, []) is None
+
+
+def test_sparse_lyrics_do_not_create_a_spurious_split():
+    assert biggest_split([{'start':0,'end':10,'valence':1}],
+                         [{'start':9,'end':10,'valence':-1}]) is None
+
+
+def test_display_grid_covers_whole_track_without_overlaps():
+    from backend.core import analysis_grid
+    rows=analysis_grid(12)
+    assert rows==[{'start':0,'end':5},{'start':5,'end':10},{'start':10,'end':12}]
+    with pytest.raises(ValueError):analysis_grid(0)

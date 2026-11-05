@@ -1,15 +1,9 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {Analysis, Point, Track, clock, activeLine} from './types';
+import {Analysis, Point, Track, clock, activeLine,toLrc} from './types';
 import './style.css';
-
-const API = 'http://127.0.0.1:8765';
-async function api(path:string, init?:RequestInit) {
-  const response = await fetch(API+'/api'+path,init);
-  if(!response.ok) {const error=await response.json().catch(()=>({detail:response.statusText})); throw Error(error.detail||'Anfrage fehlgeschlagen')}
-  return response.json();
-}
-const json = (body:unknown) => ({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+import {API,api,json,ApiError} from './api';
+import {Workspace} from './Workspace';
 
 function Chart({result,duration,time,seek}:{result:Analysis|null;duration:number;time:number;seek:(t:number)=>void}) {
   const w=1000,h=270,p=26;
@@ -27,13 +21,15 @@ function Chart({result,duration,time,seek}:{result:Analysis|null;duration:number
   <div className="axis"><span>{clock(0)}</span><span>{clock(duration/4)}</span><span>{clock(duration/2)}</span><span>{clock(duration*3/4)}</span><span>{clock(duration)}</span></div></div>
 }
 
-function App(){
+export function App(){
   const [track,setTrack]=useState<Track|null>(null),[result,setResult]=useState<Analysis|null>(null);
   const [lyrics,setLyrics]=useState(''),[artist,setArtist]=useState(''),[title,setTitle]=useState('');
   const [whisper,setWhisper]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
   const [progress,setProgress]=useState(0),[time,setTime]=useState(0),[playing,setPlaying]=useState(false),[device,setDevice]=useState('Verbindung …');
+  const [view,setView]=useState('timeline'),[mode,setMode]=useState<'local'|'cloud'>('local'),[consent,setConsent]=useState(false),[link,setLink]=useState('');
   const audio=useRef<HTMLAudioElement>(null),file=useRef<HTMLInputElement>(null),lrcFile=useRef<HTMLInputElement>(null);
   const mounted=useRef(true);
+  useEffect(()=>{if(audio.current)audio.current.volume=.8},[]);
   useEffect(()=>{mounted.current=true;api('/health').then(r=>setDevice(r.device==='cuda'?'NVIDIA CUDA':'CPU lokal')).catch(()=>setDevice('Backend offline'));return()=>{mounted.current=false}},[]);
   useEffect(()=>{let id=0; const tick=()=>{if(audio.current)setTime(audio.current.currentTime);id=requestAnimationFrame(tick)};id=requestAnimationFrame(tick);return()=>cancelAnimationFrame(id)},[]);
   useEffect(()=>{const el=document.querySelector('.lyric-row.active');el?.scrollIntoView({behavior:'smooth',block:'nearest'})},[activeLine(result?.lyrics||[],time)]);
@@ -42,8 +38,17 @@ function App(){
     setMessage('Audio wird importiert …');setProgress(0);
     const body=new FormData();body.append('file',f);
     const t:Track=await api('/tracks',{method:'POST',body});
+    await acceptTrack(t);
+  })}
+  async function acceptTrack(t:Track){
     audio.current?.pause();setTrack(t);setResult(null);setLyrics('');setTime(0);
-    setArtist(t.artist||'');setTitle(t.title||f.name.replace(/\.[^.]+$/,''));
+    setArtist(t.artist||'');setTitle(t.title||t.name.replace(/\.[^.]+$/,''));
+    try{
+      const cached:Analysis=await api(`/tracks/${t.id}/analysis?mode=${mode}`);
+      setResult(cached);setLyrics(cached.source_lyrics??toLrc(cached.lyrics));
+      setMessage(cached.stale?'Gespeicherte Analyse geladen. Modellversion geändert; bei Bedarf neu analysieren.':t.cache_match==='metadata-and-audio'?'Vorhandene Analyse anhand Metadaten und Audioabgleich geladen.':'Gespeicherte Analyse geladen; keine erneute KI-Inferenz.');
+      return;
+    }catch(e){if(!(e instanceof ApiError&&e.status===404))throw e}
     let importedLyrics='';
     if(t.artist&&t.title){
       setMessage('Suche automatisch Lyrics anhand der Song-Tags …');
@@ -54,26 +59,38 @@ function App(){
       } catch(e) {setMessage(`Song importiert. ${e instanceof Error?e.message:String(e)}`)}
     } else setMessage('Bereit zur Analyse. Ohne Interpret-/Titel-Tags: Lyrics manuell suchen oder importieren.');
     await runAnalysis(t,importedLyrics);
-  })}
-  async function runAnalysis(selected:Track,text:string){setProgress(0);setResult(null);const {job_id}=await api(`/tracks/${selected.id}/analyze`,json({lyrics:text,whisper}));let done=false;while(!done&&mounted.current){const job=await api(`/jobs/${job_id}`);setMessage(job.message);setProgress(job.progress);if(job.status==='error')throw Error(job.message);if(job.status==='done'){setResult(job.result);done=true}else await new Promise(r=>setTimeout(r,900))}}
-  async function analyze(){if(track)await perform(()=>runAnalysis(track,lyrics))}
+  }
+  async function runJob(path:string,body:unknown={}){
+    setProgress(0);const {job_id}=await api(path,json(body));const deadline=Date.now()+30*60*1000;
+    while(mounted.current&&Date.now()<deadline){const job=await api(`/jobs/${job_id}`);setMessage(job.message);setProgress(job.progress);if(job.status==='error')throw Error(job.message);if(job.status==='done')return job.result;await new Promise(r=>setTimeout(r,900))}
+    throw Error('Auftrag noch nicht abgeschlossen. Backend-Status prüfen; keine Ersatzwerte wurden erzeugt.');
+  }
+  async function importLink(){await perform(async()=>{const t:Track=await runJob('/tracks/link',{url:link});setLink('');await acceptTrack(t)})}
+  async function runAnalysis(selected:Track,text:string,force=false){setResult(null);setResult(await runJob(`/tracks/${selected.id}/analyze`,{lyrics:text,whisper:mode==='local'&&whisper,mode,upload_consent:consent,force}))}
+  async function analyze(){if(track)await perform(()=>runAnalysis(track,lyrics,true))}
   const seek=(t:number)=>{if(audio.current){audio.current.currentTime=t;setTime(t)}};
   const index=activeLine(result?.lyrics||[],time);
   const current=result?.audio.filter(p=>p.start<=time).at(-1);
   return <div className="app"><aside className="sidebar"><a className="brand" href="#"><span className="brand-icon">MS</span>MoodScope<span className="beta">LAB</span></a><div className="workspace-label">DEIN WORKSPACE</div><div className="nav active"> <span>Song-Analyse</span><span className="nav-dot"/></div><div className="sidebar-note"><div className="mini-wave">AUDIO / LYRICS</div><strong>Musik fühlen.<br/>Kontraste entdecken.</strong><p>Zwei Perspektiven.<br/>Eine neue Art zuzuhören.</p></div><div className="local-badge"><i/>Lokal auf deinem Rechner<span>{device}</span></div></aside>
   <main><header><div className="breadcrumb">WORKSPACE <span>/</span> SONG-ANALYSE</div><div className="privacy"> Local-first · Private by design</div></header>
     <div className="page-heading"><div><div className="eyebrow">BEYOND THE SOUND</div><h1>Was hörst du. <em>Was fühlst du?</em></h1><p>Entdecke die emotionale Verbindung zwischen Musik und Text.</p></div><button className="import-button" disabled={busy} onClick={()=>file.current?.click()}>+ Song importieren</button></div>
+    <div className="source-controls"><label>Songlink<input aria-label="YouTube- oder SoundCloud-Link" value={link} onChange={e=>setLink(e.target.value)} placeholder="https://www.youtube.com/watch?v=… oder soundcloud.com/artist/track" disabled={busy}/></label><button disabled={busy||!link.trim()} onClick={()=>void importLink()}>Link importieren</button><label>Analysemodus<select aria-label="Analysemodus" value={mode} disabled={busy} onChange={e=>{setMode(e.target.value as 'local'|'cloud');setConsent(false)}}><option value="local">Lokal auf meinem Rechner</option><option value="cloud">Optional: Gemini API</option></select></label></div>
+    {mode==='cloud'&&<div className="cloud-notice"><label className="check"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>Bei ausdrücklich gewähltem API-Modus dürfen in dieser Sitzung Audio und Lyrics an Google gesendet werden. Gratis-Kontingent, eigenes Projekt ohne Abrechnung.</label><button onClick={()=>setView('settings')}>Key und Hinweise</button></div>}
+    <nav className="tabs" aria-label="Songbereiche">{[['timeline','Verlauf'],['library','Bibliothek'],['details','Songdetails'],['interpretation','Interpretation'],['settings','Modelle & API']].map(([id,label])=><button key={id} className={view===id?'selected':''} aria-pressed={view===id} onClick={()=>setView(id)}>{label}</button>)}</nav>
     <input ref={file} type="file" accept=".mp3,.wav,.flac" hidden onChange={e=>{const f=e.target.files?.[0];if(f)void importAudio(f);e.target.value=''}}/>
     <input ref={lrcFile} type="file" accept=".lrc,.txt" hidden onChange={e=>{const f=e.target.files?.[0];if(f)f.text().then(setLyrics);e.target.value=''}}/>
     {error&&<div className="error" role="alert">{error}</div>}
     <section className="song-card" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(!busy&&e.dataTransfer.files[0])void importAudio(e.dataTransfer.files[0])}}><div className={`cover ${playing?'playing':''}`}><span>MS</span></div><div className="song-info"><div className="eyebrow">{track?'DEIN TRACK':'DEIN NÄCHSTER FUND'}</div><h2>{track?.name||'Gib deinem Song eine neue Dimension'}</h2><p>{track?`${clock(track.duration)} · Lokal importiert · WAV-Wiedergabe`:'MP3, WAV oder FLAC hier ablegen · bis 250 MB / 30 Min.'}</p></div><div className="song-status"><i/>{result?'Analyse bereit':track?'Bereit zur Analyse':'Warte auf Musik'}</div></section>
-    <div className="analysis-layout"><div className="main-column"><section className="panel curve-panel"><div className="panel-heading"><div><span className="eyebrow">EMOTIONALE SIGNATUR</span><h2>Zwei Stimmen. Ein Song.</h2></div><div className="legend"><span><i className="mint"/>Audio Mood</span><span><i className="purple"/>Lyric Mood</span></div></div><div className="chart-labels"><span>POSITIV</span><span>VALENZ · −1 BIS +1</span></div><Chart result={result} duration={track?.duration||0} time={time} seek={seek}/><div className="chart-foot"><span>NEGATIV</span><span>{result?`${result.device.toUpperCase()} · ${result.cached?'AUS CACHE':'LOKALE INFERENZ'}`:'Keine Beispieldaten · Deine Analyse beginnt mit einem Song'}</span></div></section>
+    {view==='timeline'&&<div className="analysis-layout"><div className="main-column"><section className="panel curve-panel"><div className="panel-heading"><div><span className="eyebrow">EMOTIONALE SIGNATUR</span><h2>Zwei Stimmen. Ein Song.</h2></div><div className="legend"><span><i className="mint"/>Audio Mood</span><span><i className="purple"/>Lyric Mood</span></div></div><div className="chart-labels"><span>POSITIV</span><span>VALENZ · −1 BIS +1</span></div><Chart result={result} duration={track?.duration||0} time={time} seek={seek}/><div className="chart-foot"><span>NEGATIV</span><span>{result?`${result.device.toUpperCase()} · ${result.cached?'AUS CACHE':result.mode==='cloud'?'API-ANALYSE':'LOKALE INFERENZ'}`:'Keine Beispieldaten · Deine Analyse beginnt mit einem Song'}</span></div>{current&&<p className="confidence-hint">Modelltrennschärfe: {current.confidence!==undefined?(current.confidence*100).toFixed(0)+' %':'nicht verfügbar'} · keine kalibrierte Genauigkeit. <button onClick={()=>setView('interpretation')}>Aktuelle Stelle erklären</button></p>}</section>
     <div className="stats"><section className="panel stat"><span className="eyebrow"><i className="mint"/> AUDIO MOOD</span><strong>{current?current.valence.toFixed(2):'—'}</strong><p>Wie die Musik klingt</p><span className="model-label">CLAP · Zero-Shot-Musikemotion</span></section><section className="panel stat"><span className="eyebrow"><i className="purple"/> LYRIC MOOD</span><strong>{index>=0?result!.lyrics[index].valence.toFixed(2):'—'}</strong><p>Was die Worte ausdrücken</p><span className="model-label">XLM-EMO · mehrsprachig</span></section><section className="panel stat split"><span className="eyebrow"> BIGGEST SPLIT</span><strong>{result?.split?`${(result.split.gap/2*100).toFixed(0)} %`:'—'}</strong><p>{result?.split?`Größter Kontrast bei ${clock(result.split.start)}`:'Wo Klang und Text sich trennen'}</p><button disabled={!result?.split} onClick={()=>seek(result!.split!.start)}>Zum Moment springen </button></section></div>
-    <section className="panel setup"><div className="panel-heading"><h2>Deine Analyse</h2><span className="step-label">01 IMPORT  02 LYRICS  03 ENTDECKEN</span></div><div className="search-row"><label>Interpret<input value={artist} onChange={e=>setArtist(e.target.value)} placeholder="Interpret" disabled={busy}/></label><label>Songtitel<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Songtitel" disabled={busy}/></label><button disabled={!track||busy||!artist.trim()||!title.trim()} onClick={()=>void perform(async()=>{setMessage('Suche bei LRCLIB …');const r=await api(`/tracks/${track!.id}/lyrics/search`,json({artist,title}));setLyrics(r.text);setMessage(r.instrumental?'Instrumental erkannt':r.synced?'Synchronisierte Lyrics gefunden':'Nur Text ohne Zeitstempel gefunden – Whisper für Synchronisierung aktivieren')})}>Lyrics suchen </button><button disabled={busy} onClick={()=>lrcFile.current?.click()}>LRC importieren</button></div><textarea value={lyrics} disabled={busy} onChange={e=>setLyrics(e.target.value)} placeholder={'Synchronisierte Lyrics einfügen, z. B. [00:12.50] Deine erste Zeile …'}/><div className="analyze-row"><label className="check"><input type="checkbox" checked={whisper} disabled={busy} onChange={e=>setWhisper(e.target.checked)}/>Whisper-Fallback, falls keine LRC-Zeitstempel vorliegen</label><button className="primary" onClick={()=>void analyze()} disabled={!track||busy}>{busy?'Analyse läuft …':'Song analysieren '}</button></div>{message&&<div className="progress" role="status"><span>{message}</span>{busy&&<progress value={progress} max="100"/>}</div>}{result?.warnings.map(w=><p key={w} className="warning">{w}</p>)}</section>
-    </div><section className="panel lyric-panel"><div className="panel-heading"><h2>Zwischen den Zeilen</h2><span className="live-label"><i/>SYNC</span></div><div className="lyrics-scroll">{result?.lyrics.length?result.lyrics.map((line,i)=><button key={i} className={`lyric-row ${i===index?'active':''}`} onClick={()=>seek(line.start)}><time>{clock(line.start)}</time><span>{line.text}</span><small>{line.valence.toFixed(2)}</small></button>):<div className="lyrics-empty"><span></span><h3>Worte werden zu Gefühl.</h3><p>Importiere eine LRC-Datei, suche bei LRCLIB oder lasse Whisper lokal transkribieren.</p></div>}</div><div className="lyric-footer">Modellschätzungen sind keine objektive Emotionsmessung. Gesang und Kontext können die Werte beeinflussen.</div></section></div>
+    <section className="panel setup"><div className="panel-heading"><h2>Deine Analyse</h2><span className="step-label">01 IMPORT  02 LYRICS  03 ENTDECKEN</span></div><div className="search-row"><label>Interpret<input value={artist} onChange={e=>setArtist(e.target.value)} placeholder="Interpret" disabled={busy}/></label><label>Songtitel<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Songtitel" disabled={busy}/></label><button disabled={!track||busy||!artist.trim()||!title.trim()} onClick={()=>void perform(async()=>{setMessage('Suche bei LRCLIB …');const r=await api(`/tracks/${track!.id}/lyrics/search`,json({artist,title}));setLyrics(r.text);setMessage(r.instrumental?'Instrumental erkannt':r.synced?'Synchronisierte Lyrics gefunden':'Nur Text ohne Zeitstempel gefunden – Whisper für Synchronisierung aktivieren')})}>Lyrics suchen </button><button disabled={busy} onClick={()=>lrcFile.current?.click()}>LRC importieren</button></div><textarea value={lyrics} disabled={busy} onChange={e=>setLyrics(e.target.value)} placeholder={'Synchronisierte Lyrics einfügen, z. B. [00:12.50] Deine erste Zeile …'}/><div className="analyze-row"><label className="check"><input type="checkbox" checked={whisper} disabled={busy} onChange={e=>setWhisper(e.target.checked)}/>Whisper-Fallback, falls keine LRC-Zeitstempel vorliegen</label><button className="primary" onClick={()=>void analyze()} disabled={!track||busy}>{busy?'Analyse läuft …':result?'Neu analysieren':'Song analysieren'}</button></div>{message&&<div className="progress" role="status"><span>{message}</span>{busy&&<progress value={progress} max="100"/>}</div>}{result?.warnings.map(w=><p key={w} className="warning">{w}</p>)}</section>
+    </div><section className="panel lyric-panel"><div className="panel-heading"><h2>Zwischen den Zeilen</h2><span className="live-label"><i/>SYNC</span></div><div className="lyrics-scroll">{result?.lyrics.length?result.lyrics.map((line,i)=><button key={i} className={`lyric-row ${i===index?'active':''}`} onClick={()=>seek(line.start)}><time>{clock(line.start)}</time><span>{line.text}</span><small>{line.valence.toFixed(2)}</small></button>):<div className="lyrics-empty"><span></span><h3>Worte werden zu Gefühl.</h3><p>Importiere eine LRC-Datei, suche bei LRCLIB oder lasse Whisper lokal transkribieren.</p></div>}</div><div className="lyric-footer">Modellschätzungen sind keine objektive Emotionsmessung. Gesang und Kontext können die Werte beeinflussen.</div></section></div>}
+    <div hidden={view==='timeline'}><Workspace view={view} track={track} analysis={result} time={time} mode={mode} consent={consent} busy={busy} perform={perform} job={runJob} onOpen={t=>void perform(async()=>{await acceptTrack(t);setView('timeline')})} onCacheDeleted={()=>setResult(null)}/></div>
+    {view!=='timeline'&&message&&<div className="progress" role="status">{message}{busy&&<progress value={progress} max="100"/>}</div>}
     <footer><span>MOODSCOPE / EXPLORING THE SPACE BETWEEN</span><span>Analyse lokal · LRCLIB nur bei Suche · Modelldownload beim ersten Start</span></footer>
   </main><div className="player"><div className="player-track"><div className="tiny-cover">MS</div><div><strong>{track?.name||'Noch kein Song'}</strong><span>{track?'Deine Musik. Deine Perspektive.':'Bereit, wenn du es bist.'}</span></div></div><div className="transport"><button aria-label="10 Sekunden zurück" disabled={!track} onClick={()=>seek(Math.max(0,time-10))}>-10s</button><button className="play" aria-label={playing?'Pause':'Abspielen'} disabled={!track} onClick={()=>{if(audio.current){if(playing)audio.current.pause();else audio.current.play().catch(e=>setError(String(e)))}}}>{playing?'Pause':'Play'}</button><button aria-label="10 Sekunden vor" disabled={!track} onClick={()=>seek(Math.min(track!.duration,time+10))}>+10s</button></div><span className="player-time">{clock(time)}</span><input aria-label="Wiedergabeposition" className="scrubber" type="range" min="0" max={track?.duration||1} step=".05" value={time} disabled={!track} onChange={e=>seek(Number(e.target.value))}/><span className="player-time">{clock(track?.duration||0)}</span><label className="volume">VOL <input aria-label="Lautstärke" type="range" min="0" max="1" step=".01" defaultValue=".8" onChange={e=>{if(audio.current)audio.current.volume=Number(e.target.value)}}/></label></div>
     <audio ref={audio} src={track?`${API}/api/tracks/${track.id}/audio`:undefined} onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onEnded={()=>setPlaying(false)} onError={()=>{if(track)setError('Audio-Wiedergabe fehlgeschlagen')}}/>
   </div>
 }
-createRoot(document.getElementById('root')!).render(<App/>);
+const root=document.getElementById('root');
+if(root)createRoot(root).render(<App/>);

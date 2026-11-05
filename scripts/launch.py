@@ -20,7 +20,9 @@ def ready():
 
 def main():
     os.chdir(ROOT)
-    exe=ROOT/'src-tauri'/'target'/'release'/('moodscope.exe' if os.name=='nt' else 'moodscope')
+    binary='moodscope.exe' if os.name=='nt' else 'moodscope'
+    candidates=[ROOT/'src-tauri'/'target'/'v02'/'release'/binary,ROOT/'src-tauri'/'target'/'release'/binary]
+    exe=next((p for p in candidates if p.exists()),candidates[0])
     if not exe.exists():
         raise SystemExit('Native App fehlt. Zuerst: npm run tauri build -- --no-bundle')
     backend=None

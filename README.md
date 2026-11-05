@@ -1,100 +1,170 @@
 # MoodScope
 
-Lokale Musik- und Lyrics-Analyse mit React, TypeScript, Tauri und Python/FastAPI. Windows 10/11 und Linux sind die Zielplattformen. Dies ist eine erste Entwicklungsversion, kein fertig paketiertes Endkundenprodukt.
+MoodScope ist eine lokale Desktop-App für die Frage, wie unterschiedlich Musik und Text eines Songs wirken. Die App spielt einen Song ab und zeigt zwei synchronisierte emotionale Verläufe:
 
-## Windows-Start
+- **Audio Mood:** der geschätzte musikalische Ausdruck.
+- **Lyric Mood:** die geschätzte Bedeutung der gesungenen Wörter.
+- **Biggest Split:** das Zeitfenster mit dem größten berechneten Unterschied zwischen beiden Verläufen.
 
-```powershell
-.\scripts\start.ps1
-```
+React und TypeScript bilden die Oberfläche, Tauri das native Fenster und Python/FastAPI den lokalen Analysedienst. Windows 10/11 und Linux sind die Zielplattformen. Dies ist eine Entwicklungsversion, kein fertig paketierter Endkundeninstaller.
 
-Danach http://127.0.0.1:8765 im Browser öffnen. Der Dienst liefert das gebaute React-Frontend aus. Strg+C beendet ihn. Portable Node-Dateien befinden sich unter `.tools`, Python-Pakete unter `.venv`. Keine globale Node-/Python-Paketinstallation erforderlich.
+## Funktionen
 
-Nach erfolgreichem nativen Build kann unter Windows auch `Start-MoodScope.cmd` per Doppelklick gestartet werden. Dieser Starter nutzt die projektlokale Python-Umgebung, startet bei Bedarf den Backend-Dienst und öffnet das native Fenster. Ein bereits laufender MoodScope-Dienst wird wiederverwendet.
+### Verlauf
 
-Für das native Tauri-Fenster (Rust, MSVC und Windows SDK erforderlich):
+- Import von MP3, WAV und FLAC sowie einzelnen öffentlichen YouTube- und SoundCloud-Songlinks.
+- Stereo-Wiedergabe, Lautstärke, Positionsregler und Sprünge in beide Richtungen.
+- Audio- und Textkurven folgen der Wiedergabezeit; Textzeilen und Kurve können angesprungen werden.
+- Automatische Lyrics-Suche bei LRCLIB anhand vorhandener Interpret-/Titel-Tags.
+- Import synchronisierter LRC-Dateien oder Einfügen eigener zeitmarkierter Lyrics.
+- Lokale Whisper-Transkription als zuschaltbarer Fallback.
+- Anzeige von Modelltrennschärfe und Unsicherheit; diese sind keine kalibrierte Genauigkeit.
 
-```powershell
-.\scripts\start.ps1 -Desktop
-```
+### Bibliothek
 
-Dieser Entwicklungsstarter verwaltet Backend und Tauri zusammen. Eine separat ausgeführte Tauri-EXE benötigt vorerst den laufenden Python-Dienst. Der Installer enthält noch keinen eigenständigen Python-Sidecar.
+Importierte Songs, Analysen und eigene Notizen werden lokal in SQLite gespeichert. Identische Dateien werden auch bei geändertem Dateinamen erkannt. Bei unterschiedlichen Dateien mit gleichen Interpret-/Titel-Tags werden zusätzlich Laufzeit und zeitlich ausgerichtete akustische Signaturen verglichen. Metadaten alleine reichen nicht aus: Ein Remix, anderes Mastering oder eine andere Aufnahme soll keine unpassenden Zeitkurven erhalten.
 
-## Benutzung
+Vorhandene Ergebnisse werden beim Import geladen, ohne erneut KI-Inferenz auszuführen. Bei geänderter Modellversion wird eine ältere Analyse als solche gekennzeichnet. **Neu analysieren** erzwingt eine neue Berechnung und umgeht Audio- und Gesamtanalyse-Cache. **Analyse-Cache löschen** entfernt gespeicherte Analyse-/KI-Deutungsergebnisse; eigene Notizen und die lokale Wiedergabedatei bleiben erhalten.
 
-1. MP3, WAV oder FLAC importieren oder auf die Songkarte ziehen. Die Analyse startet automatisch. Maximal 250 MB; Dateien werden auf maximal 30 Minuten begrenzt und für kompatible Wiedergabe in Mono-WAV mit 48 kHz umgewandelt.
-2. Vorhandene Interpret-/Titel-Tags lösen automatisch eine Lyrics-Suche bei LRCLIB aus. Ohne Tags können Interpret und Titel manuell eingegeben werden. Alternativ synchronisierte `.lrc` importieren oder LRC-Text einfügen und erneut analysieren. Interpret, Titel und Dauer werden zur Lyrics-Suche an LRCLIB gesendet; Audiodateien werden nicht hochgeladen.
-3. Optional Whisper aktivieren, wenn keine synchronisierten Lyrics vorliegen. Das funktioniert nach dem ersten Modelldownload offline und läuft standardmäßig auf CPU.
-4. Beim ersten Mal werden Modellgewichte von Hugging Face geladen (mehrere GB Speicherplatz einplanen). Anschließend erfolgt die Inferenz lokal. **Song analysieren** berechnet nach Ergänzen/Ändern der Lyrics erneut; die Audioanalyse wird separat aus dem Cache wiederverwendet.
-5. Player starten. Kurven, Positionslinie und markierte Lyrics folgen der Audiozeit. Ein Klick in die Kurve, auf eine Textzeile oder auf **Zum Moment springen** sucht die entsprechende Stelle.
+### Songdetails
 
-Ohne synchronisierte Lyrics bleibt die Textkurve leer und es gibt keinen Biggest Split. Reiner Text wird nicht künstlich mit Zeitstempeln versehen. LRCLIB kann nur unsynchronisierte Texte oder gar keine Ergebnisse liefern. Whisper erkennt Gesang nicht immer zuverlässig; hier wird der gesamte Mix transkribiert, ohne Stem-Separation.
+- Geschätztes Tempo mit librosa, Energie und spektrale Helligkeit.
+- Relative CLAP-Ähnlichkeiten für mögliche Instrumente in mehreren Audioausschnitten.
+- Eigene Angaben zu Genre, BPM, Instrumenten und Mitwirkenden.
 
-## Was die Kurven bedeuten
+Instrumenthinweise sind keine gesicherte Instrumentenliste. Eine tatsächliche Besetzung kann nicht zuverlässig allein aus einem Audiomix festgestellt werden. Manuelle Angaben sind als solche getrennt.
 
-- **Audio Mood:** Das vortrainierte Audio/Text-Modell [LAION CLAP](https://huggingface.co/laion/clap-htsat-unfused) vergleicht echte Audiofenster mit vier musikalischen Beschreibungen (fröhlich, ruhig, traurig, wütend). Aus Softmax-Ähnlichkeiten entsteht eine gewichtete Valenz von −1 bis +1. Fensterlänge 10 s, Abstand 5 s. CLAP ist ein allgemeines Audio/Text-Modell, kein auf Valenz kalibrierter Musik-Emotionsregressor. Stimmen und Textinhalt können die Audiovorhersage beeinflussen.
-- **Lyric Mood:** [XLM-EMO](https://huggingface.co/MilaNLProc/xlm-emo-t) liefert die Wahrscheinlichkeiten für joy, sadness, anger und fear je synchronisierter Zeile. Valenz = joy − sadness − 0,7 × anger − 0,7 × fear. Das Modell wurde für Social-Media-Text trainiert, nicht speziell für Songtexte.
-- **Biggest Split:** Für jedes Audiofenster wird die zeitlich überlappende Textvalenz nach Überlappungsdauer gemittelt. Der größte absolute Unterschied wird markiert. Angezeigte Prozentwerte sind Abstand / 2 × 100, keine statistische Sicherheit.
-- **librosa:** Misst echte RMS-Energie als zusätzliches akustisches Merkmal. RMS wird ausdrücklich nicht als KI-Emotion ausgegeben.
+### Interpretation
 
-Die Zuordnung zu einer gemeinsamen Valenzachse ist eine transparente MVP-Designentscheidung. Die Werte sind subjektive Modellschätzungen und nicht wissenschaftlich gegeneinander kalibriert. Es gibt keine Zufallskurven, Demo-KI-Ergebnisse oder heuristischen Ersatz, wenn Modellinferenz scheitert. Fehlermeldungen bleiben sichtbar.
+Eine lokale Sprach-KI kann den Songtext oder eine ausgewählte Textzeile in ihrem Kontext deuten: mögliche Bedeutung, Verlust, Hoffnung, Widersprüche und alternative Lesarten. Dazu gibt es getrennte Audiohinweise aus vorhandenen Mess- und Modellwerten. Ein Sprachmodell darf nicht behaupten, selbst Audio gehört zu haben, wenn es nur Text erhalten hat.
 
-## Umgebung und Installation
+Die KI-Deutung und **Meine eigene Interpretation** sind getrennte Bereiche. Eigene Notizen werden lokal gespeichert und nicht zur Online-KI gesendet. Interpretationen können trotz dieser Begrenzung falsch sein; sie sind keine gesicherten Aussagen über die Absicht eines Künstlers.
 
-Python 3.10+, Node.js 22.12+ und npm. Native Builds zusätzlich Rust und plattformspezifische [Tauri-Voraussetzungen](https://v2.tauri.app/start/prerequisites/). Windows: MSVC C++ Build Tools, Windows SDK und WebView2. Linux: z. B. WebKitGTK 4.1, GTK 3, librsvg, patchelf und Build-Werkzeuge laut Tauri-Dokumentation. Die Skripte installieren keine Betriebssystempakete automatisch.
+### Modelle & API
+
+Die App erklärt im Modellbereich Zweck, ungefähre Downloadgröße und Speicherbedarf. Angeboten werden:
+
+- CLAP kompakt oder CLAP Fusion für Audio Mood und Instrumenthinweise.
+- XLM-EMO für mehrsprachige Textemotionen.
+- Whisper Base oder Small für lokale Transkription.
+- Qwen 1.5B oder 3B für lokale Song-/Zeilendeutung.
+
+Downloads erfolgen nur aus einem kuratierten Katalog. Fremde Modell-Python-Skripte werden nicht ausgeführt. Größere Modelle sind nicht automatisch nachweislich genauer. Qwen 3B hat eigene Research-Lizenzbedingungen; vor einer Weiterverwendung prüfen. Downloadgrößen und VRAM-Angaben sind Richtwerte.
+
+**Lokale KI bleibt der Standard, auch bei Internetverbindung.** Optional kann später ein eigener Gemini-Key eingetragen werden. Er bleibt nur im Arbeitsspeicher des lokalen Backends und wird nicht in SQLite, Git oder Browser-LocalStorage gespeichert. Ohne Key erfolgt keine Online-Inferenz.
+
+## Voraussetzungen
+
+- Python 3.10 oder neuer.
+- Node.js 22.12 oder neuer mit npm.
+- Für das native Fenster: Rust und die [Tauri-Systemvoraussetzungen](https://v2.tauri.app/start/prerequisites/).
+- Windows: MSVC C++ Build Tools, Windows SDK und WebView2.
+- Linux: unter anderem WebKitGTK 4.1, GTK 3, OpenSSL und native Build-Werkzeuge gemäß Tauri-Dokumentation.
+- Optional: NVIDIA-GPU mit kompatiblem PyTorch-CUDA-Build. CPU ist als Fallback möglich.
+- Mehrere GB freier Speicher für Modellgewichte; lokale Interpretation benötigt zusätzlich RAM bzw. VRAM.
+
+Die Setupskripte installieren Python-/Node-Pakete projektlokal. Betriebssystempakete werden nicht automatisch installiert. Ein GPU-Treiber und ein für die GPU-Architektur geeigneter PyTorch-Build sind unabhängig davon erforderlich.
+
+## Installation und Start unter Windows
+
+Repository lokal auschecken und im Projektordner ausführen:
 
 ```powershell
 .\scripts\setup.ps1
+.\scripts\start.ps1
 ```
+
+Danach [http://127.0.0.1:8765](http://127.0.0.1:8765) im Browser öffnen. Der Dienst liefert das gebaute Frontend aus. Strg+C beendet ihn.
+
+Für das native Fenster:
+
+```powershell
+npm run tauri build -- --no-bundle
+.\scripts\start.ps1 -Desktop
+```
+
+Nach einem nativen Build kann auch **Start-MoodScope.cmd** per Doppelklick verwendet werden. Der Starter verwendet die projektlokale Python-Umgebung und startet den lokalen Backend-Dienst bei Bedarf. Eine separat gestartete EXE braucht diesen Dienst ebenfalls.
+
+Auf einem bereits eingerichteten Entwicklungsrechner kann ein separater Build unter `src-tauri/target/v02/release/` liegen. Der Projektstarter bevorzugt diesen, falls vorhanden; andernfalls wird `src-tauri/target/release/` verwendet. Eine bereits geöffnete ältere App muss für die neue Oberfläche neu gestartet werden.
+
+## Installation und Start unter Linux
+
+Nach Einrichtung der oben genannten Systemvoraussetzungen:
 
 ```bash
 bash scripts/setup.sh
 bash scripts/start.sh
 # Native Entwicklung:
 bash scripts/start.sh --desktop
+# Nativer Build:
+npm run tauri build -- --no-bundle
 ```
 
-Neue Installationen verwenden eine isolierte venv. Eine vorhandene kompatible PyTorch-Installation kann bei Bedarf über eine venv mit `--system-site-packages` wiederverwendet werden. TensorFlow/Flax sind für Transformers deaktiviert. Auf anderen Systemen die passende CUDA-PyTorch-Version gemäß [PyTorch](https://pytorch.org/get-started/locally/) installieren. RTX-50-GPUs benötigen einen Build mit Unterstützung ihrer CUDA-Architektur. Ein tatsächlicher CUDA-Kerneltest entscheidet über GPU-Nutzung; CPU ist der automatische Fallback.
+Windows- und Linux-Builds müssen auf ihren jeweiligen Zielsystemen geprüft werden. Ein erfolgreicher Windows-Build bestätigt keinen Linux-Build.
 
-Konfiguration über Umgebungsvariablen:
+## YouTube- und SoundCloud-Links
 
-- `MOODSCOPE_DEVICE=cpu|cuda|auto` (Standard auto)
-- `MOODSCOPE_WHISPER_DEVICE=cpu|cuda` (Standard cpu; CUDA für CTranslate2 benötigt passende CUDA/cuDNN-Bibliotheken und ist hier nicht vorausgesetzt)
-- `MOODSCOPE_DATA`: Daten-/SQLite-Ordner (Standard `data/` im Projekt)
-- `HF_HOME`: Modellcache (Standard `models/` im Projekt)
-- `HF_HUB_OFFLINE=1`: keinerlei Hugging-Face-Netzanfragen nach vollständigem Download
+Einmal das offizielle portable Downloadwerkzeug projektlokal einrichten:
 
-Die Audio-/Textmodelle werden nacheinander durch einen einzelnen Hintergrundarbeiter angesprochen. SQLite speichert dekodierte Track-Metadaten und Analyseergebnisse nach Dateiinhalt, Pipelineversion, Lyrics und Whisper-Einstellung. LRCLIB-Antworten werden ebenfalls gespeichert. Audiodateien und Gewichte werden nicht in Git aufgenommen. Zum Freigeben von Speicher kann man bei beendeter App `data/` beziehungsweise `models/` manuell löschen. Analysejobs selbst sind flüchtig; nach Backend-Neustart erneut analysieren, dann wird der Cache verwendet.
+```powershell
+.venv\Scripts\python.exe scripts\setup_links.py
+```
 
-## Entwicklung und Tests
+Unter Linux entsprechend `.venv/bin/python scripts/setup_links.py`. Der Installer lädt die offizielle yt-dlp-Standalone-Datei nach `.tools/yt-dlp/` und vergleicht deren SHA256 mit der offiziellen Release-Prüfsumme. Für YouTube benötigt yt-dlp zusätzlich eine unterstützte JavaScript-Laufzeit; MoodScope nutzt vorhandenes Node.js.
+
+Im Linkfeld wird ein einzelner HTTPS-Songlink eingefügt. Playlists und SoundCloud-Kurzlinks werden nicht angenommen. Private, gelöschte oder gesperrte Inhalte können nicht importiert werden. Es werden keine Browser-Cookies oder Anmeldedaten übernommen. Bei einem Plattformfehler kann derselbe Song weiterhin als lokale Datei importiert werden. Nur Inhalte verwenden, die heruntergeladen und analysiert werden dürfen.
+
+## Lokale Modelle einrichten
+
+Im Reiter **Modelle & API** das gewünschte Modell herunterladen und auswählen. Beim ersten Analyselauf können benötigte Standardmodelle ebenfalls geladen werden. Gewichte liegen standardmäßig unter `models/`; die Auswahl und bekannte Download-Snapshots werden lokal unter `data/` gespeichert.
+
+Die Interpretation entlädt vorher die Emotionsmodelle, um GPU-Speicher freizugeben. Beim nächsten Analyseauftrag werden diese wieder geladen. Ein kleineres Interpretationsmodell ist schneller, kann aber stärker vereinfachen oder Anweisungen missverstehen.
+
+## Optionaler API-Modus
+
+Der vorbereitete Anbieter ist Gemini, weil er Audio und Text verarbeiten kann. Die App verwendet getrennte Anfragen für musikalischen Ausdruck und Textbedeutung, damit die Textanalyse nicht einfach der Audioemotion folgt.
+
+1. Einen eigenen Key in [Google AI Studio](https://aistudio.google.com/api-keys) anlegen. Den Key direkt in der App eingeben, nicht in Issues, Chatnachrichten oder Quellcode.
+2. Ein Projekt **ohne aktivierte Abrechnung** verwenden und die Gratisbedingungen prüfen. MoodScope kann den Abrechnungsstatus nicht selbst feststellen.
+3. In der App den API-Modus ausdrücklich auswählen und dem Versand von Audio/Lyrics zustimmen.
+
+Gratis-Kontingente sind begrenzt und können sich ändern. Google kann Inhalte des kostenlosen Tarifs zur Produktverbesserung verwenden. Es gibt keine Zusage für unbegrenzte kostenlose API-Nutzung. Bei Kontingentfehlern stoppt die App; sie wechselt nicht automatisch zu einem anderen kostenpflichtigen Modell oder zur lokalen KI. [Aktuelle Preise](https://ai.google.dev/gemini-api/docs/pricing) und [Audio-API-Dokumentation](https://ai.google.dev/gemini-api/docs/audio).
+
+Im API-Modus startet kein lokales Whisper. Für die Textkurve müssen synchronisierte Lyrics vorliegen. Cloud-Audio ist auf zehn Minuten und eine einzelne begrenzte Anfrage beschränkt. Ohne eigenen Key wurde die echte Anbieter-Inferenz nicht live geprüft; Vertragstests ersetzen diesen Nachweis nicht.
+
+## Analyseverfahren und Grenzen
+
+Audio Mood nutzt ein vortrainiertes CLAP-Modell mit mehreren musikalischen Beschreibungen pro Emotionsklasse. Fünf-Sekunden-Anzeigefenster werden anhand von bis zu zehn Sekunden zentriertem Audiokontext geschätzt. Die Anzeige ist keine Messung mit Fünf-Sekunden-Genauigkeitsgarantie.
+
+Lyric Mood nutzt XLM-EMO. Die Vorhersage für eine Textzeile wird mit ihrer unmittelbaren sprachlichen Umgebung kombiniert. LRC-Leerzeilen beenden den Textspan für Instrumentalpausen. Ungeschnittener Text ohne Zeitstempel wird nicht künstlich synchronisiert.
+
+Biggest Split vergleicht die Audio-Valenz mit der nach Überlappungsdauer gemittelten Textvalenz. Ein Fenster benötigt mindestens 50 % Lyrics-Abdeckung. Prozent = absoluter Abstand / 2 × 100; das ist keine Sicherheit oder Trefferquote.
+
+CLAP ist ein allgemeines Audio/Text-Modell, XLM-EMO wurde für Social-Media-Text trainiert. Die gemeinsame Valenzachse, Kontextmischung und Trennschärfe sind nicht wissenschaftlich gegeneinander kalibriert. Sarkasmus, mehrdeutige Zeilen, Gesang und ungewöhnliche Produktionen bleiben schwierig. BPM, Energie oder spektrale Helligkeit beweisen alleine keine Emotion.
+
+Ein Diagnose-Set mit zwölf selbst geschriebenen deutschen und englischen Fällen ergab bisher für Einzelzeilen und Kontext jeweils 75 % richtige Valenzrichtung. Das ist ein kleiner Regressionstest und belegt keinen allgemeinen Genauigkeitsgewinn für Songs. Es werden keine Zufallskurven oder vorgetäuschten KI-Ergebnisse als Analyse ausgegeben.
+
+## Tests und Entwicklung
 
 ```powershell
 .venv\Scripts\python.exe -m pytest -q
 npm test
 npm run build
-# Optional: Downloads und echte Modellinferenz (keine Mocks):
+# Optionale echte Modellprüfungen:
 .venv\Scripts\python.exe -m scripts.smoke_models
+.venv\Scripts\python.exe -m scripts.evaluate_local
 ```
 
-`scripts.smoke_models` testet einen ausdrücklich synthetischen Kalibrierton und einen selbst geschriebenen Satz. Dies bestätigt technischen Modellbetrieb, nicht die emotionale Genauigkeit für Songs. Unit-/API-Tests ersetzen nur im Cachetest die Modellaufrufe; solche Testdaten erscheinen nicht in der App.
+Echte Modelltests können Gewichte laden und GPU-Zeit benötigen. Normale Unit-/API-/DOM-Tests verwenden für gezielte Fehler- und UI-Fälle Mocks; solche Testwerte erscheinen nicht in der produktiven App. Die laufend aktualisierten Nachweise und Grenzen stehen in [docs/STATUS.md](docs/STATUS.md) und [docs/RELEASE-0.2.md](docs/RELEASE-0.2.md).
 
-Frontend-Entwicklung: Backend starten und separat `npm run dev` (127.0.0.1:1420). Produktion: `npm run build`, Backend neu starten, dann 127.0.0.1:8765. Der Dienst bindet nur an Loopback und prüft Host/Origin. Er ist nicht als öffentlich erreichbarer Mehrbenutzerserver gedacht.
+Für die Oberfläche `npm run dev` und für das Backend separat `.venv\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8765` starten. `VITE_API_URL` kann für eine getrennte Testumgebung gesetzt werden. `MOODSCOPE_DATA` wählt einen separaten Datenordner. Der Dienst ist nur für lokale Nutzung vorgesehen.
 
-Native Builds auf dem jeweiligen Betriebssystem:
+## Datenschutz und Veröffentlichung
 
-```bash
-npm run tauri build -- --no-bundle
-# Erst nach Integration eines paketierten Python-Backends Endkunden-Installer bauen.
-```
+Audio, Lyrics, Analysen, persönliche Notizen, API-Keys, Modelle und Testmusik werden nicht in Git aufgenommen. Auch lokale Werkzeuge, virtuelle Umgebungen, Installer und Screenshots sind ausgeschlossen. Standardmäßig bleiben Audio und Inferenz lokal; LRCLIB erhält nur bei Lyrics-Suche Interpret, Titel und Dauer. Linkimport greift auf die gewählte Plattform zu. Der ausdrücklich gewählte API-Modus sendet die dafür genannten Daten an Google.
 
-Windows und Linux müssen separat gebaut/getestet werden; ein Windows-Build bestätigt keinen Linux-Build. Die Linux-Skripte und Tauri-Konfiguration sind vorbereitet. Videoexport ist noch nicht implementiert; das projektlokale FFmpeg wird bereits zur Audiodekodierung genutzt.
+Vor jedem Fortschritts-Commit und Upload prüft `scripts/check_publication.py` die ausgewählten Dateien. Mit `--ref HEAD` werden auch ältere erreichbare Dateiversionen und Commit-E-Mail-Adressen geprüft. Ein später gelöschtes Geheimnis bleibt ein Sperrgrund. Das ersetzt kein zusätzliches Lesen der Änderungen. Einzelheiten: [Veröffentlichungsablauf](docs/PUBLISHING.md).
 
-## Struktur
+## Noch offen
 
-`src/` React-Player, SVG-Kurven und Oberfläche · `backend/` API, Modelle, Timing und SQLite · `src-tauri/` native Hülle · `scripts/` Start/Setup/Integration · `tests/` Backend-Tests · `docs/` Prüfstatus.
-
-Modellgewichte haben eigene Nutzungsbedingungen; insbesondere verweist XLM-EMO auf die Lizenzen der Trainingsdaten. Vor einer Weiterverteilung mit eingebetteten Gewichten diese prüfen. Es werden standardmäßig keine Gewichte mit der App weiterverteilt.
-
-## Veröffentlichung
-
-Vor jeder Veröffentlichung `python scripts/check_publication.py` für vorgemerkte Dateien und `python scripts/check_publication.py --ref HEAD` für den Commit ausführen. Die Prüfung meldet nur Dateinamen und Fundkategorien, keine mutmaßlichen Geheimnisse. Details stehen in `docs/PUBLISHING.md`.
+Eigenständige Installer mit eingebettetem Python-Backend, Signierung, Update-Verteilung und FFmpeg-Videoexport fehlen. Weitere Modellvarianten und Zielsysteme benötigen eigene Live- und Qualitätsprüfungen. Modellgewichte haben eigene Lizenzbedingungen und werden nicht mit dem Quellcode weiterverteilt.
