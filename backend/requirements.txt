@@ -12,3 +12,4 @@ imageio-ffmpeg>=0.6
 sentencepiece>=0.2
 mutagen>=1.47,<2
 pytest>=8
+psutil>=6,<8

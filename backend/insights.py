@@ -74,6 +74,7 @@ def interpretation(data,engine,analysis,metadata,time_position=None,mode='local'
         return {**result,'audio_evidence':evidence,'mode':'server','time':time_position}
     if mode=='cloud':
         result=InterpretationText.model_validate(cloud.request_json(prompt,InterpretationText.model_json_schema()))
+        validate_text_interpretation(result.text,context['full_text'])
         return {'text':result.text,'audio_evidence':evidence,'model':cloud.MODEL,'mode':'cloud','time':time_position}
     from transformers import AutoModelForCausalLM, AutoTokenizer
     import torch
@@ -86,17 +87,19 @@ def interpretation(data,engine,analysis,metadata,time_position=None,mode='local'
                 dtype=torch.float16 if device=='cuda' else torch.float32).to(device).eval()
         messages=[{'role':'system','content':'Du bist ein Textinterpret. Du erhältst ausschließlich Text und hörst kein Audio. Schreibe nur über die Bedeutung der Wörter. Keine Aussagen über Melodie, Klang, Tempo, Lautstärke, Instrumente oder Biografie. Paraphrasiere statt zu zitieren.'},
                   {'role':'user','content':prompt}]
-        text=tokenizer.apply_chat_template(messages,tokenize=False,add_generation_prompt=True)
-        inputs=tokenizer(text,return_tensors='pt',truncation=True,max_length=8192).to(device)
-        with torch.inference_mode():
-            output=model.generate(**inputs,max_new_tokens=1100 if time_position is None else 650,do_sample=False,
-                                  pad_token_id=tokenizer.eos_token_id)
-        answer=tokenizer.decode(output[0,inputs['input_ids'].shape[1]:],skip_special_tokens=True).strip()
-        if len(answer)<20:raise RuntimeError('Lokales Modell lieferte keine ausreichende Interpretation.')
-        validate_text_interpretation(answer,context['full_text'])
-        return {'text':answer,'audio_evidence':evidence,'model':catalog.CATALOG[catalog.configuration(data)['active']['interpretation']]['repo'],
-                'mode':'local','time':time_position,'input_truncated':len(tokenizer.encode(text))>8192,
-                'output_truncated':output.shape[1]-inputs['input_ids'].shape[1]>=(1100 if time_position is None else 650)}
+        def generate(repair):
+            current=messages if repair is None else [messages[0],{'role':'user','content':prompt+'\n'+repair}]
+            text=tokenizer.apply_chat_template(current,tokenize=False,add_generation_prompt=True)
+            inputs=tokenizer(text,return_tensors='pt',truncation=True,max_length=8192).to(device)
+            limit=1100 if time_position is None else 650
+            with torch.inference_mode():
+                output=model.generate(**inputs,max_new_tokens=limit,do_sample=False,pad_token_id=tokenizer.eos_token_id)
+            return {'text':tokenizer.decode(output[0,inputs['input_ids'].shape[1]:],skip_special_tokens=True).strip(),
+                    'input_truncated':len(tokenizer.encode(text))>8192,
+                    'output_truncated':output.shape[1]-inputs['input_ids'].shape[1]>=limit}
+        result=checked_local_generation(generate,context['full_text'])
+        return {**result,'audio_evidence':evidence,'model':catalog.CATALOG[catalog.configuration(data)['active']['interpretation']]['repo'],
+                'mode':'local','time':time_position}
     finally:
         if 'model' in locals():del model
         import gc
@@ -155,3 +158,19 @@ def validate_text_interpretation(answer,source_text=None):
         for quote in re.findall(r'["„“]([^"„“”]+)["“”]',answer):
             if len(quote.split())>=4 and normalize(quote) not in source:
                 raise RuntimeError('Das Sprachmodell hat ein nicht belegtes Textzitat erzeugt. Deutung verworfen; erneut versuchen oder stärkeres Modell wählen.')
+
+
+def checked_local_generation(generate,source):
+    repair=None
+    for attempt in range(2):
+        result=generate(repair)
+        try:
+            if len(result['text'])<20:raise RuntimeError('Lokales Modell lieferte keine ausreichende Interpretation.')
+            validate_text_interpretation(result['text'],source)
+            return {**result,'validation_attempts':attempt+1}
+        except RuntimeError:
+            if attempt:raise
+            repair=('Die vorige Formulierung wurde wegen unbelegter Aussagen verworfen. Erzeuge eine NEUE Deutung '
+                'nur anhand des Originaltexts oben. Verwende KEINE Anführungszeichen und KEINE Zitate, auch keine '
+                'übersetzten oder erfundenen Beispielsätze. Keine Audio- oder biografischen Aussagen. '
+                'Beschreibe vorsichtig in eigenen Worten die belegbare Aussage. Erfinde keine Moral.')

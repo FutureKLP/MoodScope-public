@@ -22,3 +22,12 @@ def test_incomplete_stems_are_never_reported_ready(tmp_path):
     root=separation.folder(tmp_path,'test','htdemucs');root.mkdir(parents=True)
     (root/'manifest.json').write_text(json.dumps({'sources':['vocals']}))
     assert not separation.status(tmp_path,'test','htdemucs')['ready']
+
+
+def test_empty_instrument_is_hidden_without_claiming_presence(tmp_path):
+    root=separation.folder(tmp_path,'test','htdemucs_6s');root.mkdir(parents=True)
+    sf.write(root/'vocals.wav',np.full((1000,2),.2),16000,subtype='FLOAT')
+    sf.write(root/'piano.wav',np.zeros((1000,2)),16000,subtype='FLOAT')
+    (root/'manifest.json').write_text(json.dumps({'sources':['vocals','piano']}))
+    info=separation.status(tmp_path,'test','htdemucs_6s')
+    assert info['audible_sources']==['vocals'] and info['activity']['piano']==0

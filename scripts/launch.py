@@ -34,7 +34,7 @@ def main():
     with (ROOT/'data'/'backend.log').open('a',encoding='utf-8') as log:
         try:
             if not ready():
-                backend=subprocess.Popen([sys.executable,'-m','uvicorn','backend.app:app','--host','127.0.0.1','--port','8765'],
+                backend=subprocess.Popen([sys.executable,'-m','scripts.service','--port','8765'],
                     cwd=ROOT,stdout=log,stderr=log,
                     creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
                 for _ in range(60):
@@ -44,8 +44,14 @@ def main():
                 else: raise RuntimeError('Backend startet nicht. Siehe data/backend.log')
             subprocess.run([str(exe)],cwd=ROOT,check=True)
         finally:
-            if backend:
-                backend.terminate()
+            if backend and backend.poll() is None:
+                import psutil
+                process=psutil.Process(backend.pid)
+                descendants=process.children(recursive=True)
+                for child in reversed(descendants):
+                    try:child.terminate()
+                    except psutil.Error:pass
+                if backend.poll() is None:backend.terminate()
                 try: backend.wait(timeout=10)
                 except subprocess.TimeoutExpired:
                     backend.kill();backend.wait()

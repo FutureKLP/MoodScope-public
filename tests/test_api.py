@@ -59,6 +59,49 @@ def test_external_text_provider_requires_explicit_consent(client):
     assert 'fixture-key' not in client.get('/api/providers').text
 
 
+def test_system_control_is_explicit_and_limited_to_managed_service(client,monkeypatch):
+    module=importlib.import_module('backend.app')
+    monkeypatch.setattr(module,'SYSTEM_CONTROL',None)
+    assert client.post('/api/system',json={'action':'stop'}).status_code==409
+    calls=[];monkeypatch.setattr(module,'SYSTEM_CONTROL',lambda action,force:calls.append((action,force)))
+    module.jobs['active']={'status':'running'}
+    assert client.post('/api/system',json={'action':'restart'}).status_code==409
+    assert client.post('/api/system',json={'action':'restart','force':True}).status_code==200
+    assert calls==[('restart',True)]
+
+
+def test_research_refresh_replaces_data_and_cache_delete_removes_it(client,monkeypatch):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    recording='12345678-1234-1234-1234-123456789abc';calls=[]
+    def lookup(*args):
+        calls.append(1)
+        return {'id':recording,'title':'Revision '+str(len(calls)),'credits':[]}
+    monkeypatch.setattr(module.research,'details',lookup)
+    path=f'/api/tracks/{identity}/research/{recording}'
+    assert client.post(path).json()['title']=='Revision 1'
+    assert client.post(path).json()['title']=='Revision 1' and len(calls)==1
+    assert client.post(path+'?force=true').json()['title']=='Revision 2' and len(calls)==2
+    assert client.get(f'/api/tracks/{identity}/research').json()['title']=='Revision 2'
+    client.post(f'/api/tracks/{identity}/cache/delete')
+    assert client.get(f'/api/tracks/{identity}/research').json() is None
+
+
+def test_fine_audio_resolution_gets_own_cached_result(client,monkeypatch):
+    module=importlib.import_module('backend.app');calls=[]
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    def audio(y,sr,progress,step=5):
+        calls.append(step)
+        return [{'start':0,'end':1,'valence':0,'scores':{}}]
+    monkeypatch.setattr(module.engines,'audio',audio)
+    monkeypatch.setattr(module.engines,'lyrics',lambda *a:[])
+    for resolution in [5,2,2]:
+        module.jobs['analysis']={'status':'running'}
+        module.run_job('analysis',identity,module.AnalyzeRequest(audio_resolution=resolution))
+        assert module.jobs['analysis']['status']=='done'
+    assert calls==[5,2]
+
+
 def test_full_song_removal_erases_managed_data_and_preserves_unrelated_song(client):
     module=importlib.import_module('backend.app')
     identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']

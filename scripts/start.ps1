@@ -14,7 +14,7 @@ if ($Desktop) {
     try {
         try { $health = Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 3 } catch { $health = $null }
         if (!$health) {
-            $service = Start-Process -FilePath "$projectRoot\.venv\Scripts\python.exe" -ArgumentList '-m','uvicorn','backend.app:app','--host','127.0.0.1','--port','8765' -WorkingDirectory $projectRoot -PassThru -WindowStyle Hidden
+            $service = Start-Process -FilePath "$projectRoot\.venv\Scripts\python.exe" -ArgumentList '-m','scripts.service','--port','8765' -WorkingDirectory $projectRoot -PassThru -WindowStyle Hidden
             for ($attempt=0; $attempt -lt 30; $attempt++) {
                 try { $health = Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 2; break } catch { Start-Sleep -Milliseconds 500 }
             }
@@ -30,5 +30,5 @@ if ($Desktop) {
     } finally { if ($service) { Stop-Process -Id $service.Id -ErrorAction SilentlyContinue } }
 } else {
     Write-Host 'MoodScope: http://127.0.0.1:8765 (im Browser öffnen). Mit Strg+C beenden.'
-    & .venv\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8765
+    & .venv\Scripts\python.exe -m scripts.service --port 8765
 }

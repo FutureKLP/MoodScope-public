@@ -32,6 +32,8 @@ app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=['GET','
 executor = ThreadPoolExecutor(max_workers=1)
 jobs = {}
 job_lock = threading.RLock()
+SYSTEM_CONTROL=None
+INSTANCE_ID=uuid.uuid4().hex
 
 
 @app.exception_handler(RequestValidationError)
@@ -93,7 +95,7 @@ def local_version(active):
 
 @app.get('/api/health')
 def health():
-    return {'status':'ok', 'version':'0.3.0','api_revision':3, 'device':engines.device(),
+    return {'status':'ok', 'version':'0.3.0','api_revision':3,'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -106,6 +108,22 @@ def get_settings():
 class CloudSettings(BaseModel):
     api_key: SecretStr = Field(default=SecretStr(''),max_length=300)
     free_project_confirmed: bool = False
+
+
+class SystemAction(BaseModel):
+    action:Literal['restart','stop']
+    force:bool=False
+
+
+@app.post('/api/system')
+def system_action(request:SystemAction):
+    if SYSTEM_CONTROL is None:raise HTTPException(409,'Diesen Dienst über Start-MoodScope.cmd oder python -m scripts.service starten, um Neustart und Beenden in der App zu verwenden.')
+    with job_lock:
+        running=any(j['status']=='running' for j in jobs.values())
+        if running and not request.force:raise HTTPException(409,'Ein Auftrag läuft. Für Abbruch Neustart/Beenden ausdrücklich bestätigen.')
+        diagnostics.event(DATA,'system',f'action={request.action} force={request.force} running={running}')
+        SYSTEM_CONTROL(request.action,request.force and running)
+    return {'accepted':True,'action':request.action}
 
 
 @app.post('/api/settings/cloud')
@@ -150,6 +168,16 @@ def import_path(source, name, supplied=None):
               'artist':supplied.get('artist') or (tags.get('artist',[''])[0] if tags else ''),
               'title':supplied.get('title') or (tags.get('title',[''])[0] if tags else ''),
               'source':supplied.get('source','Datei')}
+    metadata['tags']={}
+    for key in ['album','date','genre','composer','performer','tracknumber','discnumber','copyright','organization']:
+        value=supplied.get(key) or (tags.get(key,[''])[0] if tags else '')
+        if value:metadata['tags'][key]=str(value)[:1000]
+    if supplied.get('source_url'):metadata['source_url']=supplied['source_url']
+    if supplied.get('uploader'):metadata['uploader']=str(supplied['uploader'])[:200]
+    original_info=getattr(tags,'info',None)
+    metadata['original']={'format':Path(source).suffix.lstrip('.').upper(),
+        'sample_rate':getattr(original_info,'sample_rate',None),'channels':getattr(original_info,'channels',None),
+        'bitrate':getattr(original_info,'bitrate',None),'bits_per_sample':getattr(original_info,'bits_per_sample',None)}
     with db() as conn:
         previous=conn.execute('SELECT metadata FROM tracks WHERE id=?',(identity,)).fetchone()
         if previous:
@@ -474,7 +502,7 @@ def run_interpretation(job_id,identity,request):
         with db() as conn:
             detail=conn.execute('SELECT result FROM cache WHERE key=?',(f'details:{identity}:{catalog.configuration(DATA)["active"]["audio"]}:v2',)).fetchone()
         if detail:analysis['instruments']=json.loads(detail[0]).get('instruments',[])
-        key='interpretation:'+hashlib.sha256(('whole-song-v4'+identity+json.dumps(analysis,sort_keys=True)+json.dumps(request.model_dump(exclude={'force'}),sort_keys=True)+selected).encode()).hexdigest()
+        key='interpretation:'+hashlib.sha256(('whole-song-v5-repair'+identity+json.dumps(analysis,sort_keys=True)+json.dumps(request.model_dump(exclude={'force'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
         else:
@@ -667,6 +695,7 @@ def run_separation(job_id,identity,request):
         with job_lock:jobs[job_id].update(message=message,progress=value)
     try:
         result=separation.separate(DATA,identity,request.model,engines,progress)
+        result={**stem_status(identity,request.model),'cached':result.get('cached',False)}
         with job_lock:jobs[job_id].update(status='done',progress=100,message='Quellen getrennt',result=result)
     except Exception as exc:
         message='Quellentrennung fehlgeschlagen. Modell, freien Speicher und optionale Demucs-Installation prüfen.'
@@ -683,7 +712,23 @@ def separate_track(identity:str,request:SeparationRequest):
 @app.get('/api/tracks/{identity}/stems')
 def stem_status(identity:str,model:Literal['htdemucs','htdemucs_6s']='htdemucs'):
     track(identity)
-    return separation.status(DATA,identity,model)
+    info=separation.status(DATA,identity,model)
+    with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(f'stem-visibility:{identity}:{model}',)).fetchone()
+    return {**info,'hidden_sources':json.loads(row[0]) if row else []}
+
+
+class StemVisibility(BaseModel):
+    model:Literal['htdemucs','htdemucs_6s']='htdemucs'
+    hidden:list[Literal['vocals','drums','bass','other','guitar','piano']]=Field(default_factory=list,max_length=6)
+
+
+@app.post('/api/tracks/{identity}/stems/visibility')
+def save_stem_visibility(identity:str,request:StemVisibility):
+    track(identity)
+    key=f'stem-visibility:{identity}:{request.model}'
+    with db() as conn:
+        conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(request.hidden)));own(conn,key,identity)
+    return stem_status(identity,request.model)
 
 
 @app.get('/api/tracks/{identity}/mix')
@@ -747,6 +792,8 @@ def research_search(identity:str,query:ResearchQuery):
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not query.force:return {**json.loads(cached[0]),'cached':True}
         result=research.search(query.artist,query.title)
+        if query.force:
+            with db() as conn:conn.execute('DELETE FROM cache WHERE key=?',(f'research-selected:{identity}',))
         if query.auto_match and query.artist.strip() and query.title.strip():
             matches=[r for r in result['candidates'] if library.normalized(r.get('artist',''))==library.normalized(query.artist)
                 and library.normalized(r.get('title',''))==library.normalized(query.title)

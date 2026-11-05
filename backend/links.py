@@ -92,6 +92,9 @@ def download(value,directory,progress):
         if len(files)!=1 or files[0].stat().st_size>250*1024*1024: raise ValueError()
         return files[0],{'title':str(metadata.get('track') or metadata.get('title') or 'Linkimport')[:200],
                          'artist':str(metadata.get('artist') or '')[:200],
-                         'source':'YouTube' if 'youtube.com/' in url else 'SoundCloud'}
+                         'source':'YouTube' if 'youtube.com/' in url else 'SoundCloud',
+                         'source_url':url,'uploader':str(metadata.get('uploader') or '')[:200],
+                         'album':metadata.get('album') or '', 'date':metadata.get('release_date') or '',
+                         'genre':metadata.get('genre') or ''}
     except (ValueError,TypeError,OSError):
         raise RuntimeError('Link lieferte keine einzelne unterstützte Audiodatei.') from None

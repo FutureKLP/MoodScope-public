@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from backend.insights import acoustic_features,audio_evidence,validate_text_interpretation
 from backend.insights import interpretation_context,interpretation
+from backend.insights import checked_local_generation
 
 
 def test_silence_does_not_invent_bpm():
@@ -34,6 +35,21 @@ def test_invented_long_quotation_is_rejected():
     with pytest.raises(RuntimeError,match='Textzitat'):
         validate_text_interpretation('Der Erzähler sagt "Wir reisen gemeinsam durch die Welt".','Ich gehe allein durch den Regen.')
     validate_text_interpretation('Die Wörter "allein durch den Regen" können Einsamkeit andeuten.','Ich gehe allein durch den Regen.')
+
+
+def test_local_repair_keeps_evidence_checks_and_never_returns_rejected_answer():
+    prompts=[]
+    def generate(repair):
+        prompts.append(repair)
+        return {'text':'Der Text sagt "Wir reisen gemeinsam durch die Welt".' if repair is None else 'Die Aussage kann Einsamkeit ausdrücken; diese Lesart bleibt vorsichtig.'}
+    value=checked_local_generation(generate,'Ich gehe allein durch den Regen.')
+    assert value['validation_attempts']==2 and 'Wir reisen' not in value['text']
+    assert prompts[0] is None and 'KEINE Zitate' in prompts[1]
+
+
+def test_invalid_local_repair_is_also_rejected():
+    with pytest.raises(RuntimeError):
+        checked_local_generation(lambda repair:{'text':'Ich höre deutlich eine traurige Tonart.'},'Eigener Text')
 
 
 def test_missing_lyrics_returns_actionable_result_without_loading_llm(tmp_path):

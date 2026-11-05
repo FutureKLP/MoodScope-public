@@ -41,3 +41,12 @@ Weitere quantitative Bewertungen von Textdeutung, Gesangserkennung und Trennqual
 - Einzelne Songs und gesamte Bibliothek lassen sich getrennt vom Cache entfernen. Auf dem zuvor laufenden Dienst fehlten diese Endpunkte noch; dieser veraltete Dienst wurde ersetzt. Versionsprüfung und Freigabe der Player-Datei vor dem Löschen ergänzt.
 
 Automatische Metadatenrecherche, vollständiges Ersetzen recherchierter Angaben, Instrument-Ausblendung, Neustart-/Beenden-Steuerung und die abschließende Brave-Prüfung werden noch vervollständigt. Der native Build wird nach diesen weiteren Oberflächenänderungen erneut erstellt.
+
+## Native Bedienprüfung und Dienststeuerung
+
+- Automatische Recherche, erzwungenes Ersetzen recherchierter Metadaten und deren gezielte Cache-Löschung implementiert und durch Regressionstests geprüft. Import-Tags und Originalformatwerte werden separat angezeigt.
+- Überwachter Backend-Starter ergänzt. Neustart und Beenden betreffen nur MoodScope und seine eigenen Unterprozesse. Ein direkt gestartetes Uvicorn aktiviert diese Bedienfunktionen nicht.
+- Neuer nativer Windows-Build mit Dienststeuerung erfolgreich erstellt und tatsächlich geöffnet. MP3 und FLAC über den nativen Dateidialog importiert, echte CUDA-Analysen und zwei Kurven angezeigt. Wiedergabe, Pause und Biggest-Split-Sprung geprüft. Lokale Instrumenthinweise und Metadaten-Neurecherche bedient.
+- Neustart über den Knopf im nativen Fenster tatsächlich ausgeführt. Bibliothek blieb erhalten; Wiederöffnung lud eine gespeicherte Analyse ohne neue Modellinferenz.
+- Bei der nativen Gesamtdeutung erzeugte Qwen 1.5B ein unbelegtes Zitat. Die Belegprüfung hat die Antwort korrekt verworfen. Ein begrenzter zweiter lokaler Formulierungsversuch mit unveränderter Belegprüfung wurde ergänzt; 91 Python-Tests bestanden. Derselbe native Fall wurde danach erfolgreich mit einer Gesamtdeutung abgeschlossen. Es gibt keine automatische kostenpflichtige Anbieter-Wiederholung.
+- Native Hörstudio-Prüfung und Brave-Prüfung bleiben in dieser Runde noch offen. Private Testtitel, Lyrics und Bildschirmaufnahmen werden nicht veröffentlicht.

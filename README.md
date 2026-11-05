@@ -166,6 +166,12 @@ Ein Diagnose-Set mit zwölf selbst geschriebenen deutschen und englischen Fälle
 
 ## Tests und Entwicklung
 
+**Neustarten / Beenden:** Die Knöpfe steuern den eigenen MoodScope-Dienst und dessen Modellprozesse. Sie benötigen den Projektstarter oder `python -m scripts.service --port 8765`. Ein direkt gestartetes Uvicorn bietet diese Steuerung bewusst nicht an. Beim Neustart wird die Wiedergabe beendet, der Backend-Prozess ersetzt und die Oberfläche neu geladen; gespeicherte Daten bleiben erhalten. Beenden schließt zusätzlich das native Fenster. Im Browser bleibt eine Beendet-Seite stehen; andere Browser-Tabs werden nicht geschlossen.
+
+Songdetails enthalten zusätzlich verfügbare Originalformat-/Tagangaben. Öffentliche Katalogdaten werden beim Import anhand geeigneter Song-Tags gesucht; mehrdeutige Aufnahmen müssen bestätigt werden. **Metadaten neu recherchieren** fragt die Dienste erneut ab und ersetzt die bisherigen Recherchewerte; **Ausgewählte Aufnahme neu recherchieren** aktualisiert die bestätigte Aufnahme. Eigene Angaben bleiben getrennt. Der Analyse-Cache umfasst auch recherchierte Aufnahmeinformationen und die gespeicherte Auswahl.
+
+Im Hörstudio werden nahezu leere Modellspuren anhand ihrer relativen Energie ausgeblendet. Das ist kein Nachweis realer Instrumentanwesenheit. Falsch zugeordnete Gruppen lassen sich manuell ausblenden und wieder anzeigen.
+
 ```powershell
 .venv\Scripts\python.exe -m pytest -q
 npm test
