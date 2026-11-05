@@ -30,6 +30,12 @@ def test_whole_song_is_distinct_from_instrumental_gap():
     assert interpretation_context({'source_lyrics':'Eigener Text ohne Zeitmarken'},None)['has_text']
 
 
+def test_invented_long_quotation_is_rejected():
+    with pytest.raises(RuntimeError,match='Textzitat'):
+        validate_text_interpretation('Der Erzähler sagt "Wir reisen gemeinsam durch die Welt".','Ich gehe allein durch den Regen.')
+    validate_text_interpretation('Die Wörter "allein durch den Regen" können Einsamkeit andeuten.','Ich gehe allein durch den Regen.')
+
+
 def test_missing_lyrics_returns_actionable_result_without_loading_llm(tmp_path):
     result=interpretation(tmp_path,None,{'audio':[],'lyrics':[]},{})
     assert result['missing_lyrics'] and 'Texterkennung' in result['text']

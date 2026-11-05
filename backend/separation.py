@@ -18,6 +18,18 @@ def status(data,identity,model):
     try:
         info=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
         if not all((root/(s+'.wav')).is_file() for s in info['sources']):raise ValueError()
+        if 'activity' not in info:
+            energy={}
+            for source in info['sources']:
+                squared=0.;count=0
+                with sf.SoundFile(root/(source+'.wav')) as audio:
+                    for block in audio.blocks(blocksize=65536,dtype='float32'):
+                        squared+=float(np.square(block,dtype='float64').sum());count+=block.size
+                energy[source]=squared/max(1,count)
+            total=sum(energy.values())
+            info['activity']={s:float(v/max(1e-12,total)) for s,v in energy.items()}
+            info['audible_sources']=[s for s in info['sources'] if info['activity'][s]>=.005]
+            (root/'manifest.json').write_text(json.dumps(info),encoding='utf-8')
         return {**info,'ready':True,'cached':True}
     except (OSError,ValueError,KeyError):
         return {'ready':False,'model':model,'sources':[]}
@@ -55,7 +67,7 @@ def separate(data,identity,model_name,engine,progress):
             'duration':stems.shape[-1]/model.samplerate,'cached':False,'ready':True,
             'note':'Geschätzte Quellen mit möglichen Artefakten und Übersprechen. Gesang umfasst alle Stimmen; einzelne Sänger werden nicht getrennt. Gitarre/Klavier im 6-Spur-Modell sind experimentell.'}
         (root/'manifest.json').write_text(json.dumps(info),encoding='utf-8')
-        return info
+        return {**status(data,identity,model_name),'cached':False}
     finally:
         del model,mixture
         import gc

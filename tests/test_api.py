@@ -59,6 +59,41 @@ def test_external_text_provider_requires_explicit_consent(client):
     assert 'fixture-key' not in client.get('/api/providers').text
 
 
+def test_full_song_removal_erases_managed_data_and_preserves_unrelated_song(client):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    client.post(f'/api/tracks/{identity}/notes',json={'interpretation':'Own note'})
+    with module.db() as conn:
+        key='interpretation:fixture';conn.execute('INSERT INTO cache VALUES (?,?)',(key,'{}'));module.own(conn,key,identity)
+        conn.execute('INSERT INTO cache VALUES (?,?)',('unrelated-record','{"keep":true}'))
+        alias='b'*64
+        conn.execute('INSERT INTO tracks VALUES (?,?)',(alias,json.dumps({'id':alias,'name':'alias.wav','duration':1,'reuse_source_id':identity})))
+    (module.DATA/(alias+'.wav')).write_bytes(b'managed alias fixture')
+    stems=module.DATA/'stems'/identity/'htdemucs';stems.mkdir(parents=True);(stems/'vocals.wav').write_bytes(b'fixture')
+    result=client.post(f'/api/tracks/{identity}/delete')
+    assert result.status_code==200 and result.json()['original_source_preserved']
+    assert result.json()['removed_import_variants']==2 and not (module.DATA/(alias+'.wav')).exists()
+    assert client.get('/api/library').json()['tracks']==[]
+    assert not (module.DATA/(identity+'.wav')).exists() and not (module.DATA/'stems'/identity).exists()
+    with module.db() as conn:
+        assert conn.execute('SELECT key FROM cache WHERE key=?',('unrelated-record',)).fetchone()
+        assert not conn.execute('SELECT key FROM cache WHERE key=?',('interpretation:fixture',)).fetchone()
+        assert not conn.execute('SELECT key FROM cache WHERE key=?',(f'notes:{identity}',)).fetchone()
+
+
+def test_entire_library_removal_preserves_model_settings(client):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    client.post(f'/api/tracks/{identity}/notes',json={'interpretation':'Own note'})
+    settings=module.DATA/'model-settings.json';settings.write_text('{"active":{}}')
+    result=client.post('/api/library/delete')
+    assert result.status_code==200 and result.json()['removed_songs']==1
+    assert result.json()['original_sources_preserved']
+    assert client.get('/api/library').json()['tracks']==[] and settings.exists()
+    assert not (module.DATA/(identity+'.wav')).exists()
+    with module.db() as conn:assert not conn.execute('SELECT key FROM cache').fetchall()
+
+
 def test_research_requires_explicit_recording_choice_and_restores_it(client,monkeypatch):
     module=importlib.import_module('backend.app')
     identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
@@ -80,6 +115,7 @@ def test_failures_have_diagnostic_id_but_no_exception_payload(client,monkeypatch
     assert 'Fehler-ID:' in module.jobs['details']['message']
     report=client.get('/api/diagnostics').json()
     assert report['recent'] and 'PRIVATE LYRICS' not in json.dumps(report)
+
 
 
 def test_import_real_audio_and_serve_normalized_file(client):

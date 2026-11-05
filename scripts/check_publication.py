@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 GIT = shutil.which('git.exe') or shutil.which('git')
 ALLOWED_ROOTS = {'.github', '.githooks', 'backend', 'docs', 'scripts', 'src', 'src-tauri', 'tests'}
-ALLOWED_TOP = {'.gitattributes', '.gitignore', 'README.md', 'Start-MoodScope.cmd',
+ALLOWED_TOP = {'.gitattributes', '.gitignore', 'AGENTS.md','README.md', 'Start-MoodScope.cmd',
                'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts'}
 DENIED_PARTS = {'.git', '.venv', '.tools', 'node_modules', 'dist', 'data', 'models',
                 '__pycache__', '.pytest_cache', 'target', 'gen', 'for test only music files'}
@@ -40,6 +40,7 @@ def git(*args):
 
 
 def path_problem(name):
+    if name=='.cursor/rules/github-checkpoints.mdc':return None
     path=PurePosixPath(name)
     if any(part.lower() in DENIED_PARTS for part in path.parts): return 'excluded directory'
     if path.name.startswith('.env') and path.name != '.env.example': return 'environment file'

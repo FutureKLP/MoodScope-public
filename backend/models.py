@@ -35,7 +35,7 @@ class Engines:
             raise RuntimeError('CUDA requested but no usable GPU is available')
         return 'cpu'
 
-    def audio(self, y, sr, progress):
+    def audio(self, y, sr, progress,step=5):
         import numpy as np
         import torch
         import librosa
@@ -61,7 +61,7 @@ class Engines:
         duration = len(y) / sr
         result = []
         # Non-overlapping display bins, each estimated using centered 10-second context.
-        for span in analysis_grid(duration):
+        for span in analysis_grid(duration,step):
             start,end=span['start'],span['end']
             center=(start+end)/2
             context_start=max(0.,center-5);context_end=min(duration,center+5)
@@ -119,20 +119,9 @@ class Engines:
                            'context_weight':context_weight})
         return output
 
-    def transcribe(self, path, progress):
-        from faster_whisper import WhisperModel
-        progress('Whisper: Transkribiere Gesang lokal', 5)
-        # CPU default: CTranslate2 CUDA requires separate compatible cuDNN runtime.
-        device = os.environ.get('MOODSCOPE_WHISPER_DEVICE', 'cpu')
-        from . import catalog
-        source=catalog.model_source(self.data,'whisper')
-        model = WhisperModel(source, device=device,
-                             compute_type='float16' if device == 'cuda' else 'int8',
-                             download_root=str(ROOT / 'models' / 'whisper'))
-        segments, _ = model.transcribe(str(path), beam_size=5, vad_filter=False,
-            condition_on_previous_text=False, word_timestamps=True)
-        return [{'start': s.start, 'end': s.end, 'text': s.text.strip()}
-                for s in segments if s.text.strip()]
+    def transcribe(self,path,progress,quality='standard',language=None):
+        from .transcription import transcribe
+        return transcribe(self,path,progress,quality,language)
 
     def instruments(self,y,sr,progress):
         import numpy as np

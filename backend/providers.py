@@ -9,6 +9,7 @@ import httpx
 
 _keys={}
 _lock=threading.Lock()
+_audio_profile=None
 
 
 def endpoint(value):
@@ -35,7 +36,10 @@ def status(data):
 
 def save(data,request):
     p={'id':request.get('id') or uuid.uuid4().hex,'name':request['name'].strip(),
-        'protocol':request['protocol'],'base_url':endpoint(request['base_url']),'model':request['model'].strip()}
+        'protocol':request['protocol'],'base_url':endpoint(request['base_url']),'model':request['model'].strip(),
+        'free_project_confirmed':bool(request.get('free_project_confirmed',False))}
+    if p['protocol']=='gemini' and (p['base_url']!='https://generativelanguage.googleapis.com/v1beta' or not __import__('re').fullmatch(r'[A-Za-z0-9_.-]+',p['model'])):
+        raise ValueError('Gemini benötigt die offizielle v1beta-Basis-URL und eine gültige Modell-ID.')
     if not p['name'] or not p['model']:raise ValueError('Name und Modell-ID fehlen.')
     with _lock:
         values=[v for v in profiles(data) if v['id']!=p['id']]+[p]
@@ -48,10 +52,14 @@ def save(data,request):
 
 
 def remove(data,identity):
+    global _audio_profile
     with _lock:
         values=[p for p in profiles(data) if p['id']!=identity]
         (Path(data)/'providers.json').write_text(json.dumps(values),encoding='utf-8')
         _keys.pop(identity,None)
+        if _audio_profile==(str(Path(data).resolve()),identity):
+            from . import cloud
+            cloud.configure('',False);_audio_profile=None
 
 
 def profile(data,identity):
@@ -64,7 +72,13 @@ def generate(data,identity,prompt):
     p=profile(data,identity)
     with _lock:key=_keys.get(identity,'')
     base=endpoint(p['base_url'])
-    if p['protocol']=='anthropic':
+    if not key and (p['protocol'] in {'gemini','anthropic'} or urlsplit(base).hostname in {'api.openai.com','api.deepseek.com'}):
+        raise RuntimeError('API-Key für dieses Anbieterprofil fehlt. In Modelle & API den Sitzungs-Key setzen oder ein lokales Modell wählen.')
+    if p['protocol']=='gemini':
+        url=base+'/models/'+p['model']+':generateContent'
+        headers={'x-goog-api-key':key}
+        payload={'contents':[{'role':'user','parts':[{'text':prompt}]}],'generationConfig':{'maxOutputTokens':1800}}
+    elif p['protocol']=='anthropic':
         url=base+'/messages'
         headers={'x-api-key':key,'anthropic-version':'2023-06-01'}
         payload={'model':p['model'],'max_tokens':1800,'messages':[{'role':'user','content':prompt}]}
@@ -80,7 +94,11 @@ def generate(data,identity,prompt):
     if response.status_code!=200:raise RuntimeError(f'Modellserver meldet HTTP {response.status_code}. Key, Modell-ID, Kontingent und API-Protokoll prüfen; keine automatische Wiederholung.')
     try:
         value=response.json()
-        if p['protocol']=='anthropic':
+        if p['protocol']=='gemini':
+            candidate=value['candidates'][0]
+            text=''.join(b.get('text','') for b in candidate['content']['parts'] if not b.get('thought'))
+            cut=candidate.get('finishReason')=='MAX_TOKENS'
+        elif p['protocol']=='anthropic':
             text=''.join(b.get('text','') for b in value['content'] if b.get('type')=='text')
             cut=value.get('stop_reason')=='max_tokens'
         else:
@@ -88,3 +106,17 @@ def generate(data,identity,prompt):
         if not isinstance(text,str) or len(text.strip())<20 or len(text)>20000:raise ValueError()
         return {'text':text.strip(),'model':p['model'],'provider':p['name'],'output_truncated':cut}
     except (ValueError,KeyError,IndexError,TypeError):raise RuntimeError('Server lieferte keine gültige Textantwort; keine Ersatzdeutung erzeugt.') from None
+
+
+def activate_audio(data,identity):
+    global _audio_profile
+    from . import cloud
+    p=profile(data,identity)
+    if p['protocol']!='gemini':raise ValueError('Dieses Profil unterstützt hier nur Textdeutung, keine Audioanalyse.')
+    if not p.get('free_project_confirmed'):raise ValueError('Für die optionale Gemini-Audioanalyse ein Projekt ohne Abrechnung bestätigen.')
+    with _lock:key=_keys.get(identity,'')
+    if not key:raise ValueError('API-Key für dieses Profil fehlt in der aktuellen Sitzung.')
+    cloud.configure(key,True)
+    cloud.MODEL=p['model']
+    _audio_profile=(str(Path(data).resolve()),identity)
+    return {'configured':True,'provider':p['name'],'model':p['model']}

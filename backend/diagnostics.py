@@ -39,7 +39,11 @@ def failure(data,operation,exception):
     while trace:
         frames.append(f'{Path(trace.tb_frame.f_code.co_filename).name}:{trace.tb_lineno}:{trace.tb_frame.f_code.co_name}')
         trace=trace.tb_next
-    logger.error('id=%s operation=%s exception=%s frames=%s',reference,operation,type(exception).__name__,' > '.join(frames))
+    response=getattr(exception,'response',None)
+    status=getattr(response,'status_code',None)
+    code=getattr(exception,'winerror',None) or getattr(exception,'errno',None)
+    logger.error('id=%s operation=%s exception=%s http_status=%s system_code=%s frames=%s',
+        reference,operation,type(exception).__name__,status if isinstance(status,int) else '-',code if isinstance(code,int) else '-',' > '.join(frames))
     return reference
 
 

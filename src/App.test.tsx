@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
-import {cleanup,render,screen,waitFor} from '@testing-library/react';
+import {cleanup,render,screen,waitFor,fireEvent} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {App} from './main';
 
@@ -12,9 +12,12 @@ const stored={audio:[{start:0,end:5,valence:.2,scores:{},confidence:.3}],lyrics:
 let requests:Array<{path:string;body:any}>;
 let pendingJob:Promise<any>|null;
 let pendingNotes:Promise<any>|null;
+let savedInterpretation:any;
+let providerProfiles:any[];
 beforeEach(()=>{
   requests=[];
   pendingJob=null;pendingNotes=null;
+  savedInterpretation={};providerProfiles=[];
   vi.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});
   Element.prototype.scrollIntoView=vi.fn();
   vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
@@ -26,6 +29,11 @@ beforeEach(()=>{
     else if(path==='/tracks')value=track;
     else if(path.startsWith('/tracks/test-song/analysis'))value=stored;
     else if(path==='/tracks/test-song/notes')value=body||await(pendingNotes||Promise.resolve(notes));
+    else if(path.startsWith('/tracks/test-song/interpretation'))value=savedInterpretation;
+    else if(path==='/tracks/test-song/interpret')value={job_id:'test-insight'};
+    else if(path==='/jobs/test-insight')value={status:'done',progress:100,result:savedInterpretation};
+    else if(path.startsWith('/tracks/test-song/stems'))value={ready:true,sources:['drums','bass','other','vocals'],note:'Estimated sources'};
+    else if(path==='/providers')value={profiles:providerProfiles};
     else if(path==='/tracks/link')value={job_id:'test-import'};
     else if(path==='/jobs/test-import')value=await(pendingJob||Promise.resolve({status:'done',progress:100,result:track}));
     else if(path==='/library')value={tracks:[{...track,analysis_modes:['local']}]};
@@ -37,6 +45,53 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it('uses a shared profile editor for Gemini, Claude, OpenAI, DeepSeek and local servers',async()=>{
+    render(<App/>);
+    await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
+    await screen.findByLabelText('KI-Server API-Key');
+    expect(screen.queryByText('Optionale Online-KI: Google Gemini')).toBeNull();
+    for(const label of ['Google Gemini','OpenAI / ChatGPT','Anthropic Claude','DeepSeek','Ollama','LM Studio'])expect(screen.getByRole('button',{name:label})).toBeTruthy();
+    await userEvent.click(screen.getByRole('button',{name:'DeepSeek'}));
+    expect((screen.getByLabelText('KI-Server Basis-URL') as HTMLInputElement).value).toBe('https://api.deepseek.com');
+    expect(requests.some(r=>r.path==='/providers'&&r.body)).toBe(false);
+  });
+
+  it('restores saved AI interpretation and explicitly requests regeneration',async()=>{
+    savedInterpretation={text:'Stored complete song reading.',model:'test model',time:null,cached:true,audio_evidence:'Measured audio evidence.'};
+    render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    await userEvent.click(screen.getByRole('button',{name:'Interpretation'}));
+    expect(await screen.findByText('Stored complete song reading.')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button',{name:'Gesamtdeutung neu erstellen'}));
+    await waitFor(()=>expect(requests.some(r=>r.path.endsWith('/interpret')&&r.body.force===true&&r.body.time===null)).toBe(true));
+  });
+
+  it('preserves the playback position when switching to a separated vocal source',async()=>{
+    render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    await userEvent.click(screen.getByRole('button',{name:'Hörstudio'}));
+    await screen.findByRole('button',{name:'Nur Gesang'});
+    const audio=document.querySelector('audio')!;audio.currentTime=7;
+    await userEvent.click(screen.getByRole('button',{name:'Nur Gesang'}));
+    expect(audio.src).toContain('sources=vocals');
+    audio.currentTime=0;fireEvent.loadedMetadata(audio);
+    expect(audio.currentTime).toBe(7);
+  });
+
+  it('requires confirmation before removing a song or the entire library',async()=>{
+    const confirm=vi.spyOn(window,'confirm').mockReturnValue(false);
+    render(<App/>);
+    await userEvent.click(screen.getByRole('button',{name:'Bibliothek'}));
+    await screen.findByRole('button',{name:'Song vollständig entfernen'});
+    await userEvent.click(screen.getByRole('button',{name:'Song vollständig entfernen'}));
+    expect(requests.some(r=>r.path.endsWith('/delete'))).toBe(false);
+    confirm.mockReturnValue(true);
+    await userEvent.click(screen.getByRole('button',{name:'Gesamte Bibliothek entfernen'}));
+    await waitFor(()=>expect(requests.some(r=>r.path==='/library/delete')).toBe(true));
+    expect(await screen.findByText('Noch keine Songs importiert.')).toBeTruthy();
+  });
   it('defaults to local mode, separates areas, and initializes actual player volume',async()=>{
     render(<App/>);
     expect((screen.getByLabelText('Analysemodus') as HTMLSelectElement).value).toBe('local');
@@ -73,7 +128,7 @@ describe('workspace flows',()=>{
     await userEvent.click(screen.getByRole('button',{name:'Öffnen'}));
     await screen.findByText(/keine erneute KI-Inferenz/);
     await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
-    expect(await screen.findByLabelText('Gemini API-Key')).toBeTruthy();
+    expect(await screen.findByLabelText('KI-Server API-Key')).toBeTruthy();
     expect(requests.some(r=>r.path==='/settings/cloud')).toBe(false);
   });
 
@@ -84,7 +139,7 @@ describe('workspace flows',()=>{
     await userEvent.type(screen.getByLabelText('YouTube- oder SoundCloud-Link'),'https://youtu.be/BaW_jenozKc');
     await userEvent.click(screen.getByRole('button',{name:'Link importieren'}));
     await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
-    await screen.findByLabelText('Gemini API-Key');
+    await screen.findByLabelText('KI-Server API-Key');
     expect(screen.getByRole('button',{name:'+ Song importieren'}).hasAttribute('disabled')).toBe(true);
     finish({status:'done',progress:100,message:'Import complete',result:track});
     await waitFor(()=>expect(screen.getByRole('button',{name:'+ Song importieren'}).hasAttribute('disabled')).toBe(false));

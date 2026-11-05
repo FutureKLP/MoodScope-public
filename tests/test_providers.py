@@ -35,3 +35,20 @@ def test_provider_errors_never_echo_response_body(tmp_path,monkeypatch):
     monkeypatch.setattr(providers.httpx,'post',lambda *a,**k:SimpleNamespace(status_code=401,text='PRIVATE RESPONSE'))
     with pytest.raises(RuntimeError,match='HTTP 401') as error:providers.generate(tmp_path,profile['id'],'test')
     assert 'PRIVATE' not in str(error.value)
+
+
+def test_gemini_profile_uses_native_api_and_removal_clears_audio_key(tmp_path,monkeypatch):
+    from backend import cloud
+    p=providers.save(tmp_path,{'name':'Gemini fixture','protocol':'gemini','base_url':'https://generativelanguage.googleapis.com/v1beta',
+        'model':'gemini-test','api_key':'fixture-key','free_project_confirmed':True})
+    monkeypatch.setattr(cloud,'MODEL','gemini-test')
+    def post(url,headers,json,**kwargs):
+        assert url.endswith('/models/gemini-test:generateContent')
+        assert headers['x-goog-api-key']=='fixture-key'
+        return SimpleNamespace(status_code=200,json=lambda:{'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':'Eine vorsichtige vollständige Testdeutung.'}]}}]})
+    monkeypatch.setattr(providers.httpx,'post',post)
+    assert providers.generate(tmp_path,p['id'],'Authored text')['text']
+    providers.activate_audio(tmp_path,p['id'])
+    assert cloud.settings()['configured']
+    providers.remove(tmp_path,p['id'])
+    assert not cloud.settings()['configured']

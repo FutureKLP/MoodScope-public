@@ -2,6 +2,22 @@
 import re
 
 
+def text_coverage(lines,duration):
+    intervals=sorted((max(0.,r['start']),min(duration,r['end'])) for r in lines if r['end']>r['start'])
+    merged=[]
+    for start,end in intervals:
+        if merged and start<=merged[-1][1]:merged[-1][1]=max(merged[-1][1],end)
+        else:merged.append([start,end])
+    gaps=[];previous=0.
+    for start,end in merged:
+        if start-previous>=5:gaps.append({'start':previous,'end':start})
+        previous=end
+    if duration-previous>=5:gaps.append({'start':previous,'end':duration})
+    return {'segments':len(lines),'words':sum(len(r.get('text','').split()) for r in lines),
+        'covered_seconds':sum(end-start for start,end in merged),'duration':duration,'gaps':gaps,
+        'note':'Zeitbereiche mit Text sind keine Wortgenauigkeit. Lücken können Instrumentalpausen oder nicht erkannte Stimmen sein.'}
+
+
 def analysis_grid(duration: float, hop: float = 5.) -> list[dict]:
     if duration <= 0 or hop <= 0:
         raise ValueError('Duration and hop must be positive')

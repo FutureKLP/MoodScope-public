@@ -1,0 +1,18 @@
+from types import SimpleNamespace as Item
+from backend.transcription import owned_segments
+from backend.core import text_coverage
+
+
+def test_overlap_assigns_each_word_to_one_time_window_and_retains_uncertainty():
+    words=[Item(start=2,end=3,word=' First',probability=.4),Item(start=5,end=6,word=' next',probability=.7)]
+    segment=Item(words=words,start=2,end=6,text=' First next',avg_logprob=-1.1,compression_ratio=1.,no_speech_prob=.1)
+    first=owned_segments([segment],20,20,24,50)
+    second=owned_segments([segment],20,24,48,50)
+    assert first[0]['text']=='First' and second[0]['text']=='next'
+    assert first[0]['uncertain'] and first[0]['start']==22 and second[0]['start']==25
+
+
+def test_coverage_merges_overlaps_without_claiming_word_accuracy():
+    report=text_coverage([{'start':0,'end':4,'text':'Own text'},{'start':3,'end':6,'text':'More words'}],20)
+    assert report['covered_seconds']==6 and report['gaps']==[{'start':6,'end':20}]
+    assert 'keine Wortgenauigkeit' in report['note']
