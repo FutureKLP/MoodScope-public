@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+if [ -x .venv/Scripts/python.exe ]; then
+  .venv/Scripts/python.exe scripts/check_publication.py --ref HEAD
+elif [ -x .venv/bin/python ]; then
+  .venv/bin/python scripts/check_publication.py --ref HEAD
+else
+  python3 scripts/check_publication.py --ref HEAD
+fi

@@ -1,0 +1,14 @@
+fastapi>=0.115,<1
+uvicorn>=0.34,<1
+python-multipart>=0.0.20
+librosa>=0.11,<0.12
+transformers>=4.48,<5
+huggingface-hub>=0.30,<1
+torch>=2.6
+soundfile>=0.13
+httpx>=0.28
+faster-whisper>=1.1
+imageio-ffmpeg>=0.6
+sentencepiece>=0.2
+mutagen>=1.47,<2
+pytest>=8
