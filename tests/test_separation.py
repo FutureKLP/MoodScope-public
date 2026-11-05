@@ -31,3 +31,15 @@ def test_empty_instrument_is_hidden_without_claiming_presence(tmp_path):
     (root/'manifest.json').write_text(json.dumps({'sources':['vocals','piano']}))
     info=separation.status(tmp_path,'test','htdemucs_6s')
     assert info['audible_sources']==['vocals'] and info['activity']['piano']==0
+
+def test_source_gains_are_exact_order_independent_and_reject_unsafe_values(tmp_path):
+    root=separation.folder(tmp_path,'test','htdemucs');root.mkdir(parents=True)
+    sf.write(root/'vocals.wav',np.full((480,2),.1),48000,subtype='FLOAT')
+    sf.write(root/'drums.wav',np.full((480,2),.2),48000,subtype='FLOAT')
+    (root/'manifest.json').write_text(json.dumps({'sources':['vocals','drums'],'sample_rate':48000}))
+    path=separation.mix(tmp_path,'test','htdemucs',['vocals','drums'],[1,.5])
+    assert np.allclose(sf.read(path)[0],.2)
+    assert separation.mix(tmp_path,'test','htdemucs',['drums','vocals'],[.5,1])==path
+    assert np.allclose(sf.read(separation.mix(tmp_path,'test','htdemucs',['vocals'],[0]))[0],0)
+    for gains in [[float('nan')],[float('inf')],[-1],[1.1],[]]:
+        with pytest.raises(ValueError):separation.mix(tmp_path,'test','htdemucs',['vocals'],gains)

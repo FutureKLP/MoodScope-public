@@ -208,3 +208,9 @@ Vibe-coded mit Codex. Modellschätzungen und generierte Interpretationen bleiben
 Bekannte Sicherheitsgrenzen und noch offene Bibliotheksmeldungen: [Sicherheitsstand](docs/SECURITY.md).
 
 Native Release-Builds müssen die Oberfläche einbetten. `npm run tauri build -- --no-bundle` übernimmt dies; ein direkter Cargo-Aufruf benötigt `--features tauri/custom-protocol`. Ein Build-Schutz verhindert Release-Dateien, die versehentlich den Entwicklungsserver benötigen.
+
+## Hörstudio, Analysebericht und Atmosphäre
+
+Ausgeblendete Spuren bleiben im Bereich **Ausgeblendete Spuren** direkt wiederherstellbar. Das gilt auch für automatisch als leise eingestufte Gruppen. Pro erzeugter Spur lassen sich Pegel setzen und mit **Mix anwenden** gemeinsam anhören. **Demucs Fine-tuned** bietet ein aufwendigeres Vier-Gruppen-Ensemble; die Sechs-Gruppen-Variante ergänzt experimentelle Gitarre/Klavier. Katalogeinträge erzeugen keine zusätzlichen Audiospuren.
+
+**Methode & Werte** zeigt pro Song und Abschnitt die gespeicherten Ähnlichkeiten, Kontextfenster, Gewichtung und Valenzrechnung. Messwerte wie BPM und spektrale Helligkeit sind getrennt von dieser Formel. **Atmosphäre** im Player schaltet ein sphärisches Visual ein; Farben folgen den Mood-Werten, Bewegung der Wiedergabe und gespeicherten RMS-Energie. Kein Live-Frequenzspektrum. Reduzierte Bewegung wird respektiert.

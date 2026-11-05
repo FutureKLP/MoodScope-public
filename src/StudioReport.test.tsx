@@ -1,0 +1,54 @@
+// @vitest-environment jsdom
+import React from 'react';
+import {beforeEach,afterEach,it,expect,vi} from 'vitest';
+import {render,screen,within,waitFor,cleanup,fireEvent} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {SourceStudio} from './SongTools';
+import {AnalysisReport} from './AnalysisReport';
+import {Atmosphere} from './Atmosphere';
+import {setLanguage} from './i18n';
+const track={id:'authored',name:'Authored fixture',duration:10};
+let info:any,calls:any[];
+beforeEach(()=>{setLanguage('de');calls=[];info={ready:true,sources:['vocals','piano','drums'],audible_sources:['vocals','drums'],hidden_sources:[],shown_sources:[],activity:{vocals:.8,drums:.2,piano:0}};vi.stubGlobal('fetch',vi.fn(async(url,init)=>{const body=init?.body?JSON.parse(init.body):null;calls.push({url:String(url),body});if(String(url).includes('/visibility'))info={...info,hidden_sources:body.hidden,shown_sources:body.shown};return new Response(JSON.stringify(String(url).includes('/stems')?info:null),{status:200})}));});
+afterEach(()=>{cleanup();vi.unstubAllGlobals()});
+it('restores manually hidden and automatically quiet stems, including after remount',async()=>{
+ const source=vi.fn(),props={track,busy:false,perform:async(f:()=>Promise<void>)=>f(),job:vi.fn(),onSource:source};
+ const view=render(<SourceStudio {...props}/>);
+ await screen.findByRole('button',{name:'Klavier · Wieder anzeigen'});
+ const vocals=screen.getByRole('heading',{name:'Gesang / Stimmen'}).closest('article')!;
+ await userEvent.click(within(vocals).getByRole('button',{name:'Spur ausblenden'}));
+ await screen.findByRole('button',{name:'Gesang / Stimmen · Wieder anzeigen'});
+ await userEvent.click(screen.getByRole('button',{name:'Gesang / Stimmen · Wieder anzeigen'}));
+ await screen.findByRole('heading',{name:'Gesang / Stimmen'});
+ await userEvent.click(screen.getByRole('button',{name:'Klavier · Wieder anzeigen'}));
+ await screen.findByRole('heading',{name:'Klavier'});
+ view.unmount();render(<SourceStudio {...props}/>);
+ expect(await screen.findByRole('heading',{name:'Klavier'})).toBeTruthy();
+ expect(info.shown_sources).toContain('piano');
+ expect(screen.queryByRole('button',{name:'Klavier · Wieder anzeigen'})).toBeNull();
+});
+it('applies actual per-source gains and keeps remaining selected sources when hiding one',async()=>{
+ const source=vi.fn();render(<SourceStudio track={track} busy={false} perform={async f=>f()} job={vi.fn()} onSource={source}/>);
+ await screen.findByRole('heading',{name:'Gesang / Stimmen'});
+ for(const name of ['Gesang / Stimmen','Schlagzeug'])await userEvent.click(within(screen.getByRole('heading',{name}).closest('article')!).getByRole('button',{name:'Zum Mix hinzufügen'}));
+ fireEvent.change(screen.getByLabelText('Spurpegel Schlagzeug'),{target:{value:'50'}});
+ await userEvent.click(screen.getByRole('button',{name:'Mix anwenden'}));
+ expect(source.mock.calls.at(-1)[0]).toContain('gains=1,0.5');
+ await userEvent.click(within(screen.getByRole('heading',{name:'Gesang / Stimmen'}).closest('article')!).getByRole('button',{name:'Spur ausblenden'}));
+ await waitFor(()=>expect(source.mock.calls.at(-1)[0]).toContain('sources=drums&gains=0.5'));
+});
+it('shows the actual weighted calculation, context and seek selection without inventing metadata',async()=>{
+ const seek=vi.fn();const analysis:any={audio:[{start:0,end:5,valence:-.2,scores:{joy:.4,sadness:.6},confidence:.1,rms:.2,context_start:0,context_end:7.5},{start:5,end:10,valence:0,scores:{}}],lyrics:[],models:{audio:'authored model'},device:'cpu',cached:true,method:'fixture',audio_method:{id:'clap-prompt-ensemble-v4',recording:'recorded',grid_seconds:5,context_seconds:10,labels:[{id:'joy',valence_weight:1,arousal_weight:.8,prompts:['Authored positive description']},{id:'sadness',valence_weight:-1,arousal_weight:.3,prompts:['Authored negative description']} ]}};
+ render(<AnalysisReport track={track} analysis={analysis} time={0} onSeek={seek} onReanalyse={vi.fn()} busy={false}/>);
+ expect(screen.getByText('0.4000 × 1 + 0.6000 × -1 = -0.2000')).toBeTruthy();
+ await userEvent.selectOptions(screen.getByLabelText('Abschnitt auswählen'),'1');expect(seek).toHaveBeenCalledWith(5);
+ expect(screen.getByText(/gehen nicht direkt in die CLAP/)).toBeTruthy();
+});
+it('pauses atmospheric animation with playback and uses analysed valence without altering audio',()=>{
+ setLanguage('en');const {rerender}=render(<Atmosphere audio={{start:0,end:5,valence:-.5,scores:{},rms:.1}} playing={false}/>);
+ expect(screen.getByLabelText('Atmosphere player').classList.contains('is-playing')).toBe(false);
+ expect(screen.getByText('-0.50')).toBeTruthy();
+ rerender(<Atmosphere audio={{start:0,end:5,valence:.6,scores:{},rms:.3}} playing={true}/>);
+ expect(screen.getByLabelText('Atmosphere player').classList.contains('is-playing')).toBe(true);
+ expect(document.querySelector('audio')).toBeNull();
+});

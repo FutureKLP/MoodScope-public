@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
-import {cleanup,render,screen,waitFor,fireEvent} from '@testing-library/react';
+import {cleanup,render,screen,waitFor,fireEvent,within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {App} from './main';
 import {setLanguage} from './i18n';
@@ -125,15 +125,17 @@ describe('workspace flows',()=>{
   });
 
   it('requires confirmation before removing a song or the entire library',async()=>{
-    const confirm=vi.spyOn(window,'confirm').mockReturnValue(false);
+    const confirm=vi.spyOn(window,'confirm');
     render(<App/>);
     await userEvent.click(screen.getByRole('button',{name:'Bibliothek'}));
     await screen.findByRole('button',{name:'Song vollständig entfernen'});
     await userEvent.click(screen.getByRole('button',{name:'Song vollständig entfernen'}));
     expect(requests.some(r=>r.path.endsWith('/delete'))).toBe(false);
-    confirm.mockReturnValue(true);
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button',{name:'Abbrechen'}));
     await userEvent.click(screen.getByRole('button',{name:'Gesamte Bibliothek entfernen'}));
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button',{name:'Gesamte Bibliothek entfernen'}));
     await waitFor(()=>expect(requests.some(r=>r.path==='/library/delete')).toBe(true));
+    expect(confirm).not.toHaveBeenCalled();
     expect(await screen.findByText('Noch keine Songs importiert.')).toBeTruthy();
   });
   it('defaults to local mode, separates areas, and initializes actual player volume',async()=>{

@@ -1,10 +1,13 @@
 """Cached Demucs source separation. No promise of individual singer isolation."""
 import json
+import math
+import hashlib
+import threading
 from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-MODELS={'htdemucs','htdemucs_6s'}
+MODELS={'htdemucs','htdemucs_6s','htdemucs_ft'}
 LABELS={'vocals':'Gesang / Stimmen','drums':'Schlagzeug','bass':'Bass','other':'Übrige Instrumente','guitar':'Gitarre','piano':'Klavier'}
 
 
@@ -75,20 +78,32 @@ def separate(data,identity,model_name,engine,progress):
         if torch.cuda.is_available():torch.cuda.empty_cache()
 
 
-def mix(data,identity,model,sources):
+_mix_lock=threading.RLock()
+
+
+def mix(data,identity,model,sources,gains=None):
+    # Concurrent media requests must not write the same temporary WAV at once.
+    with _mix_lock:return _mix(data,identity,model,sources,gains)
+
+
+def _mix(data,identity,model,sources,gains):
     info=status(data,identity,model)
-    chosen=sorted(set(sources))
-    if not info['ready'] or not chosen or any(s not in info['sources'] for s in chosen):raise ValueError('Keine gültigen getrennten Quellen gewählt')
+    if not info['ready'] or not sources or len(sources)>6 or len(set(sources))!=len(sources) or any(s not in info['sources'] for s in sources):
+        raise ValueError('Keine gültigen getrennten Quellen gewählt')
+    weights=[1.]*len(sources) if gains is None else gains
+    if len(weights)!=len(sources) or any(not math.isfinite(v) or not 0<=v<=1 for v in weights):raise ValueError('Spurpegel müssen zwischen 0 und 1 liegen.')
+    chosen=sorted(zip(sources,weights))
     root=folder(data,identity,model)
-    if len(chosen)==1:return root/(chosen[0]+'.wav')
-    destination=root/('mix-'+'-'.join(chosen)+'.wav')
+    if len(chosen)==1 and chosen[0][1]==1:return root/(chosen[0][0]+'.wav')
+    fingerprint=hashlib.sha256(json.dumps(chosen).encode()).hexdigest()[:24]
+    destination=root/('mix-'+fingerprint+'.wav')
     if destination.exists():return destination
-    handles=[sf.SoundFile(root/(s+'.wav')) for s in chosen]
+    handles=[sf.SoundFile(root/(s+'.wav')) for s,_ in chosen]
     temporary=destination.with_suffix('.tmp.wav')
     try:
         with sf.SoundFile(temporary,'w',samplerate=info['sample_rate'],channels=2,subtype='FLOAT') as output:
             while True:
-                blocks=[h.read(65536,dtype='float32',always_2d=True) for h in handles]
+                blocks=[h.read(65536,dtype='float32',always_2d=True)*gain for h,(_,gain) in zip(handles,chosen)]
                 if not len(blocks[0]):break
                 output.write(np.clip(sum(blocks),-1,1))
         temporary.replace(destination)

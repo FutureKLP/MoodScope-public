@@ -73,3 +73,10 @@ Automatische Metadatenrecherche, vollständiges Ersetzen recherchierter Angaben,
 Der direkte Cargo-Releaseaufruf der Sprachrunde hatte das Tauri-Feature `custom-protocol` nicht aktiviert. Die EXE erwartete deshalb den später beendeten Vite-Server. Ein erfolgreicher Compilerlauf war hier kein ausreichender Startnachweis. Der korrigierte Build bettet die Oberfläche ein; build.rs verwirft künftig Release-Builds im Entwicklungsmodus. Der Worker übernimmt außerdem die Standardausgabekanäle des Supervisors ausdrücklich, damit native Startfehler im Backend-Protokoll landen.
 
 Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtests bestanden; separater tatsächlicher Supervisor-Test bestätigte API-Revision 4, geschriebenes Startprotokoll und sauberes Beenden. Kein erneuter Song- oder sichtbarer Bedienlauf.
+
+## Hörstudio und nachvollziehbare Bewertung
+
+- Explizites Wiederherstellen manuell versteckter und automatisch leiser Gruppen mit persistenter Sichtbarkeit. Pegel für echte Quellenspuren, deterministischer Mix-Cache und Schutz vor gleichzeitigen Schreibzugriffen.
+- Zentralisierte unveränderte CLAP-Prompts und Valenzgewichte; Methodenprotokoll pro Analyse. Bekannte ältere Pipelineversionen werden ausdrücklich als rekonstruiert gekennzeichnet; unbekannte/Provider-Analysen erhalten keine erfundene CLAP-Formel.
+- Gemeinsamer Dialog mit Tastatur-/Fokussteuerung für Neustart, Beenden und Bibliotheksaktionen. Optionaler sphärischer Atmosphärenplayer ohne Eingriff in den Audiographen.
+- 23 Frontend- und 30 betroffene Backend-Tests bestanden; weiterer Recherche-Ausbau, neuer nativer Build und zusätzliche Integration folgen im nächsten Checkpoint. Fine-tuned ist auswählbar; tatsächlicher neuer Modelldurchlauf wird separat geprüft.

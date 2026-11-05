@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field, SecretStr
 
 from .core import parse_lrc, biggest_split,text_coverage
 from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
-from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language
+from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
@@ -403,6 +403,8 @@ def run_job(job_id, identity, request):
                       'models':{'audio':catalog.CATALOG[active['audio']]['repo'] if request.mode=='local' else cloud.MODEL,
                                 'lyrics':catalog.CATALOG[active['lyrics']]['repo'] if request.mode=='local' else cloud.MODEL},
                       'method':'CLAP Prompt-Ensemble und XLM-EMO mit Textkontext' if request.mode=='local' else 'Gemini: getrennte Audio- und Textanalyse; subjektive unkalibrierte Valenz.'}
+            result=audio_method.with_method(result)
+            if request.mode=='local':result['audio_method']['recording']='recorded'
             result['warnings'].append('Modellwerte und Unsicherheit sind nicht wissenschaftlich kalibriert.')
             with db() as conn:
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
@@ -434,7 +436,9 @@ def job(job_id: str):
     with job_lock:
         if job_id not in jobs:
             raise HTTPException(404,'Analyseauftrag nicht gefunden')
-        return dict(jobs[job_id])
+        value=dict(jobs[job_id])
+        if isinstance(value.get('result'),dict) and 'audio' in value['result']:value['result']=audio_method.with_method(value['result'])
+        return value
 
 
 @app.get('/api/models')
@@ -614,7 +618,7 @@ def stored_analysis(identity: str,mode: Literal['local','cloud']='local'):
             if isinstance(value,dict) and {k:v for k,v in value.items() if k!='cached'}==comparable:own(conn,key,identity)
     active=catalog.configuration(DATA)['active']
     version=local_version(active) if mode=='local' else cloud.VERSION+cloud.MODEL
-    return {**result,'cached':True,'stale':result.get('pipeline_version')!=version}
+    return {**audio_method.with_method(result),'cached':True,'stale':result.get('pipeline_version')!=version}
 
 
 @app.get('/api/library')
@@ -704,7 +708,7 @@ def delete_library():
 
 
 class SeparationRequest(BaseModel):
-    model: Literal['htdemucs','htdemucs_6s']='htdemucs'
+    model: Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs'
 
 
 def run_separation(job_id,identity,request):
@@ -727,38 +731,45 @@ def separate_track(identity:str,request:SeparationRequest):
 
 
 @app.get('/api/tracks/{identity}/stems')
-def stem_status(identity:str,model:Literal['htdemucs','htdemucs_6s']='htdemucs'):
+def stem_status(identity:str,model:Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs'):
     track(identity)
     info=separation.status(DATA,identity,model)
     with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(f'stem-visibility:{identity}:{model}',)).fetchone()
-    return {**info,'hidden_sources':json.loads(row[0]) if row else []}
+    visibility=json.loads(row[0]) if row else {}
+    if isinstance(visibility,list):visibility={'hidden':visibility}
+    return {**info,'hidden_sources':visibility.get('hidden',[]),'shown_sources':visibility.get('shown',[])}
 
 
 class StemVisibility(BaseModel):
-    model:Literal['htdemucs','htdemucs_6s']='htdemucs'
+    model:Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs'
     hidden:list[Literal['vocals','drums','bass','other','guitar','piano']]=Field(default_factory=list,max_length=6)
+    shown:list[Literal['vocals','drums','bass','other','guitar','piano']]=Field(default_factory=list,max_length=6)
 
 
 @app.post('/api/tracks/{identity}/stems/visibility')
 def save_stem_visibility(identity:str,request:StemVisibility):
     track(identity)
+    if set(request.hidden)&set(request.shown):raise HTTPException(422,'Eine Spur kann nicht zugleich ausgeblendet und eingeblendet sein.')
     key=f'stem-visibility:{identity}:{request.model}'
     with db() as conn:
-        conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(request.hidden)));own(conn,key,identity)
+        conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps({'hidden':request.hidden,'shown':request.shown})));own(conn,key,identity)
     return stem_status(identity,request.model)
 
 
 @app.get('/api/tracks/{identity}/mix')
-def stem_mix(identity:str,sources:str,model:Literal['htdemucs','htdemucs_6s']='htdemucs'):
+def stem_mix(identity:str,sources:str,model:Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs',gains:str | None=None):
     track(identity)
-    try:path=separation.mix(DATA,identity,model,sources.split(','))
+    try:
+        if len(sources)>80 or (gains is not None and len(gains)>100):raise ValueError('Ungültiger Quellenmix')
+        weights=[float(v) for v in gains.split(',')] if gains is not None else None
+        path=separation.mix(DATA,identity,model,sources.split(','),weights)
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
     return FileResponse(path,media_type='audio/wav')
 
 
 class FocusRequest(BaseModel):
     source:Literal['original','vocals','drums','bass','other','guitar','piano']='vocals'
-    model:Literal['htdemucs','htdemucs_6s']='htdemucs'
+    model:Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs'
     stereo:Literal['stereo','left','right','center','sides']='stereo'
     start:float=Field(default=0,ge=0,le=1800)
     end:float | None=Field(default=None,gt=0,le=1800)

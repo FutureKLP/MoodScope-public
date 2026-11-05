@@ -49,15 +49,11 @@ class Engines:
             kwargs={'revision':AUDIO_REVISION} if source==AUDIO_MODEL else {}
             self.processor = ClapProcessor.from_pretrained(source,**kwargs)
             self.audio_model = ClapModel.from_pretrained(source,**kwargs).to(device).eval()
-        prompts = ['This music sounds joyful, happy and uplifting.','The musical expression is bright, cheerful and celebratory.',
-                   'This music sounds peaceful, calm and relaxed.','The musical expression is serene and soothing.',
-                   'This music sounds sad, melancholic and sorrowful.','The musical expression conveys grief and sadness.',
-                   'This music sounds angry, tense and aggressive.','The musical expression is hostile and furious.',
-                   'This music sounds fearful, anxious and unsettling.','The musical expression creates dread and nervous tension.',
-                   'This music sounds tender, affectionate and warm.','The musical expression conveys gentle love and tenderness.']
-        labels=['joy','calm','sadness','anger','fear','tenderness']
-        values = torch.tensor([1., .3, -1., -.7,-.75,.5], device=device)
-        arousal = torch.tensor([.8,.15,.3,.95,.85,.3],device=device)
+        from .audio_method import LABELS,VALENCE,AROUSAL,PROMPTS
+        prompts=list(PROMPTS)
+        labels=list(LABELS)
+        values=torch.tensor(VALENCE,device=device)
+        arousal=torch.tensor(AROUSAL,device=device)
         duration = len(y) / sr
         result = []
         # Non-overlapping display bins, each estimated using centered 10-second context.
