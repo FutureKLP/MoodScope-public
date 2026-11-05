@@ -38,3 +38,8 @@ src-tauri/gen/
 *.pth
 *.safetensors
 .publication-report.json
+
+AGENTS.md
+.agents/
+.codex/
+.cursor/

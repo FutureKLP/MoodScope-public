@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 GIT = shutil.which('git.exe') or shutil.which('git')
 ALLOWED_ROOTS = {'.github', '.githooks', 'backend', 'docs', 'scripts', 'src', 'src-tauri', 'tests'}
-ALLOWED_TOP = {'.gitattributes', '.gitignore', 'AGENTS.md','README.md', 'Start-MoodScope.cmd',
+ALLOWED_TOP = {'.gitattributes', '.gitignore', 'README.md', 'Start-MoodScope.cmd',
                'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts'}
 DENIED_PARTS = {'.git', '.venv', '.tools', 'node_modules', 'dist', 'data', 'models',
                 '__pycache__', '.pytest_cache', 'target', 'gen', 'for test only music files'}
@@ -40,8 +40,8 @@ def git(*args):
 
 
 def path_problem(name):
-    if name=='.cursor/rules/github-checkpoints.mdc':return None
     path=PurePosixPath(name)
+    if path.name=='AGENTS.md' or any(part in {'.agents','.codex','.cursor'} for part in path.parts):return 'local development instructions'
     if any(part.lower() in DENIED_PARTS for part in path.parts): return 'excluded directory'
     if path.name.startswith('.env') and path.name != '.env.example': return 'environment file'
     if path.suffix.lower() in DENIED_EXTENSIONS: return 'excluded file type'
@@ -94,6 +94,8 @@ def scan(ref=None):
             continue
         for issue in content_problems(raw): findings.append({'file':name,'reason':issue})
     if ref:
+        messages=git('log',ref,'--format=%B').decode('utf-8')
+        for issue in content_problems(messages.encode('utf8')):findings.append({'file':'Git commit messages','reason':issue})
         authors=git('log',ref,'--format=%ae%n%ce').decode('utf-8')
         if any(email and not (email.endswith('@users.noreply.github.com') or email=='noreply@github.com')
                for email in authors.splitlines()):

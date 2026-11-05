@@ -22,13 +22,13 @@ from pydantic import BaseModel, Field, SecretStr
 
 from .core import parse_lrc, biggest_split,text_coverage
 from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
-from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus
+from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title='MoodScope local analysis', version='0.3.0')
 ORIGINS = ['http://127.0.0.1:1420', 'http://localhost:1420', 'tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost', 'http://127.0.0.1:8765']
-app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=['GET','POST'], allow_headers=['Content-Type'])
+app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=['GET','POST'], allow_headers=['Content-Type','Accept-Language'])
 executor = ThreadPoolExecutor(max_workers=1)
 jobs = {}
 job_lock = threading.RLock()
@@ -55,7 +55,19 @@ async def local_only(request: Request, call_next):
     origin = request.headers.get('origin')
     if host not in {'127.0.0.1', 'localhost', 'testserver'} or (origin and origin not in ORIGINS):
         return JSONResponse({'detail':'Untrusted local origin'}, status_code=403)
-    return await call_next(request)
+    result=await call_next(request)
+    locale=language.language(request.headers.get('accept-language'))
+    if locale=='en' and result.headers.get('content-type','').startswith('application/json'):
+        raw=b''.join([chunk async for chunk in result.body_iterator])
+        value=json.loads(raw)
+        # Profile names, musical metadata and personal notes must remain verbatim.
+        if result.status_code>=400 or not request.url.path.endswith('/notes'):
+            value=language.response(value,locale)
+        headers={k:v for k,v in result.headers.items() if k.lower() not in {'content-length','content-type'}}
+        headers['Content-Language']=locale
+        return JSONResponse(value,status_code=result.status_code,headers=headers,background=result.background)
+    result.headers['Content-Language']=locale
+    return result
 
 
 @contextmanager
@@ -95,7 +107,7 @@ def local_version(active):
 
 @app.get('/api/health')
 def health():
-    return {'status':'ok', 'version':'0.3.0','api_revision':3,'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
+    return {'status':'ok', 'version':'0.3.0','api_revision':4,'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -487,6 +499,7 @@ class InterpretationRequest(BaseModel):
     time: float | None = Field(default=None,ge=0)
     force: bool = False
     provider_id: str | None = Field(default=None,max_length=64)
+    language: Literal['de','en'] = 'de'
 
 
 def run_interpretation(job_id,identity,request):
@@ -502,19 +515,21 @@ def run_interpretation(job_id,identity,request):
         with db() as conn:
             detail=conn.execute('SELECT result FROM cache WHERE key=?',(f'details:{identity}:{catalog.configuration(DATA)["active"]["audio"]}:v2',)).fetchone()
         if detail:analysis['instruments']=json.loads(detail[0]).get('instruments',[])
-        key='interpretation:'+hashlib.sha256(('whole-song-v5-repair'+identity+json.dumps(analysis,sort_keys=True)+json.dumps(request.model_dump(exclude={'force'}),sort_keys=True)+selected).encode()).hexdigest()
+        key='interpretation:'+hashlib.sha256(('whole-song-v6-language'+identity+json.dumps(analysis,sort_keys=True)+json.dumps(request.model_dump(exclude={'force'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
         else:
             with job_lock:jobs[job_id].update(message='Interpretiere Belege und Textkontext; erster Start kann Modell laden',progress=20)
-            result=insights.interpretation(DATA,engines,analysis,metadata,request.time,request.mode,request.provider_id)
+            result=insights.interpretation(DATA,engines,analysis,metadata,request.time,request.mode,request.provider_id,request.language)
             result['cached']=False
+            result['language']=request.language
             result['analysis_basis']=insights.analysis_basis(analysis)
             result['source_warning']='Diese Deutung basiert auf automatisch erkannten Wörtern. Whisper kann Wörter verwechseln; bitte den Text im Verlauf prüfen und gegebenenfalls korrigieren.' if analysis.get('lyrics_source')=='whisper' else 'Auch diese Deutung ist eine mögliche Lesart. Die Textquelle und konkrete Belege selbst prüfen.'
+            result['source_warning']=language.translate(result['source_warning'],request.language)
             with db() as conn:
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
                 own(conn,key,identity)
-        latest_key=f'interpretation-latest:{cache_identity}:{request.mode}:{request.provider_id or "default"}'
+        latest_key=f'interpretation-latest:{cache_identity}:{request.mode}:{request.provider_id or "default"}:{request.language}'
         with db() as conn:
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(latest_key,json.dumps(result)))
             own(conn,latest_key,identity)
@@ -539,10 +554,12 @@ def interpret(identity: str,request: InterpretationRequest):
 
 
 @app.get('/api/tracks/{identity}/interpretation')
-def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',provider_id:str | None=None):
+def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',provider_id:str | None=None,language:Literal['de','en']='de'):
     identity=canonical(identity)
-    key=f'interpretation-latest:{identity}:{mode}:{provider_id or "default"}'
+    key=f'interpretation-latest:{identity}:{mode}:{provider_id or "default"}:{language}'
     with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
+    if not row and language=='de':
+        with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(key.rsplit(':',1)[0],)).fetchone()
     if not row:raise HTTPException(404,'Noch keine gespeicherte Deutung für dieses Modellprofil.')
     value=json.loads(row[0])
     with db() as conn:analysis=conn.execute('SELECT result FROM cache WHERE key=?',(f'latest:{identity}:{mode}',)).fetchone()

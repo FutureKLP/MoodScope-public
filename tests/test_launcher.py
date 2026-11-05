@@ -12,5 +12,5 @@ def test_running_old_backend_requires_restart(monkeypatch,version):
 
 
 def test_current_backend_can_be_reused(monkeypatch):
-    monkeypatch.setattr(launch,'urlopen',lambda *a,**k:io.BytesIO(b'{"status":"ok","version":"0.3.0","api_revision":3}'))
+    monkeypatch.setattr(launch,'urlopen',lambda *a,**k:io.BytesIO(b'{"status":"ok","version":"0.3.0","api_revision":4}'))
     assert launch.ready()

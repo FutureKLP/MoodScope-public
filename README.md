@@ -196,3 +196,13 @@ Vor jedem Fortschritts-Commit und Upload prüft `scripts/check_publication.py` d
 ## Noch offen
 
 Eigenständige Installer mit eingebettetem Python-Backend, Signierung, Update-Verteilung und FFmpeg-Videoexport fehlen. Weitere Modellvarianten und Zielsysteme benötigen eigene Live- und Qualitätsprüfungen. Modellgewichte haben eigene Lizenzbedingungen und werden nicht mit dem Quellcode weiterverteilt.
+
+## Sprache und Bedienung
+
+In der Kopfzeile zwischen **Deutsch** und **English** wechseln. Die Auswahl bleibt auf diesem Rechner gespeichert. Englisch gilt auch für neue KI-Gesamtdeutungen, Zeilendeutungen und musikalische Begründungen. Vorhandene Deutungen werden pro Sprache gespeichert; beim Sprachwechsel eine neue Deutung starten, wenn noch keine vorliegt. Original-Lyrics, Metadaten und eigene Notizen werden nicht automatisch übersetzt. Die Texterkennungssprache ist davon unabhängig.
+
+Neustart und Beenden verwenden einen Bestätigungsdialog im App-Design. **Abbrechen** oder Escape schließt ihn ohne Dienstaufruf. Ein bestätigter Neustart beendet laufende Aufträge; gespeicherte Songs bleiben erhalten.
+
+Vibe-coded mit Codex. Modellschätzungen und generierte Interpretationen bleiben überprüfungsbedürftig.
+
+Bekannte Sicherheitsgrenzen und noch offene Bibliotheksmeldungen: [Sicherheitsstand](docs/SECURITY.md).

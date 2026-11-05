@@ -15,7 +15,7 @@ def ready():
         with urlopen('http://127.0.0.1:8765/api/health',timeout=2) as response:
             state=json.load(response)
             if state.get('status')!='ok': return False
-            if state.get('version')!='0.3.0' or state.get('api_revision')!=3:
+            if state.get('version')!='0.3.0' or state.get('api_revision')!=4:
                 raise RuntimeError('Ein älteres Backend läuft auf Port 8765. Den bisherigen MoodScope-Dienst beenden und erneut starten.')
             return True
     except (OSError,ValueError):

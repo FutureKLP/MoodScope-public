@@ -50,3 +50,20 @@ Automatische Metadatenrecherche, vollständiges Ersetzen recherchierter Angaben,
 - Neustart über den Knopf im nativen Fenster tatsächlich ausgeführt. Bibliothek blieb erhalten; Wiederöffnung lud eine gespeicherte Analyse ohne neue Modellinferenz.
 - Bei der nativen Gesamtdeutung erzeugte Qwen 1.5B ein unbelegtes Zitat. Die Belegprüfung hat die Antwort korrekt verworfen. Ein begrenzter zweiter lokaler Formulierungsversuch mit unveränderter Belegprüfung wurde ergänzt; 91 Python-Tests bestanden. Derselbe native Fall wurde danach erfolgreich mit einer Gesamtdeutung abgeschlossen. Es gibt keine automatische kostenpflichtige Anbieter-Wiederholung.
 - Native Hörstudio-Prüfung und Brave-Prüfung bleiben in dieser Runde noch offen. Private Testtitel, Lyrics und Bildschirmaufnahmen werden nicht veröffentlicht.
+
+## Weitere sichtbare Prüfung
+
+- Native Hörstudio-Prüfung abgeschlossen: echte Quellentrennung, hörbare Gesangs-/Instrumentalwiedergabe, Positionsübernahme und manuelle Frequenzfokussierung bedient. Die Filter sind keine Trennung einzelner Sänger.
+- Brave tatsächlich am PC bedient: öffentlichen SoundCloud-Einzeltrack importiert, zwei Kurven angezeigt und präzise Turbo-Erkennung des vollständigen Songs auf der getrennten Gesangsspur abgeschlossen. Gesamtdeutung erfolgreich abgeschlossen.
+- Sichtbare Whisper-Auswahl und automatischen Import angeglichen; automatische Erkennung verwendet nun dieselbe Auswahl. Standardquelle ist vorhandene Gesangsspur oder Originalmix, damit ein fehlendes optionales Demucs den normalen Import nicht blockiert. 14 Frontend-Tests und Produktionsbuild bestanden; 91 Python-Tests zuletzt bestanden.
+- Private MP3-/FLAC-Titel, Lyrics, Ergebnisse und Bildschirmaufnahmen bleiben außerhalb des Repositorys. Die Prüfung der Löschlogik erfolgte mit isolierten Testdaten; keine vollständige Nutzungsbibliothek wurde zur Bedienprüfung geleert.
+
+## Sprache und Bestätigungsdialoge
+
+- Deutsch/Englisch in der Kopfzeile, lokal gespeicherte Auswahl, übersetzte Bedienelemente, Hilfen und Statusmeldungen. Eigene Notizen, importierte Tags und Original-Lyrics bleiben unverändert.
+- Neustart-/Beenden-Bestätigungen im dunklen App-Design mit Tastaturfokus, Escape, Fokusbegrenzung und expliziter Bestätigung vor dem Dienstaufruf.
+- Lokale und optionale Server-Deutungen erhalten eine ausdrückliche Ausgabesprache. Deutsche und englische Deutungen haben getrennte Cache-Einträge; Cache-Löschung entfernt beide.
+- Kein erneuter sichtbarer PC-Test in dieser Runde. Neue Abläufe werden durch Komponenten- und API-Regressionstests geprüft.
+
+- Ergebnis dieser Runde: 99 Backend- und 19 Frontend-Tests bestanden (nach Korrekturen nur die betroffenen Fälle wiederholt). TypeScript-/Produktionsbuild und nativer Windows-Releasebuild erfolgreich. Eine tatsächliche Qwen-Gesamtdeutung selbst geschriebener englischer Testzeilen lief offline auf CUDA und lieferte englischen Text; keine erfundene Live-API-Prüfung ohne Schlüssel.
+- Sieben Hilfsbibliotheken projektlokal aktualisiert; aktueller Python-Sicherheitsstand einschließlich offener Modellbibliotheksmeldungen in SECURITY.md. Keine systemweite Paketänderung. Kein neuer sichtbarer Desktop-Durchlauf dieser Sprachversion.

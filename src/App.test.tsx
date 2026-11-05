@@ -4,6 +4,7 @@ import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
 import {cleanup,render,screen,waitFor,fireEvent} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {App} from './main';
+import {setLanguage} from './i18n';
 
 const track={id:'test-song',name:'Authored test.wav',title:'Authored test',artist:'Test',duration:12};
 const notes={interpretation:'',instruments:'',personnel:'',genre:'',bpm:null};
@@ -14,10 +15,12 @@ let pendingJob:Promise<any>|null;
 let pendingNotes:Promise<any>|null;
 let savedInterpretation:any;
 let providerProfiles:any[];
+let freshAnalysis:boolean;
 beforeEach(()=>{
+  setLanguage('de');localStorage.clear();
   requests=[];
   pendingJob=null;pendingNotes=null;
-  savedInterpretation={};providerProfiles=[];
+  savedInterpretation={};providerProfiles=[];freshAnalysis=false;
   vi.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});
   Element.prototype.scrollIntoView=vi.fn();
   vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
@@ -27,7 +30,13 @@ beforeEach(()=>{
     let value:any={};
     if(path==='/health')value={device:'cpu'};
     else if(path==='/tracks')value=track;
-    else if(path.startsWith('/tracks/test-song/analysis'))value=stored;
+    else if(path.startsWith('/tracks/test-song/analysis')){
+      if(freshAnalysis)return new Response(JSON.stringify({detail:'Not cached'}),{status:404});
+      value=stored;
+    }
+    else if(path==='/tracks/test-song/lyrics/search')value={text:'',synced:false};
+    else if(path==='/tracks/test-song/analyze')value={job_id:'test-analysis'};
+    else if(path==='/jobs/test-analysis')value={status:'done',progress:100,result:{...stored,cached:false,lyrics:[]}};
     else if(path==='/tracks/test-song/notes')value=body||await(pendingNotes||Promise.resolve(notes));
     else if(path.startsWith('/tracks/test-song/interpretation'))value=savedInterpretation;
     else if(path==='/tracks/test-song/interpret')value={job_id:'test-insight'};
@@ -45,6 +54,41 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it('switches all workspace sections to English, preserves notes and sends the interpretation language',async()=>{
+    render(<App/>);
+    await userEvent.selectOptions(screen.getByLabelText('App-Sprache'),'en');
+    expect(document.documentElement.lang).toBe('en');
+    expect(localStorage.getItem('moodscope-language')).toBe('en');
+    expect(screen.getByRole('button',{name:'+ Import song'})).toBeTruthy();
+    expect(screen.getByLabelText('Transcription model')).toBeTruthy();
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/no new AI inference/);
+    await userEvent.click(screen.getByRole('button',{name:'Interpretation'}));
+    await screen.findByRole('button',{name:'Interpret entire song'});
+    await userEvent.click(screen.getByRole('button',{name:'Interpret entire song'}));
+    await waitFor(()=>expect(requests.some(r=>r.path.endsWith('/interpret')&&r.body.language==='en')).toBe(true));
+    expect(requests.some(r=>r.path.includes('interpretation?')&&r.path.includes('language=en'))).toBe(true);
+    for(const tab of ['Song details','Listening studio','Library','Models & API','Timeline']){
+      await userEvent.click(screen.getByRole('button',{name:tab}));
+      await waitFor(()=>expect(screen.getByLabelText('App language').hasAttribute('disabled')).toBe(false));
+      expect(document.body.textContent).not.toMatch(/Gespeicherte Songs|Meine eigene Interpretation|Hör hinter den Mix|KI-Anbieter|Song und einzelne Zeilen/);
+    }
+    await userEvent.selectOptions(screen.getByLabelText('App language'),'de');
+    expect(screen.getByRole('button',{name:'+ Song importieren'})).toBeTruthy();
+    expect(document.documentElement.lang).toBe('de');
+    expect((screen.getByPlaceholderText('Interpret') as HTMLInputElement).value).toBe('Test');
+  });
+
+  it('uses the visible Whisper selection for an automatic uncached import',async()=>{
+    freshAnalysis=true;
+    render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await waitFor(()=>expect(requests.some(r=>r.path.endsWith('/analyze'))).toBe(true));
+    expect(requests.some(r=>r.path==='/models/select'&&r.body.model_id==='whisper-turbo')).toBe(true);
+    const analyzed=requests.find(r=>r.path.endsWith('/analyze'))!;
+    expect(analyzed.body.transcription_quality).toBe('precise');
+    expect(analyzed.body.transcription_source).toBe('auto');
+  });
   it('uses a shared profile editor for Gemini, Claude, OpenAI, DeepSeek and local servers',async()=>{
     render(<App/>);
     await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));

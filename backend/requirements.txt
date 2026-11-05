@@ -13,3 +13,13 @@ sentencepiece>=0.2
 mutagen>=1.47,<2
 pytest>=8
 psutil>=6,<8
+
+# Network/security patch floor; the legacy model stack still has open advisories.
+certifi>=2026.10.18
+requests>=2.33,<3
+urllib3>=2.8,<3
+idna>=3.15
+protobuf>=5.29.6,<6
+fsspec>=2026.6
+filelock==3.20.3; python_version < "3.11"
+filelock>=4.2.1; python_version >= "3.11"
