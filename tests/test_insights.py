@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from backend.insights import acoustic_features,audio_evidence,validate_text_interpretation
+from backend.insights import interpretation_context,interpretation
 
 
 def test_silence_does_not_invent_bpm():
@@ -19,3 +20,22 @@ def test_audio_explanation_only_uses_supplied_measurements():
 def test_text_only_model_claiming_it_heard_audio_is_rejected():
     with pytest.raises(RuntimeError):validate_text_interpretation('Ich höre einen traurigen Song.')
     validate_text_interpretation('Die Wörter können Verlust und Hoffnung ausdrücken. Diese Lesart ist unsicher.')
+
+
+def test_whole_song_is_distinct_from_instrumental_gap():
+    analysis={'lyrics':[{'start':2,'end':4,'text':'Ich hoffe auf morgen.'}]}
+    whole=interpretation_context(analysis,None)
+    assert whole['scope']=='whole_song' and whole['has_text'] and not whole['instrumental_position']
+    assert interpretation_context(analysis,1)['instrumental_position']
+    assert interpretation_context({'source_lyrics':'Eigener Text ohne Zeitmarken'},None)['has_text']
+
+
+def test_missing_lyrics_returns_actionable_result_without_loading_llm(tmp_path):
+    result=interpretation(tmp_path,None,{'audio':[],'lyrics':[]},{})
+    assert result['missing_lyrics'] and 'Texterkennung' in result['text']
+
+
+def test_acoustic_sections_are_finite_and_time_bounded():
+    features=acoustic_features(np.sin(2*np.pi*220*np.arange(22050*2)/22050).astype('float32')*.1,22050)
+    assert features['sections'][0]['end']==2
+    assert np.isfinite(features['dynamic_range_db'])

@@ -2,6 +2,7 @@ import importlib
 import io
 import wave
 import subprocess
+import json
 import pytest
 from fastapi.testclient import TestClient
 
@@ -21,6 +22,64 @@ def wav_bytes():
         wav.setnchannels(1);wav.setsampwidth(2);wav.setframerate(48000)
         wav.writeframes(b'\0\0'*48000)
     return buf.getvalue()
+
+
+def test_interpretation_is_restored_regenerated_and_deleted_with_cache(client,monkeypatch):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    with module.db() as conn:
+        conn.execute('INSERT INTO cache VALUES (?,?)',(f'latest:{identity}:local',json.dumps({'audio':[],'lyrics':[]})))
+    calls=[]
+    def interpret(*args):
+        calls.append(1)
+        return {'text':'Vorsichtige Testdeutung auf Basis vorhandener Textbelege.','time':None,'model':'fixture'}
+    monkeypatch.setattr(module.insights,'interpretation',interpret)
+    module.jobs['interpret']={'status':'running'}
+    module.run_interpretation('interpret',identity,module.InterpretationRequest())
+    assert module.jobs['interpret']['status']=='done'
+    saved=client.get(f'/api/tracks/{identity}/interpretation').json()
+    assert saved['cached'] and saved['text'].startswith('Vorsichtige')
+    module.run_interpretation('interpret',identity,module.InterpretationRequest())
+    assert len(calls)==1
+    module.run_interpretation('interpret',identity,module.InterpretationRequest(force=True))
+    assert len(calls)==2
+    client.post(f'/api/tracks/{identity}/notes',json={'interpretation':'My own note'})
+    assert client.post(f'/api/tracks/{identity}/cache/delete').status_code==200
+    assert client.get(f'/api/tracks/{identity}/interpretation').status_code==404
+    assert client.get(f'/api/tracks/{identity}/notes').json()['interpretation']=='My own note'
+
+
+def test_external_text_provider_requires_explicit_consent(client):
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    profile=client.post('/api/providers',json={'name':'Local test','base_url':'http://127.0.0.1:11434/v1','model':'test','api_key':'fixture-key'}).json()
+    assert 'api_key' not in profile
+    response=client.post(f'/api/tracks/{identity}/interpret',json={'provider_id':profile['id']})
+    assert response.status_code==422
+    assert 'Zustimmung' in response.json()['detail']
+    assert 'fixture-key' not in client.get('/api/providers').text
+
+
+def test_research_requires_explicit_recording_choice_and_restores_it(client,monkeypatch):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    recording='12345678-1234-1234-1234-123456789abc'
+    monkeypatch.setattr(module.research,'search',lambda *a:{'candidates':[{'id':recording}],'source':'MusicBrainz'})
+    monkeypatch.setattr(module.research,'details',lambda *a:{'title':'Public test','url':'https://musicbrainz.org/recording/'+recording,'credits':[]})
+    assert client.post(f'/api/tracks/{identity}/research',json={'title':'Public test'}).status_code==200
+    assert client.get(f'/api/tracks/{identity}/research').json() is None
+    assert client.post(f'/api/tracks/{identity}/research/{recording}').status_code==200
+    assert client.get(f'/api/tracks/{identity}/research').json()['title']=='Public test'
+
+
+def test_failures_have_diagnostic_id_but_no_exception_payload(client,monkeypatch):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    def fail(*a):raise RuntimeError('PRIVATE LYRICS')
+    monkeypatch.setattr(module.insights,'acoustic_features',fail)
+    module.jobs['details']={'status':'running'};module.run_details('details',identity)
+    assert 'Fehler-ID:' in module.jobs['details']['message']
+    report=client.get('/api/diagnostics').json()
+    assert report['recent'] and 'PRIVATE LYRICS' not in json.dumps(report)
 
 
 def test_import_real_audio_and_serve_normalized_file(client):

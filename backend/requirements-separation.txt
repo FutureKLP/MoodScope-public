@@ -1,0 +1,2 @@
+# Optional source separation; install into the project venv.
+demucs==4.0.1

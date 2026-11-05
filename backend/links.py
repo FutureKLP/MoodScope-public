@@ -11,6 +11,24 @@ from urllib.parse import parse_qs, urlsplit, urlunsplit
 ROOT=Path(__file__).resolve().parents[1]
 
 
+def search_soundcloud(value):
+    parsed=urlsplit(value.strip())
+    if parsed.scheme!='https' or parsed.hostname not in {'soundcloud.com','www.soundcloud.com'} or parsed.path!='/search' or parsed.username or parsed.password:
+        raise ValueError('SoundCloud-Suchlink mit Suchbegriff benötigt.')
+    query=parse_qs(parsed.query).get('q',[''])[0].strip()
+    if not query or len(query)>200:raise ValueError('Suchbegriff fehlt oder ist zu lang.')
+    command=[downloader(),'--ignore-config','--no-plugin-dirs','--flat-playlist','--skip-download','--dump-single-json','--socket-timeout','15','--retries','0','--','scsearch8:'+query]
+    result=subprocess.run(command,capture_output=True,timeout=75,
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+    if result.returncode:raise RuntimeError('SoundCloud-Suche derzeit nicht erreichbar. Direkten Songlink verwenden.')
+    candidates=[]
+    for entry in json.loads(result.stdout).get('entries',[])[:8]:
+        try:url=validate_url(entry.get('webpage_url') or entry.get('url',''))
+        except ValueError:continue
+        candidates.append({'title':str(entry.get('title',''))[:200],'uploader':str(entry.get('uploader',''))[:200],'url':url,'duration':entry.get('duration')})
+    return {'candidates':candidates,'note':'Ein Suchlink ist kein einzelner Song. Wähle die passende Aufnahme; Uploader und Originalinterpret können abweichen.'}
+
+
 def validate_url(value):
     try:
         parsed=urlsplit(value.strip())

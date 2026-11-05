@@ -10,6 +10,24 @@ React und TypeScript bilden die Oberfläche, Tauri das native Fenster und Python
 
 ## Funktionen
 
+Neu in der aktuellen Entwicklung: ausführlichere Gesamt- und Zeilendeutung, automatisches Wiederanzeigen gespeicherter KI-Deutungen, lokales Hörstudio mit Demucs, SoundCloud-Suchtreffer-Auswahl, MusicBrainz-Recherche und zusätzliche Textmodell-Serverprofile. Der aktuelle Nachweisstand steht in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+### Hörstudio und Diagnose
+
+Im Reiter **Hörstudio** lassen sich Gesang, Schlagzeug, Bass und übrige Instrumente lokal trennen, solo hören und mischen. Optional bietet das experimentelle Sechs-Spur-Modell zusätzlich Gitarre und Klavier. Alle Sänger bleiben in einer gemeinsamen Gesangsspur. Übersprechen und Artefakte sind möglich; die Emotionskurven gelten weiterhin für den Originalmix.
+
+Vorher die optionale Erweiterung projektlokal installieren: `python -m pip install -r backend/requirements-separation.txt` in der aktivierten venv. Die torchaudio-Version muss zum vorhandenen PyTorch-/CUDA-Build passen. Der erste Trennlauf lädt die offiziellen Demucs-Gewichte nach `models/demucs/`. Ergebnisse liegen unter `data/stems/`.
+
+Unter **Modelle & API** können OpenAI, Anthropic und OpenAI-kompatible Textserver wie Ollama/LM Studio mit Basis-URL und exakter Modell-ID hinzugefügt werden. In **Interpretation** lässt sich das Textmodell unabhängig von der Audioanalyse auswählen. Vor dem Versand ist eine ausdrückliche Zustimmung nötig. Anbieter können kostenpflichtig sein; es gibt keine pauschale Gratiszusage. Profilangaben bleiben lokal gespeichert, Schlüssel nur im Arbeitsspeicher. Diese Adapter sind für Textdeutung vorbereitet, nicht für beliebige Audio- oder Bildmodelle. Unterstützt werden die dokumentierten Chat-Completions- bzw. Messages-Protokolle, nicht automatisch jede proprietäre API.
+
+KI-Deutungen werden automatisch gespeichert und beim erneuten Öffnen angezeigt. **Gesamtdeutung neu erstellen** umgeht ihren Cache; **Analyse-Cache löschen** entfernt auch die KI-Deutungen, erhält aber eigene Notizen und Audio. Getrennte Hörspuren werden separat gespeichert.
+
+Die Diagnoseansicht zeigt lokale Fehlertypen, Codepositionen, Auftragsstatus und Laufzeiten. Jede Fehlermeldung enthält eine Fehler-ID zum Abgleich mit `data/logs/moodscope.log`. Die Logs rotieren bei 2 MB mit drei Sicherungen; Texte, Audio und Zugangsdaten werden nicht protokolliert.
+
+### Öffentliche Aufnahmedaten
+
+Unter **Songdetails** können Interpret und Titel bei MusicBrainz recherchiert werden. Suchtreffer werden erst nach Auswahl einer konkreten Aufnahme übernommen; verfügbare Mitwirkende, Instrumentangaben, Genres und Veröffentlichungen werden mit Quellenlink gezeigt. Fehlende Angaben werden nicht durch die KI erfunden. MusicBrainz benötigt für diese Abfragen keinen Key; private, nichtkommerzielle Nutzung ist kostenlos. Der Dienst kann zeitweise nicht erreichbar sein. Quellen: [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API), [Demucs](https://github.com/facebookresearch/demucs), [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Anthropic Messages](https://platform.claude.com/docs/en/api/messages), [Ollama-Kompatibilität](https://docs.ollama.com/api/openai-compatibility).
+
 ### Verlauf
 
 - Import von MP3, WAV und FLAC sowie einzelnen öffentlichen YouTube- und SoundCloud-Songlinks.
