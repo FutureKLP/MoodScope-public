@@ -67,3 +67,9 @@ Automatische Metadatenrecherche, vollständiges Ersetzen recherchierter Angaben,
 
 - Ergebnis dieser Runde: 99 Backend- und 19 Frontend-Tests bestanden (nach Korrekturen nur die betroffenen Fälle wiederholt). TypeScript-/Produktionsbuild und nativer Windows-Releasebuild erfolgreich. Eine tatsächliche Qwen-Gesamtdeutung selbst geschriebener englischer Testzeilen lief offline auf CUDA und lieferte englischen Text; keine erfundene Live-API-Prüfung ohne Schlüssel.
 - Sieben Hilfsbibliotheken projektlokal aktualisiert; aktueller Python-Sicherheitsstand einschließlich offener Modellbibliotheksmeldungen in SECURITY.md. Keine systemweite Paketänderung. Kein neuer sichtbarer Desktop-Durchlauf dieser Sprachversion.
+
+## Korrektur des nativen Starts
+
+Der direkte Cargo-Releaseaufruf der Sprachrunde hatte das Tauri-Feature `custom-protocol` nicht aktiviert. Die EXE erwartete deshalb den später beendeten Vite-Server. Ein erfolgreicher Compilerlauf war hier kein ausreichender Startnachweis. Der korrigierte Build bettet die Oberfläche ein; build.rs verwirft künftig Release-Builds im Entwicklungsmodus. Der Worker übernimmt außerdem die Standardausgabekanäle des Supervisors ausdrücklich, damit native Startfehler im Backend-Protokoll landen.
+
+Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtests bestanden; separater tatsächlicher Supervisor-Test bestätigte API-Revision 4, geschriebenes Startprotokoll und sauberes Beenden. Kein erneuter Song- oder sichtbarer Bedienlauf.

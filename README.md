@@ -206,3 +206,5 @@ Neustart und Beenden verwenden einen Bestätigungsdialog im App-Design. **Abbrec
 Vibe-coded mit Codex. Modellschätzungen und generierte Interpretationen bleiben überprüfungsbedürftig.
 
 Bekannte Sicherheitsgrenzen und noch offene Bibliotheksmeldungen: [Sicherheitsstand](docs/SECURITY.md).
+
+Native Release-Builds müssen die Oberfläche einbetten. `npm run tauri build -- --no-bundle` übernimmt dies; ein direkter Cargo-Aufruf benötigt `--features tauri/custom-protocol`. Ein Build-Schutz verhindert Release-Dateien, die versehentlich den Entwicklungsserver benötigen.

@@ -48,7 +48,7 @@ def main():
     child=None
     try:
         while True:
-            child=subprocess.Popen([sys.executable,str(Path(__file__).resolve()),'--worker','--port',str(args.port)],cwd=ROOT,
+            child=subprocess.Popen([sys.executable,str(Path(__file__).resolve()),'--worker','--port',str(args.port)],cwd=ROOT,stdout=sys.stdout,stderr=sys.stderr,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
             code=child.wait()
             if code!=75:return code
