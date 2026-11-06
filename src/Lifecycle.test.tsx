@@ -35,3 +35,12 @@ it('keeps template values intact and can translate stored UI messages back to Ge
   expect(t('Song importiert. Test [a+b]')).toBe('Song imported. Test [a+b]');
   setLanguage('de');expect(t('Saved analysis loaded; no new AI inference.')).toContain('keine erneute KI-Inferenz');
 });
+it('can finish quitting after the service already disappeared without leaving an error',async()=>{
+ const ended=vi.fn();let online=true;
+ vi.stubGlobal('fetch',vi.fn(async(url)=>{if(String(url).endsWith('/health')&&online)return new Response(JSON.stringify({system_control:true,instance_id:'authored'}));online=false;throw new TypeError('offline')}));
+ render(<Lifecycle onStop={vi.fn()} onStopped={ended}/>);
+ await waitFor(()=>expect(screen.getByRole('button',{name:'Beenden'}).hasAttribute('disabled')).toBe(false));
+ await userEvent.click(screen.getByRole('button',{name:'Beenden'}));
+ await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button',{name:'Beenden'}));
+ await screen.findByText('Für heute beendet.');expect(ended).toHaveBeenCalledOnce();expect(screen.queryByRole('alert')).toBeNull();
+});

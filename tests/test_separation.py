@@ -43,3 +43,11 @@ def test_source_gains_are_exact_order_independent_and_reject_unsafe_values(tmp_p
     assert np.allclose(sf.read(separation.mix(tmp_path,'test','htdemucs',['vocals'],[0]))[0],0)
     for gains in [[float('nan')],[float('inf')],[-1],[1.1],[]]:
         with pytest.raises(ValueError):separation.mix(tmp_path,'test','htdemucs',['vocals'],gains)
+
+def test_peak_safe_mix_preserves_waveform_shape_instead_of_clipping(tmp_path):
+    root=separation.folder(tmp_path,'test','htdemucs');root.mkdir(parents=True)
+    wave=np.array([[.8,.8],[.4,.4]],dtype='float32')
+    for name in ['vocals','drums']:sf.write(root/(name+'.wav'),wave,48000,subtype='FLOAT')
+    (root/'manifest.json').write_text(json.dumps({'sources':['vocals','drums'],'sample_rate':48000}))
+    output=sf.read(separation.mix(tmp_path,'test','htdemucs',['vocals','drums']))[0]
+    assert np.allclose(output,[[1,1],[.5,.5]])

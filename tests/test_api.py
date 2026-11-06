@@ -350,3 +350,40 @@ def test_automatic_research_tries_next_compatible_recording_for_missing_credits(
     assert calls==['itunes:1','deezer:2']
     assert result['matched']['id']=='deezer:2' and len(result['selection_attempts'])==2
     assert client.get(f'/api/tracks/{identity}/research').json()['id']=='deezer:2'
+
+def test_cancelled_job_stops_before_cache_commit_and_releases_worker(client):
+    import threading,time
+    from backend import cancellation
+    module=importlib.import_module('backend.app')
+    started=threading.Event();release=threading.Event()
+    def work(job_id):
+        started.set();assert release.wait(3)
+        with module.db() as conn:
+            conn.execute('INSERT INTO cache VALUES (?,?)',('cancel-fixture','{}'))
+    identity=module.start_job('test',work)['job_id']
+    assert started.wait(3)
+    assert client.post(f'/api/jobs/{identity}/cancel').json()['cancel_requested']
+    release.set()
+    for _ in range(100):
+        value=client.get(f'/api/jobs/{identity}').json()
+        if value['status']=='cancelled':break
+        time.sleep(.01)
+    assert value['status']=='cancelled' and value['result'] is None
+    with module.db() as conn:assert conn.execute('SELECT result FROM cache WHERE key=?',('cancel-fixture',)).fetchone() is None
+
+def test_stem_and_full_mix_exports_are_attachments_with_range_support(client):
+    import soundfile as sf
+    import numpy as np
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    root=module.separation.folder(module.DATA,identity,'htdemucs');root.mkdir(parents=True)
+    for name in ['vocals','drums']:sf.write(root/(name+'.wav'),np.full((48000,2),.1),48000,subtype='FLOAT')
+    (root/'manifest.json').write_text(json.dumps({'sources':['vocals','drums'],'sample_rate':48000}))
+    base=f'/api/tracks/{identity}/mix?model=htdemucs&download=true'
+    stem=client.get(base+'&sources=vocals')
+    assert stem.status_code==200 and 'attachment' in stem.headers['content-disposition'] and 'moodscope-vocals.wav' in stem.headers['content-disposition']
+    mixed=client.get(base+'&sources=vocals,drums&gains=1,0.5')
+    assert 'moodscope-mix.wav' in mixed.headers['content-disposition']
+    audio,sr=sf.read(io.BytesIO(mixed.content));assert sr==48000 and np.allclose(audio,.15)
+    partial=client.get(base+'&sources=vocals',headers={'Range':'bytes=0-31'})
+    assert partial.status_code==206 and len(partial.content)==32

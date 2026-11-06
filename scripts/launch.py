@@ -15,12 +15,28 @@ else:
 ROOT=Path(__file__).resolve().parents[1]
 
 
+def latest_binary():
+    binary='moodscope.exe' if os.name=='nt' else 'moodscope'
+    candidates=[ROOT/'src-tauri'/'target'/version/'release'/binary for version in ['v03','v02']]
+    candidates.append(ROOT/'src-tauri'/'target'/'release'/binary)
+    return max((p for p in candidates if p.exists()),key=lambda p:p.stat().st_mtime,default=candidates[0])
+
+
+def run_desktop(before_launch=None):
+    while True:
+        if before_launch:before_launch()
+        result=subprocess.run([str(latest_binary())],cwd=ROOT)
+        if result.returncode==75:continue
+        result.check_returncode()
+        return
+
+
 def ready():
     try:
         with urlopen('http://127.0.0.1:8765/api/health',timeout=2) as response:
             state=json.load(response)
             if state.get('status')!='ok': return False
-            if state.get('version')!='0.3.0' or state.get('api_revision')!=6:
+            if state.get('version')!='0.3.0' or state.get('api_revision')!=8:
                 raise RuntimeError('Ein älteres Backend läuft auf Port 8765. Den bisherigen MoodScope-Dienst beenden und erneut starten.')
             if state.get('runtime_id')!=environment_id():
                 raise RuntimeError('Ein MoodScope-Dienst aus einer anderen Python-Umgebung läuft. In der App Beenden wählen und den Projektstarter erneut öffnen.')
@@ -34,15 +50,14 @@ def main():
     if selected.is_file() and selected.resolve()!=Path(sys.executable).resolve():
         raise SystemExit(subprocess.call([str(selected),str(Path(__file__).resolve())],cwd=ROOT))
     os.chdir(ROOT)
-    binary='moodscope.exe' if os.name=='nt' else 'moodscope'
-    candidates=[ROOT/'src-tauri'/'target'/'v03'/'release'/binary,ROOT/'src-tauri'/'target'/'v02'/'release'/binary,ROOT/'src-tauri'/'target'/'release'/binary]
-    exe=max((p for p in candidates if p.exists()),key=lambda p:p.stat().st_mtime,default=candidates[0])
+    exe=latest_binary()
     if not exe.exists():
         raise SystemExit('Native App fehlt. Zuerst: npm run tauri build -- --no-bundle')
     backend=None
     (ROOT/'data').mkdir(exist_ok=True)
     with (ROOT/'data'/'backend.log').open('a',encoding='utf-8') as log:
-        try:
+        def ensure_backend():
+            nonlocal backend
             if not ready():
                 backend=subprocess.Popen([sys.executable,'-m','scripts.service','--port','8765'],
                     cwd=ROOT,stdout=log,stderr=log,
@@ -52,7 +67,8 @@ def main():
                     if backend.poll() is not None: raise RuntimeError('Backend beendet. Siehe data/backend.log')
                     time.sleep(.5)
                 else: raise RuntimeError('Backend startet nicht. Siehe data/backend.log')
-            subprocess.run([str(exe)],cwd=ROOT,check=True)
+        try:
+            run_desktop(ensure_backend)
         finally:
             if backend and backend.poll() is None:
                 import psutil

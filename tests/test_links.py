@@ -29,8 +29,8 @@ def test_downloader_uses_argument_array_and_does_not_load_user_config(tmp_path,m
         assert '--no-playlist' in command
         assert '--cookies-from-browser' not in command
         (tmp_path/'source.webm').write_bytes(b'test media')
-        return SimpleNamespace(returncode=0,stdout=json.dumps({'title':'Public test','artist':'Test'}).encode())
-    monkeypatch.setattr(links.subprocess,'run',run)
+        return SimpleNamespace(returncode=0,communicate=lambda **k:(json.dumps({'title':'Public test','artist':'Test'}).encode(),b''),poll=lambda:0)
+    monkeypatch.setattr(links.subprocess,'Popen',run)
     source,metadata=links.download('https://youtu.be/BaW_jenozKc',tmp_path,lambda *a:None)
     assert source.name=='source.webm'
     assert metadata['source']=='YouTube'
@@ -38,6 +38,6 @@ def test_downloader_uses_argument_array_and_does_not_load_user_config(tmp_path,m
 
 def test_downloader_diagnostics_are_not_exposed(tmp_path,monkeypatch):
     monkeypatch.setattr(links,'downloader',lambda:'downloader')
-    monkeypatch.setattr(links.subprocess,'run',lambda *a,**k:SimpleNamespace(returncode=1,stderr=b'PRIVATE_DIAGNOSTIC',stdout=b''))
+    monkeypatch.setattr(links.subprocess,'Popen',lambda *a,**k:SimpleNamespace(returncode=1,communicate=lambda **kw:(b'',b'PRIVATE_DIAGNOSTIC'),poll=lambda:1))
     with pytest.raises(RuntimeError) as error:links.download('https://youtu.be/BaW_jenozKc',tmp_path,lambda *a:None)
     assert 'PRIVATE_DIAGNOSTIC' not in str(error.value)

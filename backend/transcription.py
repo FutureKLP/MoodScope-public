@@ -7,6 +7,17 @@ _dll_handles=[]
 _dll_directories=set()
 
 
+def decode_audio(path,sampling_rate=16000):
+    """Our inputs are normalised WAV/stem files; avoid incompatible PyAV keyword APIs."""
+    import soundfile as sf
+    import librosa
+    audio,sr=sf.read(path,dtype='float32',always_2d=True)
+    mono=audio.mean(axis=1)
+    if sr!=sampling_rate:mono=librosa.resample(mono,orig_sr=sr,target_sr=sampling_rate)
+    if not np.isfinite(mono).all():raise ValueError('Ungültige Audiodaten für Texterkennung')
+    return np.ascontiguousarray(mono,dtype='float32')
+
+
 def windows_cuda_directories(torch_folder):
     from importlib.metadata import distribution,PackageNotFoundError
     folders=[Path(torch_folder)]
@@ -62,7 +73,6 @@ def owned_segments(segments,window_start,owner_start,owner_end,duration):
 
 def transcribe(engine,path,progress,quality='standard',language=None):
     from faster_whisper import WhisperModel
-    from faster_whisper.audio import decode_audio
     from . import catalog,diagnostics
     device=device_for(engine)
     progress('Whisper: lokale Texterkennung auf '+('NVIDIA CUDA' if device=='cuda' else 'CPU'),5)

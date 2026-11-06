@@ -19,6 +19,8 @@ def fetch_checkpoint(url,destination,expected_hash):
             response.raise_for_status()
             with temporary.open('wb') as output:
                 for block in response.iter_bytes(1024*1024):
+                    from .cancellation import check
+                    check()
                     total+=len(block)
                     if total>200*1024*1024 or time.monotonic()>deadline:raise RuntimeError('Modelldownload überschreitet Größen- oder Zeitlimit.')
                     digest.update(block);output.write(block)

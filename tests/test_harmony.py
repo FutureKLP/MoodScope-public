@@ -39,3 +39,11 @@ def test_musical_projection_is_bounded_explained_and_keeps_raw_inference():
     assert 0<result['musical_adjustment']<=.12 and len(result['musical_contributions'])==4
     assert result['arousal']>.5 and rows[0]['valence']==.98
     assert musical_projection([{**rows[0],'rms':0}],f)[0]['musical_adjustment']==0
+
+def test_major_minor_transitions_are_weighted_by_actual_overlap():
+    from backend.audio_method import musical_projection
+    rows=[{'start':0,'end':2,'valence':0,'scores':{}}]
+    features={'harmony':{'chords':[{'start':0,'end':1,'label':'C','margin':.15},{'start':1,'end':2,'label':'Cm','margin':.15}]}}
+    result=musical_projection(rows,features)[0]
+    assert result['musical_contributions'][0]['feature']=='triad_mode'
+    assert abs(result['musical_adjustment'])<1e-8

@@ -88,7 +88,7 @@ describe('workspace flows',()=>{
     await userEvent.click(screen.getByRole('button',{name:'Interpret entire song'}));
     await waitFor(()=>expect(requests.some(r=>r.path.endsWith('/interpret')&&r.body.language==='en')).toBe(true));
     expect(requests.some(r=>r.path.includes('interpretation?')&&r.path.includes('language=en'))).toBe(true);
-    for(const tab of ['Song details','Listening studio','Library','Models & API','Timeline']){
+    for(const tab of ['Song details','Listening studio','Library','Models & API','Song analysis','Mood timeline']){
       await userEvent.click(screen.getByRole('button',{name:tab}));
       await waitFor(()=>expect(screen.getByLabelText('App language').hasAttribute('disabled')).toBe(false));
       expect(document.body.textContent).not.toMatch(/Gespeicherte Songs|Meine eigene Interpretation|Hör hinter den Mix|KI-Anbieter|Song und einzelne Zeilen/);
@@ -206,9 +206,12 @@ describe('workspace flows',()=>{
     await userEvent.click(screen.getByRole('button',{name:'Link importieren'}));
     await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
     await screen.findByLabelText('KI-Server API-Key');
-    expect(screen.getByRole('button',{name:'+ Song importieren'}).hasAttribute('disabled')).toBe(true);
+    expect((screen.getByLabelText('Modellzweck') as HTMLSelectElement).disabled).toBe(true);
+    expect(screen.getByRole('button',{name:'Abbrechen'})).toBeTruthy();
     finish({status:'done',progress:100,message:'Import complete',result:track});
-    await waitFor(()=>expect(screen.getByRole('button',{name:'+ Song importieren'}).hasAttribute('disabled')).toBe(false));
+    await waitFor(()=>expect((screen.getByLabelText('Modellzweck') as HTMLSelectElement).disabled).toBe(false));
+    await userEvent.click(screen.getByRole('button',{name:'Song-Analyse'}));
+    expect(screen.getByRole('button',{name:'+ Song importieren'}).hasAttribute('disabled')).toBe(false);
   });
 
   it('does not let delayed note loading overwrite a user edit',async()=>{

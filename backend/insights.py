@@ -111,8 +111,10 @@ def interpretation(data,engine,analysis,metadata,time_position=None,mode='local'
             return {'text':tokenizer.decode(output[0,inputs['input_ids'].shape[1]:],skip_special_tokens=True).strip(),
                     'input_truncated':len(tokenizer.encode(text))>8192,
                     'output_truncated':output.shape[1]-inputs['input_ids'].shape[1]>=limit}
+        from .cancellation import check
+        check()
         result=checked_local_generation(generate,context['full_text'],language)
-        return {**result,'audio_evidence':evidence,'model':catalog.CATALOG[catalog.configuration(data)['active']['interpretation']]['repo'],
+        return {**result,'audio_evidence':evidence,'model':catalog.entries(data)[catalog.configuration(data)['active']['interpretation']]['repo'],
                 'mode':'local','time':time_position}
     finally:
         if 'model' in locals():del model

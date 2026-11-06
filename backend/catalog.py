@@ -33,7 +33,12 @@ CATALOG={
             'download':'etwa 6,2 GB','memory':'etwa 7 GB VRAM'},
 }
 DEFAULTS={'audio':'clap','lyrics':'xlm-emo','whisper':'whisper-base','interpretation':'qwen-small'}
-_lock=threading.Lock()
+_lock=threading.RLock()
+
+
+def entries(data):
+    from . import custom_models
+    return {**CATALOG,**custom_models.entries(data)}
 
 
 def config_path(data):return Path(data)/'model-settings.json'
@@ -41,58 +46,96 @@ def config_path(data):return Path(data)/'model-settings.json'
 
 def configuration(data):
     try:
+        models=entries(data)
         value=json.loads(config_path(data).read_text(encoding='utf-8'))
-        active={k:v for k,v in value.get('active',{}).items() if v in CATALOG and CATALOG[v]['purpose']==k}
-        installed={k:v for k,v in value.get('installed',{}).items() if k in CATALOG and Path(v).is_dir()}
-        return {'active':{**DEFAULTS,**active},'installed':installed}
-    except (OSError,ValueError,TypeError):return {'active':dict(DEFAULTS),'installed':{}}
+        active={k:v for k,v in value.get('active',{}).items() if v in models and models[v]['purpose']==k}
+        installed={k:v for k,v in value.get('installed',{}).items() if k in models and Path(v).is_dir()}
+        return {'active':{**DEFAULTS,**active},'installed':installed,'incomplete':value.get('incomplete',[])}
+    except (OSError,ValueError,TypeError):return {'active':dict(DEFAULTS),'installed':{},'incomplete':[]}
 
 
 def save(data,value):
     path=config_path(data);path.parent.mkdir(parents=True,exist_ok=True)
     temporary=path.with_suffix('.tmp')
+    from .cancellation import check
+    check()
     temporary.write_text(json.dumps(value,indent=2),encoding='utf-8');temporary.replace(path)
 
 
 def select(data,key):
-    if key not in CATALOG:raise ValueError('Nicht unterstütztes Modell')
+    models=entries(data)
+    if key not in models:raise ValueError('Nicht unterstütztes Modell')
     with _lock:
-        value=configuration(data);value['active'][CATALOG[key]['purpose']]=key;save(data,value)
+        value=configuration(data)
+        if models[key].get('custom') and key not in value['installed']:raise ValueError('Eigenes Modell zuerst herunterladen und prüfen.')
+        value['active'][models[key]['purpose']]=key;save(data,value)
 
 
 def model_source(data,purpose):
     value=configuration(data);key=value['active'][purpose]
-    return value['installed'].get(key,CATALOG[key]['repo'])
+    model=entries(data)[key]
+    if model.get('custom') and key not in value['installed']:raise ValueError('Eigenes Modell zuerst herunterladen.')
+    if purpose=='whisper' and key not in value['installed'] and not model.get('custom'):
+        # Explicit model-manager downloads use the shared Hub cache; faster-whisper's
+        # own downloader uses a separate directory. Reuse either complete snapshot offline.
+        from huggingface_hub import try_to_load_from_cache
+        for location in [ROOT/'models'/'hub',ROOT/'models'/'whisper']:
+            cached=try_to_load_from_cache(model['repo'],'model.bin',cache_dir=location)
+            if isinstance(cached,str) and (Path(cached).parent/'config.json').is_file():return str(Path(cached).parent)
+    return value['installed'].get(key,model['repo'])
 
 
 def status(data):
     from huggingface_hub import try_to_load_from_cache
     value=configuration(data)
     items=[]
-    for key,model in CATALOG.items():
+    for key,model in entries(data).items():
         weight='model.bin' if model['purpose']=='whisper' else 'model.safetensors'
-        cached=try_to_load_from_cache(model['repo'],weight)
+        cached=try_to_load_from_cache(model['repo'],weight,revision=model.get('revision'))
         if model['purpose']=='whisper' and not isinstance(cached,str):
             cached=try_to_load_from_cache(model['repo'],weight,cache_dir=ROOT/'models'/'whisper')
-        if not isinstance(cached,str):cached=try_to_load_from_cache(model['repo'],'pytorch_model.bin')
-        installed=key in value['installed'] or isinstance(cached,str)
+        if not model.get('custom') and not isinstance(cached,str):cached=try_to_load_from_cache(model['repo'],'pytorch_model.bin')
+        installed=(key in value['installed'] or isinstance(cached,str)) and key not in value.get('incomplete',[])
         items.append({'id':key,**model,'installed':installed,'active':value['active'][model['purpose']]==key})
     return {'models':items,'active':value['active']}
 
 
 def download(data,key,progress):
-    if key not in CATALOG:raise ValueError('Nicht unterstütztes Modell')
+    models=entries(data)
+    if key not in models:raise ValueError('Nicht unterstütztes Modell')
     from huggingface_hub import snapshot_download
-    progress('Lade '+CATALOG[key]['name']+' von Hugging Face; mehrere GB möglich',5)
-    model=CATALOG[key]
+    progress('Lade '+models[key]['name']+' von Hugging Face; mehrere GB möglich',5)
+    model=models[key]
     patterns=['*.json','*.model','tokenizer*','*.txt']
     if model['purpose']=='whisper':patterns+=['model.bin']
     elif model['purpose']=='lyrics':patterns+=['pytorch_model.bin']
     elif model['purpose']=='audio':patterns+=['pytorch_model.bin','*.safetensors']
     else:patterns+=['*.safetensors']
-    path=snapshot_download(model['repo'],allow_patterns=patterns)
+    from . import cancellation
+    checkpoint=cancellation.capture()
+    from tqdm.auto import tqdm
+    class DownloadProgress(tqdm):
+        def update(self,n=1):
+            checkpoint()
+            return super().update(n)
+    kwargs={}
+    if model.get('custom'):
+        patterns=['*.json','*.model','tokenizer*','*.txt','*.safetensors']
+        if model['purpose']=='whisper':patterns+=['model.bin']
+        kwargs={'revision':model['revision'],'token':False,'local_dir':ROOT/'models'/'managed'/key,'ignore_patterns':['*.py','*.pkl','*.pickle','*.pt','*.pth','*.ckpt']}
     with _lock:
-        value=configuration(data);value['installed'][key]=path;save(data,value)
+        value=configuration(data);value['incomplete']=list(set(value.get('incomplete',[])+[key]));save(data,value)
+    path=snapshot_download(model['repo'],allow_patterns=patterns,tqdm_class=DownloadProgress,**kwargs)
+    checkpoint()
+    if model.get('custom'):
+        from .custom_models import validate_config
+        validate_config(model['purpose'],json.loads((Path(path)/'config.json').read_text(encoding='utf8')))
+        if model['purpose']=='interpretation':
+            from transformers import AutoTokenizer
+            tokenizer=AutoTokenizer.from_pretrained(path,trust_remote_code=False,local_files_only=True)
+            if not tokenizer.chat_template:raise ValueError('Interpretationsmodell benötigt ein Chat-Template.')
+    with _lock:
+        value=configuration(data);value['installed'][key]=str(path);value['incomplete']=[v for v in value.get('incomplete',[]) if v!=key];save(data,value)
     return {'model_id':key,'installed':True}
 
 
@@ -101,3 +144,45 @@ def unload_models(engine):
     gc.collect()
     import torch
     if torch.cuda.is_available():torch.cuda.empty_cache()
+
+
+def remove(data,key):
+    """Delete only verified app-owned model paths, never arbitrary configured folders."""
+    import shutil
+    from huggingface_hub import scan_cache_dir
+    from . import custom_models
+    with _lock:
+        models=entries(data)
+        if key not in models:raise ValueError('Nicht unterstütztes Modell')
+        model=models[key];value=configuration(data)
+        for purpose,active in list(value['active'].items()):
+            if active==key:value['active'][purpose]=DEFAULTS[purpose]
+        root=(ROOT/'models').resolve()
+        if not root.is_relative_to(ROOT.resolve()):raise ValueError('Modellordner liegt außerhalb des Projekts')
+        managed=root/'managed'/key
+        installed=value['installed'].get(key)
+        if installed and not Path(installed).resolve().is_relative_to(root):
+            raise ValueError('Modell liegt außerhalb des verwalteten Modellordners; keine Datei gelöscht.')
+        if managed.exists():
+            resolved=managed.resolve()
+            if resolved!=managed or managed.is_symlink() or (hasattr(managed,'is_junction') and managed.is_junction()):raise ValueError('Ungültiger Modellpfad')
+            shutil.rmtree(resolved)
+        # Existing curated downloads live in the project Hugging Face cache.
+        if not model.get('custom'):
+            if any(active!=key and models[active]['repo']==model['repo'] for active in value['active'].values()):
+                raise ValueError('Ein anderes ausgewähltes Modell verwendet dieselben Gewichte.')
+            for location in [root/'hub',root/'whisper']:
+                if not location.is_dir():continue
+                cache=scan_cache_dir(location)
+                for repo in cache.repos:
+                    if repo.repo_id!=model['repo']:continue
+                    strategy=cache.delete_revisions(*(r.commit_hash for r in repo.revisions))
+                    for field in ['blobs','refs','snapshots','repos']:
+                        for target in getattr(strategy,field,[]):
+                            resolved=Path(target).resolve()
+                            if not resolved.is_relative_to(root) or resolved==root:raise ValueError('Cachepfad außerhalb des Modellordners')
+                    strategy.execute()
+        value['installed'].pop(key,None);value['incomplete']=[v for v in value.get('incomplete',[]) if v!=key];save(data,value)
+        if model.get('custom'):
+            custom=custom_models.entries(data);custom.pop(key,None);custom_models.save(data,custom)
+    return status(data)

@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field, SecretStr
 
 from .core import parse_lrc, biggest_split,text_coverage
 from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
-from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method
+from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method,cancellation
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
@@ -32,6 +32,7 @@ app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=['GET','
 executor = ThreadPoolExecutor(max_workers=1)
 jobs = {}
 job_lock = threading.RLock()
+cancel_events = {}
 SYSTEM_CONTROL=None
 INSTANCE_ID=uuid.uuid4().hex
 
@@ -78,7 +79,10 @@ def db():
     conn.execute('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, result TEXT NOT NULL)')
     conn.execute('CREATE TABLE IF NOT EXISTS cache_owner (key TEXT PRIMARY KEY, track_id TEXT NOT NULL)')
     try:
-        with conn: yield conn
+        with conn:
+            cancellation.check()
+            yield conn
+            cancellation.check()
     finally: conn.close()
 
 
@@ -111,7 +115,7 @@ def local_version(active):
 @app.get('/api/health')
 def health():
     from scripts.runtime import environment_id
-    return {'status':'ok', 'version':'0.3.0','api_revision':6,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
+    return {'status':'ok', 'version':'0.3.0','api_revision':8,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -291,6 +295,7 @@ def start_job(kind, function, *args):
             if jobs[identity]['status']!='running': jobs.pop(identity)
         job_id=uuid.uuid4().hex
         jobs[job_id]={'kind':kind,'status':'running','progress':0,'message':'Auftrag wird vorbereitet'}
+        cancel_events[job_id]=threading.Event()
     diagnostics.event(DATA,kind,'queued job='+job_id)
     executor.submit(execute_job,kind,function,job_id,args)
     return {'job_id':job_id}
@@ -299,13 +304,17 @@ def start_job(kind, function, *args):
 def execute_job(kind,function,job_id,args):
     import time
     started=time.monotonic()
-    try:function(job_id,*args)
+    try:
+        with cancellation.scope(cancel_events[job_id]):function(job_id,*args)
+    except cancellation.Cancelled:
+        with job_lock:jobs[job_id].update(status='cancelled',message='Auftrag abgebrochen.',result=None)
     except Exception as exc:
         with job_lock:jobs[job_id].update(status='error',message=diagnostics.user_error(DATA,kind,exc,'Auftrag fehlgeschlagen.'))
     finally:
         with job_lock:
+            cancel_events.pop(job_id,None)
             job=jobs.get(job_id,{})
-            state=job.get('status','unknown');result=job.get('result',{})
+            state=job.get('status','unknown');result=job.get('result') or {}
         diagnostics.event(DATA,kind,f'job={job_id} status={state} elapsed_seconds={time.monotonic()-started:.2f} cached={result.get("cached",False)} audio_segments={len(result.get("audio",[]))} lyric_segments={len(result.get("lyrics",[]))}')
 
 
@@ -322,6 +331,7 @@ def link_search(request:LinkRequest):
 
 def run_link_job(job_id,url):
     def progress(message,value):
+        cancellation.check()
         with job_lock: jobs[job_id].update(message=message,progress=value)
     try:
         with tempfile.TemporaryDirectory(prefix='link-',dir=DATA) as directory:
@@ -345,6 +355,7 @@ def import_link(request: LinkRequest):
 
 def run_job(job_id, identity, request):
     def progress(message, value):
+        cancellation.check()
         with job_lock:
             jobs[job_id].update(message=message, progress=value)
     try:
@@ -365,9 +376,10 @@ def run_job(job_id, identity, request):
             if request.lyrics.strip() and not lines:
                 warnings.append('Text ohne LRC-Zeitstempel: keine synchronisierte Textkurve. Bitte LRC importieren oder Whisper aktivieren.')
             if not lines and request.whisper and request.mode=='local':
-                vocal_file=separation.folder(DATA,identity,'htdemucs')/'vocals.wav'
+                vocal_candidates=[separation.folder(DATA,identity,name)/'vocals.wav' for name in ['htdemucs_auto','htdemucs_ft','htdemucs','htdemucs_6s']]
+                vocal_file=next((p for p in vocal_candidates if p.exists()),vocal_candidates[0])
                 if request.transcription_source=='vocals' and not vocal_file.exists():
-                    separation.separate(DATA,identity,'htdemucs',engines,progress)
+                    separation.separate(DATA,identity,'htdemucs_auto',engines,progress)
                 input_file=vocal_file if request.transcription_source!='mix' and vocal_file.exists() else DATA / f'{identity}.wav'
                 if request.transcription_quality=='standard' and not request.transcription_language:
                     lines=engines.transcribe(input_file,progress)
@@ -405,8 +417,8 @@ def run_job(job_id, identity, request):
                       'lyrics_source':lyric_source,
                       'audio_resolution':request.audio_resolution,
                       'text_coverage':text_coverage(l,metadata['duration']),
-                      'models':{'audio':catalog.CATALOG[active['audio']]['repo'] if request.mode=='local' else cloud.MODEL,
-                                'lyrics':catalog.CATALOG[active['lyrics']]['repo'] if request.mode=='local' else cloud.MODEL},
+                      'models':{'audio':catalog.entries(DATA)[active['audio']]['repo'] if request.mode=='local' else cloud.MODEL,
+                                'lyrics':catalog.entries(DATA)[active['lyrics']]['repo'] if request.mode=='local' else cloud.MODEL},
                       'method':'CLAP Prompt-Ensemble und XLM-EMO mit Textkontext' if request.mode=='local' else 'Gemini: getrennte Audio- und Textanalyse; subjektive unkalibrierte Valenz.'}
             if request.mode=='local':result['audio_method']=audio_method.describe_musical(result['models']['audio'],request.audio_resolution)
             else:result=audio_method.with_method(result)
@@ -446,12 +458,49 @@ def job(job_id: str):
         return value
 
 
+@app.post('/api/jobs/{job_id}/cancel')
+def cancel_job(job_id:str):
+    with job_lock:
+        if job_id not in jobs:raise HTTPException(404,'Analyseauftrag nicht gefunden')
+        value=jobs[job_id]
+        if value['status']=='running' and job_id in cancel_events:
+            cancel_events[job_id].set()
+            value.update(cancel_requested=True,message='Abbruch angefordert. Aktueller Rechenschritt wird sicher beendet.')
+        return {'status':value['status'],'cancel_requested':value.get('cancel_requested',False)}
+
+
 @app.get('/api/models')
 def models():return catalog.status(DATA)
 
 
 class ModelChoice(BaseModel):
     model_id: str = Field(max_length=80)
+
+
+class CustomModel(BaseModel):
+    url:str=Field(min_length=20,max_length=500)
+    purpose:Literal['audio','lyrics','interpretation','whisper']
+
+
+@app.post('/api/models/custom')
+def add_custom_model(request:CustomModel):
+    from . import custom_models
+    with job_lock:
+        if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
+        try:custom_models.add(DATA,request.url,request.purpose)
+        except ValueError as exc:raise HTTPException(422,str(exc)) from None
+        except Exception as exc:raise HTTPException(502,diagnostics.user_error(DATA,'model-register',exc,'Modellseite konnte nicht geprüft werden. Öffentliches Repository und Verbindung prüfen.')) from None
+    return catalog.status(DATA)
+
+
+@app.post('/api/models/delete')
+def delete_model(request:ModelChoice):
+    with job_lock:
+        if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
+        catalog.unload_models(engines)
+        try:return catalog.remove(DATA,request.model_id)
+        except ValueError as exc:raise HTTPException(422,str(exc)) from None
+        except Exception as exc:raise HTTPException(500,diagnostics.user_error(DATA,'model-delete',exc,'Modelldateien konnten nicht vollständig gelöscht werden. App neu starten und erneut versuchen.')) from None
 
 
 @app.post('/api/models/select')
@@ -466,17 +515,18 @@ def select_model(request: ModelChoice):
 
 def run_download(job_id,key):
     def progress(message,value):
+        cancellation.check()
         with job_lock:jobs[job_id].update(message=message,progress=value)
     try:
         result=catalog.download(DATA,key,progress)
         with job_lock:jobs[job_id].update(status='done',progress=100,message='Modell heruntergeladen',result=result)
-    except Exception:
-        with job_lock:jobs[job_id].update(status='error',message='Modelldownload fehlgeschlagen. Netzwerk, freien Speicher und Offline-Einstellung prüfen.')
+    except Exception as exc:
+        with job_lock:jobs[job_id].update(status='error',message=diagnostics.user_error(DATA,'model-download',exc,'Modelldownload fehlgeschlagen. Netzwerk, freien Speicher und Offline-Einstellung prüfen.'))
 
 
 @app.post('/api/models/download')
 def download_model(request: ModelChoice):
-    if request.model_id not in catalog.CATALOG:raise HTTPException(422,'Nicht unterstütztes Modell')
+    if request.model_id not in catalog.entries(DATA):raise HTTPException(422,'Nicht unterstütztes Modell')
     return start_job('download',run_download,request.model_id)
 
 
@@ -524,13 +574,19 @@ def run_interpretation(job_id,identity,request):
         with db() as conn:
             detail=conn.execute('SELECT result FROM cache WHERE key=?',(f'details:{identity}:{catalog.configuration(DATA)["active"]["audio"]}:v3-harmony',)).fetchone()
         if detail:analysis['instruments']=json.loads(detail[0]).get('instruments',[])
-        key='interpretation:'+hashlib.sha256(('whole-song-v7-harmonic-evidence-language'+identity+json.dumps(analysis,sort_keys=True)+json.dumps(request.model_dump(exclude={'force'}),sort_keys=True)+selected).encode()).hexdigest()
+        with db() as conn:research_row=conn.execute('SELECT result FROM cache WHERE key=?',(f'research-selected:{cache_identity}',)).fetchone()
+        research_facts=json.loads(research_row[0]) if research_row else None
+        research_basis=hashlib.sha256(json.dumps(research_facts,sort_keys=True).encode()).hexdigest()
+        key='interpretation:'+hashlib.sha256(('whole-song-v8-grounded-language'+research_basis+identity+json.dumps(analysis,sort_keys=True)+json.dumps(request.model_dump(exclude={'force'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
         else:
             with job_lock:jobs[job_id].update(message='Interpretiere Belege und Textkontext; erster Start kann Modell laden',progress=20)
             result=insights.interpretation(DATA,engines,analysis,metadata,request.time,request.mode,request.provider_id,request.language)
             result['cached']=False
+            result['text_evidence']=[{'start':r['start'],'end':r['end'],'text':r.get('text','')} for r in analysis.get('lyrics',[]) if request.time is None or r['start']<=request.time<r['end']]
+            result['online_evidence']={k:v for k,v in research_facts.items() if k in {'source','url','title','musical_facts'}} if research_facts else None
+            result['research_basis']=research_basis
             result['language']=request.language
             result['analysis_basis']=insights.analysis_basis(analysis)
             result['source_warning']='Diese Deutung basiert auf automatisch erkannten Wörtern. Whisper kann Wörter verwechseln; bitte den Text im Verlauf prüfen und gegebenenfalls korrigieren.' if analysis.get('lyrics_source')=='whisper' else 'Auch diese Deutung ist eine mögliche Lesart. Die Textquelle und konkrete Belege selbst prüfen.'
@@ -573,11 +629,16 @@ def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',prov
     value=json.loads(row[0])
     with db() as conn:analysis=conn.execute('SELECT result FROM cache WHERE key=?',(f'latest:{identity}:{mode}',)).fetchone()
     stale=not analysis or value.get('analysis_basis')!=insights.analysis_basis(json.loads(analysis[0]))
+    with db() as conn:research_row=conn.execute('SELECT result FROM cache WHERE key=?',(f'research-selected:{identity}',)).fetchone()
+    current_research=json.loads(research_row[0]) if research_row else None
+    research_basis=hashlib.sha256(json.dumps(current_research,sort_keys=True).encode()).hexdigest()
+    stale=stale or (value.get('research_basis') is not None and value['research_basis']!=research_basis)
     return {**value,'cached':True,'stale':stale}
 
 
 def run_details(job_id,identity):
     def progress(message,value):
+        cancellation.check()
         with job_lock:jobs[job_id].update(message=message,progress=value)
     try:
         engines.data=DATA
@@ -713,11 +774,12 @@ def delete_library():
 
 
 class SeparationRequest(BaseModel):
-    model: Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs'
+    model: Literal['htdemucs','htdemucs_6s','htdemucs_ft','htdemucs_auto']='htdemucs'
 
 
 def run_separation(job_id,identity,request):
     def progress(message,value):
+        cancellation.check()
         with job_lock:jobs[job_id].update(message=message,progress=value)
     try:
         result=separation.separate(DATA,identity,request.model,engines,progress)
@@ -736,7 +798,7 @@ def separate_track(identity:str,request:SeparationRequest):
 
 
 @app.get('/api/tracks/{identity}/stems')
-def stem_status(identity:str,model:Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs'):
+def stem_status(identity:str,model:Literal['htdemucs','htdemucs_6s','htdemucs_ft','htdemucs_auto']='htdemucs'):
     track(identity)
     info=separation.status(DATA,identity,model)
     with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(f'stem-visibility:{identity}:{model}',)).fetchone()
@@ -746,7 +808,7 @@ def stem_status(identity:str,model:Literal['htdemucs','htdemucs_6s','htdemucs_ft
 
 
 class StemVisibility(BaseModel):
-    model:Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs'
+    model:Literal['htdemucs','htdemucs_6s','htdemucs_ft','htdemucs_auto']='htdemucs'
     hidden:list[Literal['vocals','drums','bass','other','guitar','piano']]=Field(default_factory=list,max_length=6)
     shown:list[Literal['vocals','drums','bass','other','guitar','piano']]=Field(default_factory=list,max_length=6)
 
@@ -762,19 +824,20 @@ def save_stem_visibility(identity:str,request:StemVisibility):
 
 
 @app.get('/api/tracks/{identity}/mix')
-def stem_mix(identity:str,sources:str,model:Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs',gains:str | None=None):
+def stem_mix(identity:str,sources:str,model:Literal['htdemucs','htdemucs_6s','htdemucs_ft','htdemucs_auto']='htdemucs',gains:str | None=None,download:bool=False):
     track(identity)
     try:
         if len(sources)>80 or (gains is not None and len(gains)>100):raise ValueError('Ungültiger Quellenmix')
         weights=[float(v) for v in gains.split(',')] if gains is not None else None
         path=separation.mix(DATA,identity,model,sources.split(','),weights)
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
-    return FileResponse(path,media_type='audio/wav')
+    name='moodscope-'+(sources if ',' not in sources else 'mix')+'.wav' if download else None
+    return FileResponse(path,media_type='audio/wav',filename=name)
 
 
 class FocusRequest(BaseModel):
     source:Literal['original','vocals','drums','bass','other','guitar','piano']='vocals'
-    model:Literal['htdemucs','htdemucs_6s','htdemucs_ft']='htdemucs'
+    model:Literal['htdemucs','htdemucs_6s','htdemucs_ft','htdemucs_auto']='htdemucs'
     stereo:Literal['stereo','left','right','center','sides']='stereo'
     start:float=Field(default=0,ge=0,le=1800)
     end:float | None=Field(default=None,gt=0,le=1800)

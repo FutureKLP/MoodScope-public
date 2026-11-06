@@ -28,3 +28,14 @@ def test_windows_cuda_directories_find_separately_installed_project_libraries(tm
     monkeypatch.setattr(importlib.metadata,'distribution',lambda name:Installed())
     folders=windows_cuda_directories(tmp_path/'torch/lib')
     assert folders==[tmp_path/'torch/lib',tmp_path/'nvidia/cublas/bin']
+
+def test_normalized_audio_decode_works_without_pyav_metadata_keyword(tmp_path):
+    import numpy as np
+    import soundfile as sf
+    from backend.transcription import decode_audio
+    path=tmp_path/'authored.wav';sr=48000
+    mono=np.sin(2*np.pi*440*np.arange(sr)/sr).astype('float32')*.1
+    sf.write(path,np.stack([mono,mono],axis=1),sr,subtype='FLOAT')
+    decoded=decode_audio(path)
+    assert decoded.shape==(16000,) and decoded.dtype==np.float32
+    assert abs(np.fft.rfftfreq(len(decoded),1/16000)[np.argmax(abs(np.fft.rfft(decoded)))]-440)<1

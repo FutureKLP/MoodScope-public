@@ -6,6 +6,12 @@ fn exit_app(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn restart_app(app: tauri::AppHandle) {
+    // The project launcher selects the newest built executable on exit code 75.
+    app.exit(75);
+}
+
+#[tauri::command]
 fn toggle_fullscreen(window: tauri::WebviewWindow) -> Result<(), String> {
     let fullscreen = window.is_fullscreen().map_err(|e| e.to_string())?;
     window.set_fullscreen(!fullscreen).map_err(|e| e.to_string())
@@ -13,7 +19,7 @@ fn toggle_fullscreen(window: tauri::WebviewWindow) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![exit_app, toggle_fullscreen])
+        .invoke_handler(tauri::generate_handler![exit_app, restart_app, toggle_fullscreen])
         .run(tauri::generate_context!())
         .expect("MoodScope desktop runtime failed");
 }

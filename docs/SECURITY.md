@@ -10,7 +10,7 @@ Stand: 6. November 2026. Entwicklungsversion, keine Freigabe als gehärteter öf
 - Provider-URLs ohne eingebettete Zugangsdaten; HTTPS für entfernte Server, HTTP nur für explizit konfigurierte lokale/LAN-Server. Keine Weiterleitung von API-Schlüsseln über HTTP-Redirects. LAN-Server nur innerhalb der eigenen Vertrauensgrenze verwenden.
 - Schlüssel verbleiben im Backend-Arbeitsspeicher. Validierungsantworten enthalten keine ursprünglichen Eingabewerte. Logs speichern Fehlertypen und Codepositionen; keine Modellantworten oder Lyrics. Kein ungeprüftes HTML aus KI-Ausgaben.
 - Demucs-Downloads sind auf die verpackten offiziellen Modelle begrenzt; TLS, Dateigrößen-/Zeitlimit und Herausgeber-Prüfsummen. `weights_only=True` bleibt aktiv; nur die benötigten Typen des offiziellen HTDemucs-Pakets werden während des Ladens freigegeben.
-- Kuratierte Modellliste, `trust_remote_code=False`; lokales Interpretationsmodell lädt ausschließlich Safetensors. Kein frei konfigurierbares Python-Modellrepository. Das reduziert Angriffsflächen, ersetzt aber keine Bibliothekspatches.
+- Vorgegebene sowie eigene kompatible öffentliche Hugging-Face-Modelle; eigene Revisionen werden festgelegt, `auto_map` wird verworfen und `trust_remote_code=False` bleibt aktiv. Eigene Transformers-Modelle und lokale Interpretation laden ausschließlich Safetensors. Keine beliebigen Downloadhosts und kein fremder Python-Modellcode. Das reduziert Angriffsflächen, ersetzt aber keine Bibliothekspatches.
 - Veröffentlichungsprüfung kontrolliert ausgewählte Dateien, erreichbare frühere Dateiversionen, Commit-Texte und E-Mail-Metadaten. Lokale Entwicklungsanweisungen werden ebenso ausgeschlossen wie Musik, Schlüssel, Notizen, Ausgaben und Modelle.
 
 ## Offene Bibliotheksmeldungen
@@ -23,4 +23,4 @@ Primärquellen: [OSV](https://osv.dev/), [filelock](https://github.com/advisorie
 
 ## Repository-Historie
 
-Die Hauptbranch enthält neu geschriebene technische Commit-Texte; lokale Agent-Regeln wurden auch aus ihren früheren Entwicklungsständen entfernt. Es werden keine Entwicklungsordner oder lokalen Hilfsdateien veröffentlicht. Das Repository bleibt privat. Ein Rewrite entfernt alte Commits aus der erreichbaren Branch-Historie, erzwingt jedoch keine Löschung aus fremden Klonen oder GitHubs internen Caches. Falls jemals ein echter Schlüssel veröffentlicht würde, müsste er zusätzlich widerrufen werden.
+Die Hauptbranch enthält neu geschriebene technische Commit-Texte; lokale Agent-Regeln wurden auch aus ihren früheren Entwicklungsständen entfernt. Es werden keine Entwicklungsordner oder lokalen Hilfsdateien veröffentlicht. Vor einer öffentlichen Freigabe werden der veröffentlichte Stand und die erreichbare Branch-Historie erneut geprüft. Ein Rewrite entfernt alte Commits aus der erreichbaren Branch-Historie, erzwingt jedoch keine Löschung aus fremden Klonen oder GitHubs internen Caches. Falls jemals ein echter Schlüssel veröffentlicht würde, müsste er zusätzlich widerrufen werden.

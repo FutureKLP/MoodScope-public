@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-MODELS={'htdemucs','htdemucs_6s','htdemucs_ft'}
+MODELS={'htdemucs','htdemucs_6s','htdemucs_ft','htdemucs_auto'}
 LABELS={'vocals':'Gesang / Stimmen','drums':'Schlagzeug','bass':'Bass','other':'Übrige Instrumente','guitar':'Gitarre','piano':'Klavier'}
 
 
@@ -51,22 +51,33 @@ def separate(data,identity,model_name,engine,progress):
     catalog.unload_models(engine)
     torch.hub.set_dir(str(catalog.ROOT/'models'/'demucs'))
     progress('Lade lokales Demucs-Modell; beim ersten Mal Modelldownload',5)
-    model=load_model(model_name,progress).to(engine.device()).eval()
+    actual_model='htdemucs_ft' if model_name=='htdemucs_auto' else model_name
+    model=load_model(actual_model,progress).to(engine.device()).eval()
     y,sr=sf.read(Path(data)/(identity+'.wav'),dtype='float32',always_2d=True)
     import librosa
     y=librosa.resample(y.T,orig_sr=sr,target_sr=model.samplerate)
     mixture=torch.from_numpy(y).to(engine.device())
     reference=mixture.mean(0);mean=reference.mean();std=reference.std()
     std=std.clamp(min=1e-6)
+    adaptive=model_name=='htdemucs_auto'
+    plan=adaptive_plan(y,model.samplerate) if adaptive else {'shifts':0,'overlap':.25}
     try:
         progress('Trenne Gesang und Instrumentgruppen lokal; das kann mehrere Minuten dauern',15)
         with torch.inference_mode():
             stems=apply_model(model,((mixture-mean)/std)[None],device=engine.device(),
-                shifts=0,split=True,overlap=.25,progress=False,num_workers=0)[0]
+                shifts=plan['shifts'],split=True,overlap=plan['overlap'],progress=False,num_workers=0)[0]
         stems=(stems*std+mean/len(model.sources)).cpu().numpy()
+        progress('Prüfe getrennte Spuren und Rekonstruktion',90)
+        error_before=float(np.sqrt(np.mean((y-stems.sum(axis=0))**2)))
+        if adaptive:
+            energy=np.mean(stems**2,axis=(1,2));weights=energy/max(1e-12,float(energy.sum()))
+            stems+=weights[:,None,None]*(y-stems.sum(axis=0))[None]
+        if not np.isfinite(stems).all():raise RuntimeError('Quellentrennung lieferte ungültige Audiodaten.')
         root=folder(data,identity,model_name);root.mkdir(parents=True,exist_ok=True)
         for source,audio in zip(model.sources,stems):sf.write(root/(source+'.wav'),audio.T,model.samplerate,subtype='FLOAT')
         info={'sources':list(model.sources),'model':model_name,'sample_rate':model.samplerate,
+            'actual_model':actual_model,'processing':plan,'reconstruction_rms_before':error_before,
+            'reconstruction_rms_after':float(np.sqrt(np.mean((y-stems.sum(axis=0))**2))),
             'duration':stems.shape[-1]/model.samplerate,'cached':False,'ready':True,
             'note':'Geschätzte Quellen mit möglichen Artefakten und Übersprechen. Gesang umfasst alle Stimmen; einzelne Sänger werden nicht getrennt. Gitarre/Klavier im 6-Spur-Modell sind experimentell.'}
         (root/'manifest.json').write_text(json.dumps(info),encoding='utf-8')
@@ -76,6 +87,16 @@ def separate(data,identity,model_name,engine,progress):
         import gc
         gc.collect()
         if torch.cuda.is_available():torch.cuda.empty_cache()
+
+
+def adaptive_plan(audio,sr):
+    """Choose bounded inference effort from measured transient contrast, not catalogue guesses."""
+    sample=audio[...,:min(audio.shape[-1],sr*30)]
+    rms=float(np.sqrt(np.mean(sample**2)))
+    crest=float(np.max(np.abs(sample))/max(1e-8,rms))
+    return {'shifts':2 if crest>5 else 1,'overlap':.5,'crest_ratio':crest,
+            'method':'fine-tuned ensemble, measured crest-based shift averaging, energy-weighted mixture consistency',
+            'limitation':'Reconstruction consistency does not measure source isolation quality.'}
 
 
 _mix_lock=threading.RLock()
@@ -95,18 +116,27 @@ def _mix(data,identity,model,sources,gains):
     chosen=sorted(zip(sources,weights))
     root=folder(data,identity,model)
     if len(chosen)==1 and chosen[0][1]==1:return root/(chosen[0][0]+'.wav')
-    fingerprint=hashlib.sha256(json.dumps(chosen).encode()).hexdigest()[:24]
+    fingerprint=hashlib.sha256(('peak-safe-v3:'+json.dumps(chosen)).encode()).hexdigest()[:24]
     destination=root/('mix-'+fingerprint+'.wav')
     if destination.exists():return destination
     handles=[sf.SoundFile(root/(s+'.wav')) for s,_ in chosen]
     temporary=destination.with_suffix('.tmp.wav')
+    normalized=destination.with_suffix('.normalized.tmp.wav')
     try:
+        peak=0.
         with sf.SoundFile(temporary,'w',samplerate=info['sample_rate'],channels=2,subtype='FLOAT') as output:
             while True:
                 blocks=[h.read(65536,dtype='float32',always_2d=True)*gain for h,(_,gain) in zip(handles,chosen)]
                 if not len(blocks[0]):break
-                output.write(np.clip(sum(blocks),-1,1))
+                mixture=sum(blocks);peak=max(peak,float(np.max(np.abs(mixture))))
+                output.write(mixture)
+        if peak>1:
+            with sf.SoundFile(temporary) as source,sf.SoundFile(normalized,'w',samplerate=info['sample_rate'],channels=2,subtype='FLOAT') as output:
+                for block in source.blocks(blocksize=65536,dtype='float32'):output.write(block/peak)
+            normalized.replace(temporary)
         temporary.replace(destination)
     finally:
         for handle in handles:handle.close()
+        for leftover in [temporary,normalized]:
+            if leftover.exists():leftover.unlink()
     return destination

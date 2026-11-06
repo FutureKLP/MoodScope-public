@@ -14,7 +14,7 @@ Neu in Version 0.3: ausführlichere Gesamt- und Zeilendeutung, automatisches Wie
 
 ### Hörstudio und Diagnose
 
-Im Reiter **Hörstudio** lassen sich Gesang, Schlagzeug, Bass und übrige Instrumente lokal trennen, solo hören und mischen. Optional bietet das experimentelle Sechs-Spur-Modell zusätzlich Gitarre und Klavier. Alle Sänger bleiben in einer gemeinsamen Gesangsspur. Übersprechen und Artefakte sind möglich; die Emotionskurven gelten weiterhin für den Originalmix.
+Im Reiter **Hörstudio** lassen sich Gesang, Schlagzeug, Bass und übrige Instrumente lokal trennen, solo hören und mischen. Der automatische Qualitätsmodus verwendet das Fine-tuned-Ensemble, passt Versatzmittelung anhand gemessener Transienten an und korrigiert die Rekonstruktionssumme. Das ist kein Beweis besserer Instrumentisolation auf jedem Song. Optional bietet das experimentelle Sechs-Spur-Modell zusätzlich Gitarre und Klavier. Alle Sänger bleiben in einer gemeinsamen Gesangsspur. Übersprechen und Artefakte sind möglich; die Emotionskurven gelten weiterhin für den Originalmix.
 
 Vorher die optionale Erweiterung projektlokal installieren: `python -m pip install -r backend/requirements-separation.txt` in der aktivierten venv. Die torchaudio-Version muss zum vorhandenen PyTorch-/CUDA-Build passen. Der erste Trennlauf lädt die offiziellen Demucs-Gewichte nach `models/demucs/`. Ergebnisse liegen unter `data/stems/`.
 
@@ -70,9 +70,11 @@ Die App erklärt im Modellbereich Zweck, ungefähre Downloadgröße und Speicher
 - Whisper Base oder Small für lokale Transkription.
 - Qwen 1.5B oder 3B für lokale Song-/Zeilendeutung.
 
-Downloads erfolgen nur aus einem kuratierten Katalog. Fremde Modell-Python-Skripte werden nicht ausgeführt. Größere Modelle sind nicht automatisch nachweislich genauer. Qwen 3B hat eigene Research-Lizenzbedingungen; vor einer Weiterverwendung prüfen. Downloadgrößen und VRAM-Angaben sind Richtwerte.
+Unter **Modelle & API** gibt es zusätzlich **Eigenes Modell hinzufügen**. Unterstützt werden öffentliche Hugging-Face-Modellseiten mit kompatibler Architektur: CLAP für Audio, BERT/RoBERTa/XLM-RoBERTa mit exakt den vier erwarteten Emotionslabels für Lyrics, unterstützte Transformers-Instruct-Modelle mit Chat-Template für Interpretation sowie konvertiertes CTranslate2-Whisper. Die App erklärt die Anforderungen am Linkfeld, prüft Konfiguration und Format und fixiert eine unveränderliche Revision. Eigene Transformers-Modelle benötigen Safetensors, eigener Python-Code ist ausgeschlossen. GGUF/Ollama wird über Serverprofile eingebunden. Ein erfolgreicher Architekturcheck garantiert noch keine Qualität oder passende Speicherausstattung.
 
-**Lokale KI bleibt der Standard, auch bei Internetverbindung.** Optional kann später ein eigener Gemini-Key eingetragen werden. Er bleibt nur im Arbeitsspeicher des lokalen Backends und wird nicht in SQLite, Git oder Browser-LocalStorage gespeichert. Ohne Key erfolgt keine Online-Inferenz.
+**Entfernen** löscht verwaltete lokale Modellgewichte; bei eigenen Modellen auch den Eintrag. Aktive Auswahl fällt auf den Standard zurück. Songs, gespeicherte Analysen und Notizen bleiben erhalten. Der Standard kann beim nächsten Analyselauf erneut geladen werden. Abgebrochene Downloads werden nicht als installierte Modelle angeboten; teilweise geladene Dateien können beim erneuten Download wiederverwendet werden. Größere Modelle sind nicht automatisch genauer; Modelllizenzen prüfen.
+
+**Lokale KI bleibt der Standard, auch bei Internetverbindung.** Eigene Anbieterprofile können für optionale Serverdeutungen eingerichtet werden. Schlüssel bleiben nur im Arbeitsspeicher des lokalen Backends. Ohne explizite Wahl und Zustimmung erfolgt keine Online-Inferenz.
 
 ## Voraussetzungen
 
@@ -221,3 +223,19 @@ Ausgeblendete Spuren bleiben im Bereich **Ausgeblendete Spuren** direkt wiederhe
 Die Bestätigungen für Bibliotheks-/Cache-Aktionen und Anbieterprofile verwenden denselben Dialog wie Neustart/Beenden. Ein fehlgeschlagener Bibliotheks-Refresh nach erfolgreichem Löschen stellt keine gelöschte Audioadresse mehr her. Modelldownloads für Demucs haben Zeit-/Größenlimits, atomare Dateien und die Prüfsummen des Herausgebers; das Laden erzwingt `weights_only=True` mit einer engen Typfreigabe für die kuratierten HTDemucs-Pakete.
 
 Die optionale **Atmosphäre** färbt das gesamte Layout anhand der analysierten Stimmung. Nebel-/Wasserbewegungen folgen Wiedergabe, geschätztem Tempo und gespeicherter Energie, keinem Live-Frequenzspektrum. Pausieren hält sie an; reduzierte Bewegung wird respektiert. F11 schaltet im nativen Fenster Vollbild um; im Browser gilt dessen Vollbildfunktion.
+
+**Bedienweg:** Bibliothek → Songdetails → Stimmungsverlauf → Methode & Werte → Hörstudio → Interpretation. **Modelle & API** ist ein eigener Hauptbereich links unter **Song-Analyse**. Der letzte Song-Reiter und die Wiedergabe bleiben beim Wechsel erhalten.
+
+**Aufträge abbrechen:** Im globalen Auftragsbanner kann ein laufender Download, Import oder Analyseauftrag abgebrochen werden. Die App wartet gegebenenfalls auf einen aktuellen GPU-Schritt oder Netzwerkaufruf. Bereits abgeschlossene Zwischencaches dürfen wiederverwendbar bleiben; eine unvollständige neue Gesamtanalyse wird nicht als fertig ausgegeben. Synchrone Metadatenabfragen sind zeitlich begrenzt, haben aber noch keinen eigenen Auftragsabbruch.
+
+**Neustart bei veraltetem Dienst:** Neustarten ersetzt den Backend-Prozess; im nativen Modus wird auch das Fenster über den Projektstarter neu geöffnet und die neueste vorhandene EXE gewählt. Im Browser wird die Oberfläche neu geladen. Eine bereits beendete Sitzung zeigt einen eigenen Abschlussbildschirm.
+
+### Live-Mix, Export und A/B-Loop
+
+Im Hörstudio steuert **Live-Mix** die Pegel der tatsächlichen Audiospuren direkt per Web Audio. Solo, Spurwahl und Regler benötigen keine neu gerenderte Mixdatei; Pause, Positionssprünge und Abhörlautstärke folgen dem Hauptplayer. Die Spuren werden lokal gestreamt. Bei Browser-/Audioproblemen lässt sich Live-Mix ausschalten und der dateibasierte Mix verwenden.
+
+Jede erzeugte Spur lässt sich als WAV exportieren. **Mix als WAV exportieren** rendert die gewählten Spuren mit ihren eingestellten Pegeln; die Abhörlautstärke beeinflusst den Export nicht. Bei Übersteuerung wird der gesamte Mix gleichmäßig abgesenkt. Originaldateien werden nicht verändert. Exportformat ist derzeit WAV, keine MP3-/FLAC-Ausgabe und kein gespeichertes Mix-Preset.
+
+Rechtsklick auf die untere Positionsleiste setzt zuerst A, dann B. Der Bereich wird bei Wiedergabe wiederholt; ein dritter Rechtsklick entfernt beide Markierungen. Zwei Punkte in umgekehrter Reihenfolge werden geordnet. Die A/B-Schaltfläche oder Shift+F10 setzen den Punkt an der aktuellen Position. Neben **Song importieren** steht zusätzlich **Song neu analysieren**.
+
+Dropdowns verwenden in aktuellen Chromium-/WebView2-Browsern ein gestaltetes natives Auswahlmenü; Tastatur- und Fokussteuerung bleiben erhalten. Ältere Browser behalten die dunkel gestaltete Standardauswahl. Animationen respektieren die Betriebssystemoption für reduzierte Bewegung.

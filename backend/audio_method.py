@@ -33,8 +33,14 @@ def musical_projection(rows,features):
             terms.append({'feature':name,'value':float(value),'weight':weight,'reliability':float(reliability),'contribution':float(value*weight*reliability)})
         silent=row.get('rms') is not None and row['rms']<1e-5
         if key and not silent:term('key_mode',1 if key['mode']=='major' else -1,.04,min(1,max(0,key['margin'])/.15))
-        chord=next((c for c in h.get('chords',[]) if c['start']<=mid<c['end'] and c.get('label')),None)
-        if chord and not silent:term('triad_mode',-1 if chord['label'].endswith('m') else 1,.06,min(1,chord['margin']/.15))
+        chords=[(c,max(0,min(row['end'],c['end'])-max(row['start'],c['start']))) for c in h.get('chords',[]) if c.get('label')]
+        chords=[(c,overlap) for c,overlap in chords if overlap>0]
+        duration=max(1e-8,row['end']-row['start'])
+        coverage=sum(overlap for _,overlap in chords)
+        reliability=sum(overlap*min(1,c['margin']/.15) for c,overlap in chords)/duration
+        if chords and not silent:
+            mode=sum(overlap*min(1,c['margin']/.15)*(-1 if c['label'].endswith('m') else 1) for c,overlap in chords)
+            term('triad_mode',mode/max(1e-8,reliability*duration),.06,reliability)
         tempo=features.get('bpm');regularity=features.get('beat_regularity') or 0
         if tempo and not silent:term('tempo',math.tanh((tempo-100)/60),.04,regularity)
         brightness=features.get('brightness_hz')

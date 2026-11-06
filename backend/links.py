@@ -77,11 +77,21 @@ def download(value,directory,progress):
     if node_path: command+=['--js-runtimes','node:'+node_path]
     command+=['--',url]
     progress('Lade öffentlichen Songlink; keine Browser-Cookies oder Anmeldungen',5)
+    from . import cancellation
+    process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+    deadline=time.monotonic()+240
     try:
-        result=subprocess.run(command,capture_output=True,timeout=240,
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
-    except subprocess.TimeoutExpired:
-        raise RuntimeError('Linkimport hat das Zeitlimit überschritten. Lokale Datei importieren oder später erneut versuchen.') from None
+        while True:
+            cancellation.check()
+            if time.monotonic()>deadline:raise RuntimeError('Linkimport hat das Zeitlimit überschritten. Lokale Datei importieren oder später erneut versuchen.')
+            try:
+                stdout,stderr=process.communicate(timeout=.3)
+                result=subprocess.CompletedProcess(command,process.returncode,stdout,stderr);break
+            except subprocess.TimeoutExpired:continue
+    finally:
+        if process.poll() is None:
+            process.kill();process.communicate()
     if result.returncode:
         # Do not expose downloader diagnostics, local paths, cookies or signed CDN URLs.
         raise RuntimeError('Plattform hat den Download abgelehnt oder der Song ist nicht öffentlich verfügbar. Keine Login-, DRM- oder Zugriffssperren werden umgangen.')

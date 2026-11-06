@@ -49,6 +49,8 @@ def analyse(audio,sr):
     timeline=[];total=np.zeros(12);active=0
     # Thirty-second blocks keep spectral arrays bounded even for long imports.
     for start in range(0,len(audio),sr*30):
+        from .cancellation import check
+        check()
         block=audio[start:start+sr*30]
         if len(block)<4096 or np.max(np.abs(block))<1e-5:continue
         spectrum=np.abs(librosa.stft(block,n_fft=4096,hop_length=1024))

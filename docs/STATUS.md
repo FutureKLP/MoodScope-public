@@ -4,8 +4,8 @@ Entwicklungsversion 0.3; aktuelle Erweiterungen und Prüfungen: [Entwicklungssta
 
 ## Ausgeführte Prüfungen
 
-- 24 Frontend-Tests bestanden. Backend: 113 Tests im Volltest der neuen Python-Umgebung bestanden; danach neun gezielte Start-/CUDA-Pfadtests bestanden. Der Umfang beträgt durch vier zusätzliche Regressionen jetzt 117 Tests.
-- React/TypeScript-Produktionsbuild und nativer Tauri-Windows-Releasebuild bestanden. Neuer Build unter `src-tauri/target/v02/release/moodscope.exe`; der Starter berücksichtigt auch den normalen Releaseordner.
+- 31 Frontend-Tests und 141 Backend-Tests im abschließenden Volltest bestanden. Danach wurde die Startkompatibilitätskennung auf API 8 angehoben; zusätzlich sieben betroffene Startertests bestanden.
+- React/TypeScript-Produktionsbuild und nativer Tauri-Windows-Releasebuild bestanden. Neuer Build unter `src-tauri/target/v03/release/moodscope.exe`; der Starter berücksichtigt auch den normalen Releaseordner.
 - MP3, WAV und FLAC durch FFmpeg dekodiert; Stereo-WAV-Wiedergabe mit Range-Anfragen und Seeking. Player, Lautstärke, zwei Kurven, Lyrics-Synchronisierung und Biggest-Split-Sprung wurden geprüft.
 - Echte lokale CLAP- und XLM-EMO-Inferenz auf CUDA, auch vollständig offline. Private Songtests und ihre Ergebnisse werden nicht veröffentlicht.
 - Vollständiger isolierter Offline-Modelltest mit selbst erzeugtem Kalibrieraudio und selbst geschriebenen Lyrics: Analyse, Cache-Wiederverwendung ohne neue Audioinferenz, Songdetails, Instrumenthinweise, Qwen-Zeilendeutung, Cache-Löschung bei erhaltenen eigenen Notizen und erzwungene Neuanalyse bestanden. Reproduzierbar mit `python -m scripts.smoke_pipeline` nach Einrichtung der Modelle.
@@ -26,7 +26,7 @@ Native MP3-/FLAC-Imports und SoundCloud im tatsächlichen Brave-Fenster wurden g
 - Whisper-CUDA und Large-v3-Turbo wurden an einem vollständigen Song tatsächlich ausgeführt. Demucs-Gesangs-/Instrumentalspuren und manueller Fokus wurden nativ bedient. Vollständige Wortgenauigkeit und einzelne Sängeridentitäten sind nicht garantiert.
 - LRCLIB kann falsche, unvollständige oder keine Lyrics liefern; ungetakteter Text wird nicht künstlich synchronisiert. Linkplattformen können einzelne Inhalte sperren oder löschen.
 - Kein eigenständiger Installer mit Python-Sidecar, keine Signierung/Updates und kein Videoexport. Die native EXE benötigt die eingerichtete Projektumgebung samt Backend.
-- Kein Abbruch laufender Analyse. Maximal 250 MB Import und 30 Minuten dekodierte Laufzeit; API-Audio maximal zehn Minuten.
+- Kooperativer Auftragsabbruch vorhanden; laufende GPU-Schritte oder Netzwerkaufrufe können bis zum nächsten sicheren Haltepunkt auslaufen. Synchrone Metadatenabfragen haben noch keinen eigenen Abbruch. Maximal 250 MB Import und 30 Minuten dekodierte Laufzeit; API-Audio maximal zehn Minuten.
 
 ## Reproduzierbarkeit
 

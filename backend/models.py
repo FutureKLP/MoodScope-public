@@ -90,7 +90,7 @@ class Engines:
             source=catalog.model_source(self.data,'lyrics')
             kwargs={'revision':LYRIC_REVISION} if source==LYRIC_MODEL else {}
             self.lyric_pipe = pipeline('text-classification', model=source, **kwargs,
-                                       model_kwargs={'use_safetensors':False},
+                                       model_kwargs={'use_safetensors':catalog.entries(self.data)[catalog.configuration(self.data)['active']['lyrics']].get('custom',False)},
                                        device=0 if self.device() == 'cuda' else -1)
         results = self.lyric_pipe([l['text'] for l in lines], top_k=None,
                                  truncation=True, max_length=256, batch_size=8)
