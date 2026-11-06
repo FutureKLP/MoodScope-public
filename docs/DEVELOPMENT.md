@@ -214,3 +214,10 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 ## Weiter auslaufender Header-Fade
 
 - Matte Headerfläche läuft am Seitenanfang über 96 statt 24 Pixel mit mehreren weichen Deckkraftstufen aus. Beim Scrollen verkürzt sich die Strecke kontinuierlich auf 44 Pixel im kompakten Zustand. Maskiert wird ausschließlich die dekorative Glasfläche; Texte und Steuerelemente behalten ihre Deckkraft und Geometrie.
+
+
+## Farbflächen statt grauer Deckflächen
+
+- Die frühere Verwendung dunkler farbiger und transparenter Oberflächen wieder aufgenommen. Relative OKLCH-Farben leiten aus den weiterhin gemischten Emotionsfarben dunkle Hintergrund- und Paneltöne mit sichtbarer Chroma ab. Panels mit 78/80 Prozent Deckkraft lassen die Atmosphäre durchscheinen; Sidebar, Player und Header verwenden dieselben Farbflächen. Text und Bedienelemente werden nicht über einen globalen Filter verändert.
+- Farbpalette, Emotionsgewichte und Bewegungszeiten unverändert; nur dekorative Farbstärke und Nebelsättigung erhöht. Relative Farbfunktionen sind durch eine Feature-Abfrage abgesichert, ältere Renderer behalten die bestehende Darstellung.
+- Validierung: TypeScript-/Produktionsbuild bestanden. Hintergrund-Bedienprüfung mit vorhandener echter Songanalyse und ohne zusätzliche Modellinferenz: farbige Panelverläufe im Renderer wirksam, Text und Kurven lesbar, kein horizontaler Überlauf. Kein neuer Backend-Testlauf für diese reine Darstellungsänderung.

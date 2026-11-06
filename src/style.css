@@ -81,3 +81,29 @@ html{scrollbar-gutter:stable}.ambient-dialog{transition:--mood-hue 1.6s ease,--l
 .ambient-mist{opacity:calc(.18 + var(--ambient-energy)*.16);filter:blur(65px) saturate(1.2)}
 
 @media(max-width:800px){.app .sticky-workspace-header{--header-radius:20px}}
+
+/* Restore coloured translucent surfaces instead of mixing pastel tints into opaque grey. */
+@supports (color:oklch(from red .25 .06 h)) {
+  .app.ambient-enabled,.ambient-dialog {
+    --mood-wash:oklch(from var(--mood-color) .245 max(.06,calc(c * 1.8)) h);
+    --lyric-wash:oklch(from var(--lyric-color) .215 max(.05,calc(c * 1.6)) h);
+    --mood-surface:oklch(from var(--mood-color) .235 max(.035,calc(c * 1.25)) h / .78);
+    --lyric-surface:oklch(from var(--lyric-color) .205 max(.03,calc(c * 1.15)) h / .8);
+  }
+  .ambient-enabled .ambient-field {background:linear-gradient(135deg,var(--mood-wash),var(--lyric-wash))}
+  .ambient-enabled :is(.panel,.song-card,.workspace-panel,.stem-card,.research-result) {
+    background:linear-gradient(145deg,var(--mood-surface),var(--lyric-surface));
+    border-color:color-mix(in oklab,var(--mood-color) 34%,#263942);
+  }
+  .ambient-enabled .sidebar {background:linear-gradient(160deg,var(--mood-surface),var(--lyric-surface))}
+  .ambient-enabled .player {background:linear-gradient(125deg,var(--mood-surface),var(--lyric-surface))}
+  .app.ambient-enabled .sticky-workspace-header::before {
+    background:linear-gradient(135deg,var(--mood-surface),var(--lyric-surface));
+    backdrop-filter:blur(24px) saturate(1.2);-webkit-backdrop-filter:blur(24px) saturate(1.2);
+  }
+  .ambient-dialog .confirmation-dialog,.ambient-dialog.lifecycle-overlay>.panel {
+    background:linear-gradient(145deg,var(--mood-wash),var(--lyric-wash));
+  }
+}
+.ambient-enabled .ambient-mist {filter:blur(65px) saturate(2.2);opacity:calc(.27 + var(--ambient-energy)*.2)}
+@keyframes ambient-breathe{50%{scale:1.08;opacity:calc(.34 + var(--ambient-energy)*.23)}}

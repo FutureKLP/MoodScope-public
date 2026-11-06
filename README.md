@@ -270,3 +270,5 @@ Die manuelle Hörhilfe verwendet das oben ausgewählte Trennmodell. Als Quelle s
 Die Atmosphärenfarben mischen sich aus den relativen Anteilen von Freude, Ruhe, Trauer, Ärger, Anspannung/Angst und Zärtlichkeit. Die weichen Farbübergänge verändern keine Analysewerte; die Farbzuordnung ist eine Designentscheidung. Fehler erscheinen in einer schließbaren Meldungsleiste über dem Player und außerhalb der fixierten Kopfzeile.
 
 Beim Löschen verwirft die App noch laufende Rechercheantworten, statt gelöschte Werte wieder zu speichern. Ein bestätigter Neustart beendet auch offene Recherche- und Streaming-Verbindungen; der Dienst startet als neuer Prozess. Reguläres Herunterfahren hat eine begrenzte Wartezeit.
+
+Im Atmosphärenmodus verwenden Hintergrund, Panels, Sidebar, Header und Player wieder dunkle, durchscheinende Farbflächen. Die Farbsättigung der Darstellung wird angehoben, damit gemischte Emotionsanteile sichtbar bleiben. Das verändert weder die Emotionswerte noch die Palette oder die Übergangszeiten. Browser ohne relative OKLCH-Farben verwenden die bisherige Farbdarstellung als Fallback.
