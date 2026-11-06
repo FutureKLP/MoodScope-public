@@ -203,3 +203,9 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 
 - Gemeinsame Einstellungszeile steht vor der großen Überschrift am oberen Rand. Überschrift und Songaktionen behalten ihre natürliche Dokumentgeometrie; die Songaktionen gleiten beim Scrollen unter die oben bleibenden Einstellungen. Matte Einfärbung folgt kontinuierlich dem vorhandenen Scrollfortschritt. Keine zweite Kopie der Bedienelemente, kein Umbau der Dokumenthöhe.
 - Hintergrund-Bedienprüfung: am Seitenanfang Einstellungszeile bei 0 px, Titel bei 54 px; während des Scrollens kontinuierliches Verblassen des Titels; kompakt bleiben Einstellungen bei 0 px und Songaktionen bei rund 54 px. Kein horizontaler Überlauf. Alle 52 Frontend-Tests sowie TypeScript-/Produktionsbuild bestanden.
+
+
+## Kräftigere Atmosphärenfarben
+
+- Farbtöne, relative Emotionsgewichte und Übergangszeiten bleiben unverändert. Hintergrund-Farbanteile von 12/9 auf 16/12 Prozent erhöht, Nebeldeckkraft moderat angehoben und Sättigung der rein dekorativen Nebel auf 1,2 gesetzt. Panels, Player und Header erhalten entsprechend etwas mehr Farbanteil, ohne Text und Bedienelemente zu filtern.
+- Untere Header-Ecken von 12 auf 28 Pixel verstärkt, bei schmaler Ansicht 20 Pixel. Fade, matte Oberfläche und Scrollgeometrie bleiben erhalten. Hintergrundprüfung der Nebelebene bestätigt die erhöhte Deckkraft und Sättigung bei unveränderten Bewegungszeiten.
