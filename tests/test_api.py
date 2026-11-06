@@ -59,6 +59,14 @@ def test_external_text_provider_requires_explicit_consent(client):
     assert 'fixture-key' not in client.get('/api/providers').text
 
 
+def test_confirmed_restart_cancels_background_http_work_even_without_analysis_job(client,monkeypatch):
+    module=importlib.import_module('backend.app');seen=[]
+    monkeypatch.setattr(module,'SYSTEM_CONTROL',lambda action,force:seen.append((action,force)))
+    assert client.post('/api/system',json={'action':'restart','force':True}).status_code==200
+    assert client.post('/api/system',json={'action':'stop','force':False}).status_code==200
+    assert seen==[('restart',True),('stop',False)]
+
+
 def test_system_control_is_explicit_and_limited_to_managed_service(client,monkeypatch):
     module=importlib.import_module('backend.app')
     monkeypatch.setattr(module,'SYSTEM_CONTROL',None)

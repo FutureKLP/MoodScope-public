@@ -59,3 +59,17 @@ it('applies live source level changes without requesting a new server mix file',
  expect(live.mock.calls.at(-1)![0].gains.vocals).toBe(.35);expect(live.mock.calls.at(-1)![0].selected).toEqual(['vocals']);
  expect(calls.some(c=>c.url.includes('/mix?'))).toBe(false);expect(screen.queryByRole('button',{name:'Mix anwenden'})).toBeNull();
 });
+
+it('uses the selected separator model and offers only existing focus sources',async()=>{
+ const {ManualFocus}=await import('./ManualFocus');const job=vi.fn(async(...args:any[])=>({url:'/focus.wav'}));
+ const props={track,busy:false,perform:async(f:()=>Promise<void>)=>f(),job,onSource:vi.fn()};
+ const view=render(<ManualFocus {...props} model="htdemucs_auto"/>);
+ await screen.findByRole('option',{name:'Getrennte Gesangsspur'});
+ expect(screen.queryByRole('option',{name:'Bass'})).toBeNull();
+ await userEvent.selectOptions(screen.getByLabelText('Fokus Quelle'),'vocals');
+ await userEvent.click(screen.getByRole('button',{name:'Fokus vorbereiten und auswählen'}));
+ expect(job.mock.calls[0][1]).toMatchObject({model:'htdemucs_auto',source:'vocals'});
+ info={ready:false,sources:[]};view.rerender(<ManualFocus {...props} model="htdemucs_6s"/>);
+ await waitFor(()=>expect(screen.queryByRole('option',{name:'Getrennte Gesangsspur'})).toBeNull());
+ expect((screen.getByLabelText('Fokus Quelle') as HTMLSelectElement).value).toBe('original');
+});

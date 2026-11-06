@@ -31,15 +31,20 @@ def worker(port):
     sys.path.insert(0,str(ROOT))
     import uvicorn
     import backend.app as module
-    server=uvicorn.Server(uvicorn.Config(module.app,host='127.0.0.1',port=port,access_log=False))
+    server=uvicorn.Server(uvicorn.Config(module.app,host='127.0.0.1',port=port,access_log=False,timeout_graceful_shutdown=3))
     state={'code':0}
     def control(action,force):
         state['code']=75 if action=='restart' else 0
+        def deadline():
+            stop_children()
+            os._exit(state['code'])
         def finish():
             if force:
-                stop_children()
-                os._exit(state['code'])
+                deadline()
             server.should_exit=True
+            # An idle worker can still have streaming/research HTTP calls open.
+            # Bound shutdown even if a synchronous request ignores cancellation.
+            watchdog=threading.Timer(8,deadline);watchdog.daemon=True;watchdog.start()
         threading.Timer(.5,finish).start()
     module.SYSTEM_CONTROL=control
     server.run()

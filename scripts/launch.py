@@ -17,8 +17,13 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def latest_binary():
     binary='moodscope.exe' if os.name=='nt' else 'moodscope'
-    candidates=[ROOT/'src-tauri'/'target'/version/'release'/binary for version in ['v03','v02']]
-    candidates.append(ROOT/'src-tauri'/'target'/'release'/binary)
+    releases=[ROOT/'src-tauri'/'target'/version/'release' for version in ['v03','v02']]
+    releases.append(ROOT/'src-tauri'/'target'/'release')
+    candidates=[folder/binary for folder in releases]
+    # A running Windows executable is locked. New builds can be deployed beside it.
+    pattern='moodscope-build-*.exe' if os.name=='nt' else 'moodscope-build-*'
+    for folder in releases:
+        candidates.extend(p for p in folder.glob(pattern) if p.is_file() and (p.suffix=='.exe' if os.name=='nt' else not p.suffix))
     return max((p for p in candidates if p.exists()),key=lambda p:p.stat().st_mtime,default=candidates[0])
 
 

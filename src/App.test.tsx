@@ -242,3 +242,24 @@ describe('workspace flows',()=>{
   });
 
 });
+
+it('clears selected cached output and opens the uncached library song without regenerating it',async()=>{
+ const original=vi.mocked(fetch).getMockImplementation()!;
+ vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+  const path=String(input).split('/api')[1];
+  if(path==='/tracks/test-song/cache/delete'){freshAnalysis=true;return new Response(JSON.stringify({affected_ids:['test-song']}),{status:200})}
+  return original(input,init);
+ }));
+ render(<App/>);
+ await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+ await screen.findByText(/keine erneute KI-Inferenz/);
+ await userEvent.click(screen.getByRole('button',{name:'Bibliothek'}));
+ await userEvent.click(await screen.findByRole('button',{name:'Analyse-Cache löschen'}));
+ await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button',{name:'Analyse-Cache löschen'}));
+ await waitFor(()=>expect(freshAnalysis).toBe(true));
+ requests.length=0;
+ await userEvent.click(screen.getByRole('button',{name:'Öffnen'}));
+ await screen.findByText(/Song geöffnet. Kein Analyse-Cache/);
+ expect(requests.some(r=>/\/analyze$|\/research$|\/lyrics\/search$/.test(r.path))).toBe(false);
+ expect(screen.queryByRole('slider',{name:'Wiedergabeposition im Stimmungsverlauf'})).toBeNull();
+});

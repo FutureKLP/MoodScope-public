@@ -35,8 +35,9 @@ export class LiveStemMixer{
  dispose(){if(this.disposed)return;this.disposed=true;this.generation++;cancelAnimationFrame(this.frame);for(const [event,listener] of this.listeners)this.master.removeEventListener(event,listener);for(const {audio,node,gain} of this.channels){audio.pause();audio.removeAttribute('src');audio.load();audio.remove?.();node.disconnect();gain.disconnect()}this.output.disconnect();void this.context.close();this.master.muted=this.priorMuted}
 }
 
-export function useLiveMix(master:RefObject<HTMLAudioElement|null>,config:LiveMixConfig|null){
+export function useLiveMix(master:RefObject<HTMLAudioElement|null>,config:LiveMixConfig|null,stopRef?:RefObject<(()=>void)|null>){
  const mixer=useRef<LiveStemMixer|null>(null),latest=useRef(config);latest.current=config;const [state,setState]=useState('');
+ useEffect(()=>{if(!stopRef)return;stopRef.current=()=>{mixer.current?.dispose();mixer.current=null;setState('')};return()=>{stopRef.current=null}},[stopRef]);
  const key=config?`${config.trackId}:${config.model}:${config.sources.join(',')}`:'';
  useEffect(()=>{if(!key||!master.current||!latest.current){setState('');return}try{const current=latest.current;const urls=Object.fromEntries(current.sources.map(source=>[source,`${API}/api/tracks/${current.trackId}/mix?model=${current.model}&sources=${source}`]));mixer.current=new LiveStemMixer(master.current,urls,setState);mixer.current.setLevels(current.selected,current.gains)}catch{setState('error')}return()=>{mixer.current?.dispose();mixer.current=null}},[key,master]);
  useEffect(()=>{if(config)mixer.current?.setLevels(config.selected,config.gains)},[config]);

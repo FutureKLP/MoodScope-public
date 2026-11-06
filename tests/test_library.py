@@ -89,3 +89,36 @@ def test_library_signature_rejects_silence_and_large_gain_changes(tmp_path):
     assert not library.same_recording(library.signature(a),library.signature(b))
     sf.write(b,np.zeros(48000*20),48000)
     assert library.signature(b) is None
+
+def test_legacy_song_cache_and_stem_preferences_are_removed(state):
+    import json
+    module,client,_=state
+    identity=client.post('/api/tracks',files={'file':('test.wav',sample())}).json()['id']
+    removed=[f'interpretation-latest:{identity}:local:default:de',f'research-recording:{identity}:itunes:1',f'research-results:{identity}']
+    with module.db() as conn:
+        for key in removed+[f'stem-visibility:{identity}:htdemucs_auto']:
+            conn.execute('INSERT INTO cache VALUES (?,?)',(key,json.dumps({'fixture':True})))
+        module.own(conn,f'stem-visibility:{identity}:htdemucs_auto',identity)
+        conn.execute('INSERT INTO cache VALUES (?,?)',('interpretation:legacy-hash',json.dumps({'fixture':True})))
+        removed.append('interpretation:legacy-hash')
+    response=client.post(f'/api/tracks/{identity}/cache/delete')
+    assert response.json()['affected_ids']==[identity]
+    with module.db() as conn:keys={r[0] for r in conn.execute('SELECT key FROM cache')}
+    assert not keys.intersection(removed)
+    assert f'stem-visibility:{identity}:htdemucs_auto' not in keys
+    assert client.post(f'/api/tracks/{identity}/delete').status_code==200
+    with module.db() as conn:assert not conn.execute('SELECT key FROM cache').fetchall()
+
+
+@pytest.mark.parametrize('delete_song',[False,True])
+def test_inflight_research_cannot_restore_deleted_cache(state,monkeypatch,delete_song):
+    module,client,_=state
+    identity=client.post('/api/tracks',files={'file':('test.wav',sample())}).json()['id']
+    def search(*args):
+        endpoint='delete' if delete_song else 'cache/delete'
+        assert client.post(f'/api/tracks/{identity}/{endpoint}').status_code==200
+        return {'candidates':[],'note':'Authored research fixture'}
+    monkeypatch.setattr(module.research,'search',search)
+    response=client.post(f'/api/tracks/{identity}/research',json={'artist':'Fixture','title':'Fixture','force':True})
+    assert response.status_code==409,response.text
+    with module.db() as conn:assert not conn.execute("SELECT key FROM cache WHERE key LIKE 'research-%'").fetchall()

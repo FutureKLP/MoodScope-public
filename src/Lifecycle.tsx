@@ -1,14 +1,28 @@
 import {useConfirm} from './ConfirmDialog';
-import {useEffect,useState} from 'react';
+import {useEffect,useState,useContext} from 'react';
+import {AtmosphereThemeContext} from './Atmosphere';
+import {ErrorNotice} from './ErrorNotice';
+import {createPortal} from 'react-dom';
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import {api,json} from './api';
 import {t as tr,useLanguage} from './i18n';
 
 export function Lifecycle({onStop,onStopped=()=>{}}:{onStop:()=>void;onStopped?:()=>void}){
-  useLanguage();
+  useLanguage();const theme=useContext(AtmosphereThemeContext);
   const [health,setHealth]=useState<any>(null),[state,setState]=useState(''),[error,setError]=useState('');
   const {confirm,dialog}=useConfirm();
-  useEffect(()=>{api('/health',{signal:AbortSignal.timeout(3000)}).then(setHealth).catch(()=>{})},[]);
+  useEffect(()=>{if(!state)return;const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous}},[state]);
+  useEffect(()=>{
+    let live=true,retry:ReturnType<typeof setTimeout>|undefined,controller:AbortController|undefined;
+    const check=async()=>{
+      controller=new AbortController();const request=controller;
+      const timeout=setTimeout(()=>request.abort(),8000);
+      try{const value=await api('/health',{signal:request.signal});if(live)setHealth(value)}
+      catch{if(live)retry=setTimeout(()=>void check(),1200)}
+      finally{clearTimeout(timeout)}
+    };
+    void check();return()=>{live=false;clearTimeout(retry);controller?.abort()};
+  },[]);
   async function finishStop(){setState('stopped');onStopped();if(isTauri())await invoke('exit_app')}
   async function control(action:'restart'|'stop'){
     if(!await confirm({title:action==='restart'?'MoodScope neu starten':'MoodScope beenden',message:action==='restart'?'MoodScope neu starten? Wiedergabe wird beendet und laufende Analyseaufträge werden abgebrochen. Gespeicherte Daten bleiben erhalten.':'MoodScope beenden? Wiedergabe und laufende Analyseaufträge werden beendet. Gespeicherte Daten bleiben erhalten.',confirmLabel:action==='restart'?'Neustarten':'Beenden',danger:action==='stop'}))return;
@@ -41,5 +55,5 @@ export function Lifecycle({onStop,onStopped=()=>{}}:{onStop:()=>void;onStopped?:
       }
     }catch(e){setError(e instanceof Error?e.message:String(e));setState('')}
   }
-  return <><div className="system-actions"><span data-tooltip={tr(health?.system_control?'App und lokaler Dienst werden gemeinsam gesteuert':'Für die Dienststeuerung den Projektstarter verwenden')}>{tr(health?.system_control?'Dienst bereit':'Direkter Dienst')}</span>{(['restart','stop'] as const).map(action=><button key={action} disabled={(!health?.system_control&&!isTauri())||!!state} onClick={()=>void control(action)}>{tr(action==='restart'?'Neustarten':'Beenden')}</button>)}</div>{error&&<div className="lifecycle-error" role="alert">{tr(error)}</div>}{dialog}{state&&<div className="lifecycle-overlay"><div className="panel"><span className="eyebrow">MOODSCOPE</span><h2>{tr(state==='stopped'?'Für heute beendet.':state==='stop'?'MoodScope wird beendet.':'MoodScope startet neu.')}</h2><p>{tr(state==='stopped'?'Der lokale Dienst ist beendet. Deine gespeicherten Songs bleiben erhalten. Zum nächsten Start Start-MoodScope.cmd oder das Startskript öffnen.':state==='stop'?'Wiedergabe wird gestoppt und der lokale Dienst beendet.':'Der Analysedienst wird als neuer Prozess gestartet und die Oberfläche anschließend neu geladen.')}</p></div></div>}</>;
+  return <><div className="system-actions"><span data-tooltip={tr(!health?'Der lokale Dienst wird geprüft.':health.system_control?'App und lokaler Dienst werden gemeinsam gesteuert':'Für die Dienststeuerung den Projektstarter verwenden')}>{tr(!health?'Verbindung prüfen …':health.system_control?'Dienst bereit':'Direkter Dienst')}</span>{(['restart','stop'] as const).map(action=><button key={action} disabled={(!health?.system_control&&!isTauri())||!!state} onClick={()=>void control(action)}>{tr(action==='restart'?'Neustarten':'Beenden')}</button>)}</div><ErrorNotice message={error} onDismiss={()=>setError('')}/>{dialog}{state&&createPortal(<div className={`lifecycle-overlay ${theme.enabled?'ambient-dialog':''}`} style={theme.style} role="status" aria-live="polite"><div className="panel"><span className="eyebrow">MOODSCOPE</span><h2>{tr(state==='stopped'?'Für heute beendet.':state==='stop'?'MoodScope wird beendet.':'MoodScope startet neu.')}</h2><p>{tr(state==='stopped'?'Der lokale Dienst ist beendet. Deine gespeicherten Songs bleiben erhalten. Zum nächsten Start Start-MoodScope.cmd oder das Startskript öffnen.':state==='stop'?'Wiedergabe wird gestoppt und der lokale Dienst beendet.':'Der Analysedienst wird als neuer Prozess gestartet und die Oberfläche anschließend neu geladen.')}</p></div></div>,document.body)}</>;
 }

@@ -53,3 +53,14 @@ def test_native_restart_reselects_newest_binary_and_rechecks_service(monkeypatch
     monkeypatch.setattr(launch.subprocess,'run',lambda command,**kw:(calls.append(command) or subprocess.CompletedProcess(command,next(codes))))
     launch.run_desktop(lambda:before.append(True))
     assert calls==[[str(tmp_path/'first')],[str(tmp_path/'second')]] and len(before)==2
+
+
+def test_restart_selects_a_versioned_build_beside_a_running_executable(tmp_path,monkeypatch):
+    import os
+    from scripts import launch
+    monkeypatch.setattr(launch,'ROOT',tmp_path)
+    root=tmp_path/'src-tauri'/'target'/'v03'/'release';root.mkdir(parents=True)
+    suffix='.exe' if os.name=='nt' else ''
+    original=root/('moodscope'+suffix);original.write_bytes(b'authored placeholder');os.utime(original,(1000,1000))
+    fresh=root/('moodscope-build-20300101'+suffix);fresh.write_bytes(b'authored replacement');os.utime(fresh,(2000,2000))
+    assert launch.latest_binary()==fresh

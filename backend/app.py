@@ -79,12 +79,47 @@ def db():
     conn.execute('CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, metadata TEXT NOT NULL)')
     conn.execute('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, result TEXT NOT NULL)')
     conn.execute('CREATE TABLE IF NOT EXISTS cache_owner (key TEXT PRIMARY KEY, track_id TEXT NOT NULL)')
+    conn.execute('CREATE TABLE IF NOT EXISTS cache_state (name TEXT PRIMARY KEY, revision INTEGER NOT NULL)')
     try:
         with conn:
             cancellation.check()
             yield conn
             cancellation.check()
     finally: conn.close()
+
+
+def cache_generation():
+    with db() as conn:
+        row=conn.execute("SELECT revision FROM cache_state WHERE name='generation'").fetchone()
+    return row[0] if row else 0
+
+
+def invalidate_generation(conn):
+    conn.execute("INSERT INTO cache_state VALUES ('generation',1) ON CONFLICT(name) DO UPDATE SET revision=revision+1")
+
+
+def guard_research(conn,identity,generation):
+    # Serialize the generation check and cache writes against deletion.
+    conn.execute('BEGIN IMMEDIATE')
+    row=conn.execute("SELECT revision FROM cache_state WHERE name='generation'").fetchone()
+    if (row[0] if row else 0)!=generation or not conn.execute('SELECT 1 FROM tracks WHERE id=?',(identity,)).fetchone():
+        raise HTTPException(409,'Recherche verworfen: Bibliothek oder Analyse-Cache wurde inzwischen geändert. Bitte erneut recherchieren.')
+
+
+def song_cache_keys(conn,ids,include_personal=False):
+    keys={r[0] for identity in ids for r in conn.execute('SELECT key FROM cache_owner WHERE track_id=?',(identity,))}
+    prefixes={'audio','latest','details','interpretation-latest','research-search-v5','research-recording','research-selected','research-results','stem-visibility'}
+    if include_personal:prefixes.update({'notes','fingerprint'})
+    for key, in conn.execute('SELECT key FROM cache'):
+        parts=key.split(':')
+        if len(parts)>1 and parts[0] in prefixes and parts[1] in ids:keys.add(key)
+    # Older versions did not register owners for hashed interpretation entries.
+    # Adopt only entries identical to this song's saved interpretation pointers.
+    pointers={raw for key,raw in conn.execute('SELECT key,result FROM cache') if key in keys and key.startswith('interpretation-latest:')}
+    for key,raw in conn.execute("SELECT key,result FROM cache WHERE key LIKE 'interpretation:%' AND key NOT IN (SELECT key FROM cache_owner)"):
+        if raw in pointers:keys.add(key)
+    if not include_personal:keys={key for key in keys if key.split(':')[0] not in {'notes','fingerprint'}}
+    return keys
 
 
 def track(track_id):
@@ -145,7 +180,7 @@ def system_action(request:SystemAction):
         running=any(j['status']=='running' for j in jobs.values())
         if running and not request.force:raise HTTPException(409,'Ein Auftrag läuft. Für Abbruch Neustart/Beenden ausdrücklich bestätigen.')
         diagnostics.event(DATA,'system',f'action={request.action} force={request.force} running={running}')
-        SYSTEM_CONTROL(request.action,request.force and running)
+        SYSTEM_CONTROL(request.action,request.force)
     return {'accepted':True,'action':request.action}
 
 
@@ -772,12 +807,13 @@ def delete_analysis_cache(identity: str):
             try:stored_analysis(identity,mode)
             except HTTPException:pass
         with db() as conn:
-            keys=[r[0] for r in conn.execute('SELECT key FROM cache_owner WHERE track_id=?',(identity,))]
-            keys += [r[0] for r in conn.execute('SELECT key FROM cache WHERE key LIKE ? OR key LIKE ? OR key LIKE ?',
-                (f'audio:{identity}:%',f'latest:{identity}:%',f'details:{identity}:%'))]
-            for key in set(keys):conn.execute('DELETE FROM cache WHERE key=?',(key,))
-            conn.execute('DELETE FROM cache_owner WHERE track_id=?',(identity,))
-    return {'deleted_cache_entries':len(set(keys)),'notes_preserved':True,'audio_preserved':True}
+            family=[r[0] for r in conn.execute('SELECT id FROM tracks') if canonical(r[0])==identity]
+            keys=song_cache_keys(conn,set(family))
+            invalidate_generation(conn)
+            for key in keys:
+                conn.execute('DELETE FROM cache WHERE key=?',(key,))
+                conn.execute('DELETE FROM cache_owner WHERE key=?',(key,))
+    return {'affected_ids':family,'deleted_cache_entries':len(keys),'notes_preserved':True,'audio_preserved':True}
 
 
 @app.post('/api/tracks/{identity}/delete')
@@ -800,12 +836,11 @@ def delete_song(identity:str):
                         destination=quarantine/(song_id+('-stems' if path.is_dir() else '.wav'))
                         path.rename(destination);moved.append((path,destination))
             with db() as conn:
-                keys=[r[0] for r in conn.execute('SELECT key FROM cache_owner WHERE track_id=?',(root_identity,)).fetchall()]
-                for song_id in family:
-                    keys.extend(r[0] for r in conn.execute('SELECT key FROM cache WHERE key LIKE ? OR key LIKE ? OR key LIKE ? OR key LIKE ? OR key LIKE ? OR key LIKE ?',
-                        (f'audio:{song_id}:%',f'latest:{song_id}:%',f'details:{song_id}:%',f'notes:{song_id}',f'fingerprint:{song_id}',f'research-selected:{song_id}')))
-                for key in set(keys):conn.execute('DELETE FROM cache WHERE key=?',(key,))
-                conn.execute('DELETE FROM cache_owner WHERE track_id=?',(root_identity,))
+                keys=song_cache_keys(conn,set(family),include_personal=True)
+                invalidate_generation(conn)
+                for key in keys:
+                    conn.execute('DELETE FROM cache WHERE key=?',(key,))
+                    conn.execute('DELETE FROM cache_owner WHERE key=?',(key,))
                 for song_id in family:conn.execute('DELETE FROM tracks WHERE id=?',(song_id,))
         except Exception as exc:
             for original,temporary in reversed(moved):
@@ -945,46 +980,57 @@ class ResearchQuery(BaseModel):
 
 @app.post('/api/tracks/{identity}/research')
 def research_search(identity:str,query:ResearchQuery):
-    metadata=track(identity);identity=canonical(identity)
+    metadata=track(identity);identity=canonical(identity);generation=cache_generation()
     key='research-search-v5:'+identity+':'+hashlib.sha256(json.dumps([query.artist,query.title,metadata['duration'],query.auto_match]).encode()).hexdigest()
     try:
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not query.force:return {**json.loads(cached[0]),'cached':True}
         result=research.search(query.artist,query.title)
         if query.force:
-            with db() as conn:conn.execute('DELETE FROM cache WHERE key=?',(f'research-selected:{identity}',))
+            with db() as conn:
+                guard_research(conn,identity,generation)
+                conn.execute('DELETE FROM cache WHERE key=?',(f'research-selected:{identity}',))
         result['candidates']=research.ranked_candidates(result['candidates'],query.artist,query.title,metadata['duration'])
         if query.auto_match:
             matches=[r for r in result['candidates'] if r['auto_eligible']]
             best=None;best_count=-1;trials=[]
             for candidate in matches[:3]:
                 try:
-                    detail=research_recording(identity,candidate['id'],force=query.force)
+                    detail=_research_recording(identity,candidate['id'],query.force,generation)
                     count=research.recording_credit_count(detail)
                     trials.append({'id':candidate['id'],'source':candidate.get('source'),'duration_delta':candidate['duration_delta'],'recording_instrument_credits':count,'status':'found'})
                     if count>best_count:best,best_count=candidate,count
                     if count:break
-                except HTTPException:trials.append({'id':candidate['id'],'status':'unavailable'})
+                except HTTPException as exc:
+                    if exc.status_code==409:raise
+                    trials.append({'id':candidate['id'],'status':'unavailable'})
             result['selection_attempts']=trials
             if best:
-                result['matched']=research_recording(identity,best['id'])
+                result['matched']=_research_recording(identity,best['id'],False,generation)
                 result['auto_selection']={'id':best['id'],'duration_delta':best['duration_delta'],'method':'matching artist/title/version and closest duration; up to three compatible credit fallbacks'}
             elif matches:result['details_unavailable']=True
         with db() as conn:
+            guard_research(conn,identity,generation)
             for cache_key in [key,f'research-results:{identity}']:
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(cache_key,json.dumps(result)));own(conn,cache_key,identity)
         return result
+    except HTTPException:raise
     except Exception as exc:
         failure={'candidates':[],'attempts':[{'source':name,'status':'unavailable'} for name in ['MusicBrainz','Apple iTunes','Deezer']],
             'note':'Die automatische Recherche war nicht erreichbar. Vorhandene Angaben wurden nicht aktualisiert. Verbindung prüfen und erneut recherchieren.','failed':True}
         with db() as conn:
+            guard_research(conn,identity,generation)
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(f'research-results:{identity}',json.dumps(failure)));own(conn,f'research-results:{identity}',identity)
         raise HTTPException(502,diagnostics.user_error(DATA,'research-search',exc,'Katalogrecherche nicht erreichbar; gespeicherte Analysen bleiben verfügbar.')) from None
 
 
 @app.post('/api/tracks/{identity}/research/{recording}')
 def research_recording(identity:str,recording:str,force:bool=False):
-    identity=canonical(identity)
+    return _research_recording(canonical(identity),recording,force,cache_generation())
+
+
+def _research_recording(identity,recording,force,generation):
+    track(identity)
     import re
     if not re.fullmatch(r'(?:[0-9a-fA-F-]{36}|(?:itunes|deezer):[0-9]{1,20})',recording):raise HTTPException(422,'Ungültige Aufnahme-ID')
     key='research-recording:'+identity+':'+recording
@@ -992,10 +1038,12 @@ def research_recording(identity:str,recording:str,force:bool=False):
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         result=json.loads(cached[0]) if cached and not force else research.details(recording)
         with db() as conn:
+            guard_research(conn,identity,generation)
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(f'research-selected:{identity}',json.dumps(result)))
             own(conn,key,identity);own(conn,f'research-selected:{identity}',identity)
         return result
+    except HTTPException:raise
     except Exception as exc:raise HTTPException(502,diagnostics.user_error(DATA,'research-details',exc,'Aufnahmedetails konnten nicht geladen werden.')) from None
 
 

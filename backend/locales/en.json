@@ -774,5 +774,13 @@
   "Text-Server": "Text server",
   "API-Modus": "API mode",
   "Zum Löschen eine eigene Vorlage auswählen. Der Standard bleibt erhalten.": "Select a custom preset to delete it. The default is preserved.",
-  "Rechtsklick: A setzen, B setzen, beim dritten Mal Loop löschen. Der A/B-Knopf rechts markiert die aktuelle Position.": "Right-click to set A, then B; a third click clears the loop. The A/B button on the right marks the current position."
+  "Rechtsklick: A setzen, B setzen, beim dritten Mal Loop löschen. Der A/B-Knopf rechts markiert die aktuelle Position.": "Right-click to set A, then B; a third click clears the loop. The A/B button on the right marks the current position.",
+  "API nur nach Zustimmung · Lyrics-Suche und Downloads separat": "API only with consent · lyrics search and downloads are separate",
+  "Der lokale Dienst wird geprüft.": "Checking the local service.",
+  "Verbindung prüfen …": "Checking connection …",
+  "Fehlermeldung schließen": "Dismiss error message",
+  "Schließen": "Close",
+  "Mischt die Farbanteile von Freude, Ruhe, Trauer, Ärger, Angst und Zärtlichkeit weich. Farben sind eine Gestaltungswahl, keine zusätzliche Emotionsmessung.": "Softly blends the colour shares of joy, calm, sadness, anger, fear and tenderness. Colours are a design choice, not an additional emotion measurement.",
+  "Song geöffnet. Kein Analyse-Cache vorhanden; mit Song neu analysieren eine neue Analyse starten.": "Song opened. No cached analysis is available; use Reanalyse song to create a new analysis.",
+  "Recherche verworfen: Bibliothek oder Analyse-Cache wurde inzwischen geändert. Bitte erneut recherchieren.": "Research discarded: the library or analysis cache changed while the request was running. Please run the research again."
 }

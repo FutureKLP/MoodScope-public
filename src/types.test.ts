@@ -1,6 +1,10 @@
 import {describe,it,expect} from 'vitest';
-import {clock, activeLine, Point,toLrc} from './types';
+import {clock, activeLine, Point,toLrc,trackInitials} from './types';
 describe('player timing',()=>{
+  it('derives song initials from titles, Unicode words and filename fallbacks',()=>{
+    expect(trackInitials(null)).toBe('MS');expect(trackInitials({id:'test',name:'file.wav',title:'Real Love',duration:1})).toBe('RL');
+    expect(trackInitials({id:'test',name:'Intro.flac',duration:1})).toBe('IN');expect(trackInitials({id:'test',name:'file.wav',title:'Über Nacht',duration:1})).toBe('ÜN');
+  });
   it('formats track times',()=>{expect(clock(125.9)).toBe('2:05')});
   it('does not invent lyric coverage during gaps or after end',()=>{
     const lines=[{start:10,end:15,text:'hello',valence:1,scores:{}}] satisfies Point[];

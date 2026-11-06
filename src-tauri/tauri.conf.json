@@ -1,7 +1,38 @@
 {
-  "$schema":"https://schema.tauri.app/config/2",
-  "productName":"MoodScope", "version":"0.3.0", "identifier":"dev.moodscope.desktop",
-  "build":{"beforeDevCommand":"npm run dev","devUrl":"http://127.0.0.1:1420","beforeBuildCommand":"npm run build","frontendDist":"../dist"},
-  "app":{"windows":[{"title":"MoodScope 0.3","width":1440,"height":980,"minWidth":900,"minHeight":680,"dragDropEnabled":false}],"security":{"csp":"default-src 'self'; connect-src 'self' http://127.0.0.1:8765; media-src 'self' http://127.0.0.1:8765 blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'"}},
-  "bundle":{"active":true,"targets":["nsis","deb","appimage"],"shortDescription":"Explore the emotional split between music and lyrics"}
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MoodScope",
+  "version": "0.3.0",
+  "identifier": "dev.moodscope.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "MoodScope 0.3",
+        "width": 1440,
+        "height": 980,
+        "minWidth": 900,
+        "minHeight": 680,
+        "dragDropEnabled": false,
+        "maximized": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' http://127.0.0.1:8765; media-src 'self' http://127.0.0.1:8765 blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis",
+      "deb",
+      "appimage"
+    ],
+    "shortDescription": "Explore the emotional split between music and lyrics"
+  }
 }
