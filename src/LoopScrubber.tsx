@@ -2,10 +2,17 @@ import {useState} from 'react';
 import {clock} from './types';
 import {t,useLanguage} from './i18n';
 export type LoopRange={a:number;b:number|null};
-export function LoopScrubber({duration,time,disabled,onSeek,onLoopChange}:{duration:number;time:number;disabled:boolean;onSeek:(time:number)=>void;onLoopChange:(range:LoopRange|null)=>void}){
- useLanguage();const [range,setRange]=useState<LoopRange|null>(null);
+export function nextLoopRange(range:LoopRange|null,position:number,duration:number):LoopRange|null{
+ const point=Math.min(duration,Math.max(0,position));
+ if(!range)return {a:point,b:null};
+ if(range.b!==null)return null;
+ if(Math.abs(point-range.a)<.1)return range;
+ return {a:Math.min(point,range.a),b:Math.max(point,range.a)};
+}
+export function LoopScrubber({duration,time,disabled,onSeek,onLoopChange,range:controlledRange}:{duration:number;time:number;disabled:boolean;onSeek:(time:number)=>void;onLoopChange:(range:LoopRange|null)=>void;range?:LoopRange|null}){
+ useLanguage();const [internal,setRange]=useState<LoopRange|null>(null);const range=controlledRange===undefined?internal:controlledRange;
  function mark(position:number){if(disabled)return;const point=Math.min(duration,Math.max(0,position));let next:LoopRange|null;
-  if(!range)next={a:point,b:null};else if(range.b===null){if(Math.abs(point-range.a)<.1)return;next={a:Math.min(point,range.a),b:Math.max(point,range.a)};if(time<next.a||time>=next.b!)onSeek(next.a)}else next=null;
+  next=nextLoopRange(range,point,duration);if(next?.b!==null&&next&&(time<next.a||time>=next.b!))onSeek(next.a);
   setRange(next);onLoopChange(next);
  }
  return <div className="loop-control"><div className="scrubber-loop" onContextMenu={e=>{e.preventDefault();const rect=e.currentTarget.getBoundingClientRect();mark(rect.width?((e.clientX-rect.left)/rect.width)*duration:time)}} title={t('Rechtsklick: A setzen, B setzen, beim dritten Mal Loop löschen. Shift+F10 setzt den Punkt an der aktuellen Position.')}>

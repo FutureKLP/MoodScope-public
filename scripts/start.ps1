@@ -22,7 +22,7 @@ if ($Desktop) {
             }
             if (!$health) { throw 'Backend konnte nicht gestartet werden.' }
         }
-        if ($health.status -ne 'ok' -or $health.version -ne '0.3.0' -or $health.api_revision -ne 8) {
+        if ($health.status -ne 'ok' -or $health.version -ne '0.3.0' -or $health.api_revision -ne 9) {
             throw 'Unpassendes Backend auf Port 8765. Bisherigen MoodScope-Dienst beenden und erneut starten.'
         }
         $nativeApp = @('src-tauri\target\v03\release\moodscope.exe','src-tauri\target\v02\release\moodscope.exe','src-tauri\target\release\moodscope.exe') | Where-Object { Test-Path $_ } | Get-Item | Sort-Object LastWriteTime -Descending | Select-Object -First 1

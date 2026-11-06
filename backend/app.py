@@ -115,7 +115,7 @@ def local_version(active):
 @app.get('/api/health')
 def health():
     from scripts.runtime import environment_id
-    return {'status':'ok', 'version':'0.3.0','api_revision':8,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
+    return {'status':'ok', 'version':'0.3.0','api_revision':9,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -564,7 +564,7 @@ class InterpretationRequest(BaseModel):
 def run_interpretation(job_id,identity,request):
     try:
         engines.data=DATA
-        cache_identity=canonical(identity)
+        cache_identity=canonical(identity);identity=cache_identity
         with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(f'latest:{cache_identity}:{request.mode}',)).fetchone()
         if not row:raise RuntimeError('Zuerst den Song im ausgewählten Modus analysieren.')
         analysis=json.loads(row[0]);metadata=track(identity)
@@ -577,7 +577,7 @@ def run_interpretation(job_id,identity,request):
         with db() as conn:research_row=conn.execute('SELECT result FROM cache WHERE key=?',(f'research-selected:{cache_identity}',)).fetchone()
         research_facts=json.loads(research_row[0]) if research_row else None
         research_basis=hashlib.sha256(json.dumps(research_facts,sort_keys=True).encode()).hexdigest()
-        key='interpretation:'+hashlib.sha256(('whole-song-v8-grounded-language'+research_basis+identity+json.dumps(analysis,sort_keys=True)+json.dumps(request.model_dump(exclude={'force'}),sort_keys=True)+selected).encode()).hexdigest()
+        key='interpretation:'+hashlib.sha256(('whole-song-v9-stable-scope'+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
         else:
@@ -589,15 +589,20 @@ def run_interpretation(job_id,identity,request):
             result['research_basis']=research_basis
             result['language']=request.language
             result['analysis_basis']=insights.analysis_basis(analysis)
+            result['model_basis']=selected
+            result['saved_with_song']=True
             result['source_warning']='Diese Deutung basiert auf automatisch erkannten Wörtern. Whisper kann Wörter verwechseln; bitte den Text im Verlauf prüfen und gegebenenfalls korrigieren.' if analysis.get('lyrics_source')=='whisper' else 'Auch diese Deutung ist eine mögliche Lesart. Die Textquelle und konkrete Belege selbst prüfen.'
             result['source_warning']=language.translate(result['source_warning'],request.language)
             with db() as conn:
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
                 own(conn,key,identity)
         latest_key=f'interpretation-latest:{cache_identity}:{request.mode}:{request.provider_id or "default"}:{request.language}'
+        scoped_key=latest_key+(':whole' if request.time is None else ':position')
         with db() as conn:
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(latest_key,json.dumps(result)))
             own(conn,latest_key,identity)
+            conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(scoped_key,json.dumps(result)))
+            own(conn,scoped_key,identity)
         with job_lock:jobs[job_id].update(status='done',progress=100,message='Interpretation abgeschlossen',result=result)
     except Exception as exc:
         message=str(exc)[:800] if request.mode=='local' or isinstance(exc,cloud.CloudError) else 'API-Interpretation fehlgeschlagen; keine Ersatzwerte erzeugt.'
@@ -619,10 +624,14 @@ def interpret(identity: str,request: InterpretationRequest):
 
 
 @app.get('/api/tracks/{identity}/interpretation')
-def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',provider_id:str | None=None,language:Literal['de','en']='de'):
+def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',provider_id:str | None=None,language:Literal['de','en']='de',scope:Literal['whole','position']='whole'):
     identity=canonical(identity)
     key=f'interpretation-latest:{identity}:{mode}:{provider_id or "default"}:{language}'
-    with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
+    with db() as conn:
+        row=conn.execute('SELECT result FROM cache WHERE key=?',(key+':'+scope,)).fetchone()
+        if not row:
+            legacy=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
+            if legacy and ((json.loads(legacy[0]).get('time') is None)==(scope=='whole')):row=legacy
     if not row and language=='de':
         with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(key.rsplit(':',1)[0],)).fetchone()
     if not row:raise HTTPException(404,'Noch keine gespeicherte Deutung für dieses Modellprofil.')
@@ -633,6 +642,10 @@ def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',prov
     current_research=json.loads(research_row[0]) if research_row else None
     research_basis=hashlib.sha256(json.dumps(current_research,sort_keys=True).encode()).hexdigest()
     stale=stale or (value.get('research_basis') is not None and value['research_basis']!=research_basis)
+    try:
+        selected=json.dumps(providers.profile(DATA,provider_id),sort_keys=True) if provider_id else catalog.configuration(DATA)['active']['interpretation']
+        stale=stale or (value.get('model_basis') is not None and value['model_basis']!=selected)
+    except ValueError:stale=True
     return {**value,'cached':True,'stale':stale}
 
 

@@ -26,11 +26,13 @@ def describe(model,grid_seconds,recording='recorded'):
 
 def musical_projection(rows,features):
     """Small explicit, uncalibrated feature adjustments; keep original inference intact."""
-    result=[];h=features.get('harmony',{});key=h.get('key')
+    result=[];h=features.get('harmony',{});global_key=h.get('key')
     for original in rows:
         row=deepcopy(original);mid=(row['start']+row['end'])/2;terms=[]
         def term(name,value,weight,reliability=1.):
             terms.append({'feature':name,'value':float(value),'weight':weight,'reliability':float(reliability),'contribution':float(value*weight*reliability)})
+        key=next((r['key'] for r in h.get('key_regions',[]) if r['start']<=mid<r['end'] and r.get('key')),None) or global_key
+        section=next((s for s in features.get('sections',[]) if s['start']<=mid<s['end']),None)
         silent=row.get('rms') is not None and row['rms']<1e-5
         if key and not silent:term('key_mode',1 if key['mode']=='major' else -1,.04,min(1,max(0,key['margin'])/.15))
         chords=[(c,max(0,min(row['end'],c['end'])-max(row['start'],c['start']))) for c in h.get('chords',[]) if c.get('label')]
@@ -39,11 +41,13 @@ def musical_projection(rows,features):
         coverage=sum(overlap for _,overlap in chords)
         reliability=sum(overlap*min(1,c['margin']/.15) for c,overlap in chords)/duration
         if chords and not silent:
-            mode=sum(overlap*min(1,c['margin']/.15)*(-1 if c['label'].endswith('m') else 1) for c,overlap in chords)
+            mode=sum(overlap*min(1,c['margin']/.15)*({'major':1,'minor':-1}.get(c.get('mode'),0) if c.get('mode') else (-1 if c['label'].endswith('m') else 1)) for c,overlap in chords)
             term('triad_mode',mode/max(1e-8,reliability*duration),.06,reliability)
-        tempo=features.get('bpm');regularity=features.get('beat_regularity') or 0
+        resolutions=[(c,overlap) for c,overlap in chords if c.get('resolution')]
+        if resolutions and not silent:term('harmonic_resolution',1,.025,sum(overlap*min(1,c['margin']/.15) for c,overlap in resolutions)/duration)
+        tempo=(section or {}).get('bpm') or features.get('bpm');regularity=features.get('beat_regularity') or 0
         if tempo and not silent:term('tempo',math.tanh((tempo-100)/60),.04,regularity)
-        brightness=features.get('brightness_hz')
+        brightness=(section or {}).get('brightness_hz',features.get('brightness_hz'))
         if brightness is not None and not silent:term('brightness',math.tanh((brightness-2000)/2000),.02)
         adjustment=max(-.12,min(.12,sum(t['contribution'] for t in terms)))
         raw=row['valence'];row.update(clap_valence=raw,valence=max(-1,min(1,raw+adjustment)),musical_adjustment=adjustment,musical_contributions=terms)
@@ -53,13 +57,20 @@ def musical_projection(rows,features):
         dynamic=.12*math.tanh(math.log(max(1e-8,energy)/mean)) if energy is not None and mean>1e-8 else 0
         row.update(clap_arousal=raw_arousal,dynamic_arousal_adjustment=dynamic,arousal=max(0,min(1,raw_arousal+dynamic)))
         result.append(row)
+    # Duration-aware three-bin triangular smoothing; raw inference remains untouched.
+    values=[r['valence'] for r in result]
+    for i,row in enumerate(result):
+        neighbors=[(j,(2 if j==i else 1)*max(1e-6,result[j]['end']-result[j]['start'])) for j in range(max(0,i-1),min(len(result),i+2))]
+        smoothed=sum(values[j]*weight for j,weight in neighbors)/sum(weight for _,weight in neighbors)
+        row.update(feature_valence=values[i],temporal_adjustment=smoothed-values[i],valence=smoothed)
     return result
 
 
 def describe_musical(model,grid_seconds):
-    return {**describe(model,grid_seconds),'id':'clap-musical-features-v5','features_used_in_valence':True,
-            'valence_formula':'clip(clap_valence + clip(sum(feature * weight * reliability), -.12, .12), -1, 1)',
-            'feature_weights':{'key_mode':.04,'triad_mode':.06,'tempo':.04,'brightness':.02},
+    return {**describe(model,grid_seconds),'id':'clap-musical-sequence-v6','features_used_in_valence':True,
+            'valence_formula':'duration_weighted_triangular_1_2_1(clip(clap_valence + clip(sum(feature * weight * reliability), -.12, .12), -1, 1))',
+            'feature_weights':{'key_mode':.04,'triad_mode':.06,'tempo':.04,'brightness':.02,'harmonic_resolution':.025},
+            'temporal_filter':{'weights':[1,2,1],'duration_weighted':True,'online':False},
             'arousal_formula':'clip(clap_arousal + .12 * tanh(log(local_rms / global_rms)), 0, 1)',
             'note':'Explicit Western major/minor and tempo/brightness heuristics; not a trained or calibrated emotion model. Dynamics affect arousal, not valence.'}
 

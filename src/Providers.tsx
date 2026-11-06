@@ -22,11 +22,11 @@ export function ProviderSettings({perform,busy}:Props){
   async function refresh(){setProfiles((await api('/providers')).profiles||[])}
   useEffect(()=>{void perform(refresh)},[]);
   function preset(type:string){const p=presets[type];setEditing(null);setKey('');setModel('');setFree(false);setProtocol(p.protocol);setName(p.name);setUrl(p.url);setMessage('')}
-  return <>{dialog}<section className="panel workspace-panel">
+  return <>{dialog}<section className="panel workspace-panel provider-settings">
     <h2>{tr("KI-Anbieter und eigene Modellserver")}</h2>
     <p>{tr("Eine gemeinsame Profilverwaltung für Gemini, OpenAI, Claude, DeepSeek und lokale Server. Du wählst das Profil für Textdeutungen im Reiter Interpretation. Lokale KI auf diesem Rechner bleibt der Standard.")}</p>
     <div className="provider-presets">{Object.entries(presets).map(([id,p])=><button key={id} onClick={()=>preset(id)}>{p.name}</button>)}</div>
-    <div className="note-grid">
+    <div className="note-grid provider-form">
       <label>{tr("Profilname")}<input aria-label={tr("KI-Profilname")} value={name} onChange={e=>setName(e.target.value)}/></label>
       <label>{tr("API-Protokoll")}<select aria-label={tr("API-Protokoll")} value={protocol} onChange={e=>setProtocol(e.target.value)}><option value="openai">{tr("OpenAI-kompatibel · Text")}</option><option value="anthropic">{tr("Anthropic Messages · Text")}</option><option value="gemini">{tr("Gemini · Text und vorbereitete Audioanalyse")}</option></select></label>
       <label>{tr("Basis-URL")}<input aria-label={tr("KI-Server Basis-URL")} value={url} onChange={e=>setUrl(e.target.value)}/></label>

@@ -387,3 +387,26 @@ def test_stem_and_full_mix_exports_are_attachments_with_range_support(client):
     audio,sr=sf.read(io.BytesIO(mixed.content));assert sr==48000 and np.allclose(audio,.15)
     partial=client.get(base+'&sources=vocals',headers={'Range':'bytes=0-31'})
     assert partial.status_code==206 and len(partial.content)==32
+
+def test_whole_interpretation_survives_line_reading_and_cache_status_changes(client,monkeypatch):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    analysis={'audio':[],'lyrics':[{'start':0,'end':1,'text':'Authored hopeful sentence.'}],'cached':False}
+    with module.db() as conn:conn.execute('INSERT INTO cache VALUES (?,?)',(f'latest:{identity}:local',json.dumps(analysis)))
+    calls=[]
+    def interpretation(*args):
+        position=args[4];calls.append(position)
+        return {'text':'Whole authored interpretation.' if position is None else 'Line authored interpretation.','time':position,'model':'fixture'}
+    monkeypatch.setattr(module.insights,'interpretation',interpretation)
+    module.jobs['read']={'status':'running'}
+    module.run_interpretation('read',identity,module.InterpretationRequest())
+    module.run_interpretation('read',identity,module.InterpretationRequest(time=.2))
+    assert client.get(f'/api/tracks/{identity}/interpretation').json()['time'] is None
+    assert client.get(f'/api/tracks/{identity}/interpretation?scope=position').json()['time']==.2
+    analysis['cached']=True
+    with module.db() as conn:conn.execute('UPDATE cache SET result=? WHERE key=?',(json.dumps(analysis),f'latest:{identity}:local'))
+    module.run_interpretation('read',identity,module.InterpretationRequest())
+    assert len(calls)==2 and module.jobs['read']['result']['cached']
+    client.post(f'/api/tracks/{identity}/cache/delete')
+    assert client.get(f'/api/tracks/{identity}/interpretation').status_code==404
+    assert client.get(f'/api/tracks/{identity}/interpretation?scope=position').status_code==404
