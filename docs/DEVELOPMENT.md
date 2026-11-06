@@ -197,3 +197,9 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 - Bibliotheksöffnung verwendet wieder denselben Ablauf wie der Import: vorhandene Analyse laden oder bei fehlendem Cache automatisch Lyrics suchen und analysieren. Die Verlaufsansicht wird bereits beim Öffnen angezeigt, damit der laufende Auftrag sichtbar bleibt. Cache-Löschen selbst startet keinen Auftrag.
 - Der Cache-Zyklus-Test erwartet jetzt genau einen neuen Analyseauftrag nach dem erneuten Öffnen sowie die automatische Recherche und Lyrics-Suche. Die oben protokollierte Zwischenfassung ohne automatische Neuanalyse ist damit ersetzt.
 - Validierung: alle 52 Frontend-Tests sowie TypeScript- und Produktionsbuild bestanden. Der Test nutzt kontrollierte Antworten; ein weiterer kostspieliger Modelllauf war für diese Änderung am Auslöser nicht erforderlich.
+
+
+## Einstellungen am oberen Fensterrand
+
+- Gemeinsame Einstellungszeile steht vor der großen Überschrift am oberen Rand. Überschrift und Songaktionen behalten ihre natürliche Dokumentgeometrie; die Songaktionen gleiten beim Scrollen unter die oben bleibenden Einstellungen. Matte Einfärbung folgt kontinuierlich dem vorhandenen Scrollfortschritt. Keine zweite Kopie der Bedienelemente, kein Umbau der Dokumenthöhe.
+- Hintergrund-Bedienprüfung: am Seitenanfang Einstellungszeile bei 0 px, Titel bei 54 px; während des Scrollens kontinuierliches Verblassen des Titels; kompakt bleiben Einstellungen bei 0 px und Songaktionen bei rund 54 px. Kein horizontaler Überlauf. Alle 52 Frontend-Tests sowie TypeScript-/Produktionsbuild bestanden.
