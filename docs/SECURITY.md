@@ -17,7 +17,7 @@ Stand: 6. November 2026. Entwicklungsversion, keine Freigabe als gehärteter öf
 
 Die validierte projektlokale Umgebung ist jetzt der Standard. Die ältere Python-Umgebung bleibt nur als lokale Rückfallinstallation erhalten und wurde nicht systemweit verändert.
 
-OSV-Abgleich des Rust-Lockfiles: 406 Registry-Pakete geprüft. Offen sind glib 0.18.5 (VariantStrIter-Unsoundness, korrigiert ab 0.20.0) und ein Wartungshinweis zu proc-macro-error 1.0.4. Das betrifft den GTK/Linux-Abhängigkeitszweig; keine vollständige Linux-Sicherheitsfreigabe. Externe Downloadwerkzeuge wurden nicht vollständig mit einer eigenen Advisory-Datenbank auditiert. FFmpeg und yt-dlp ebenfalls aktuell halten.
+OSV-Abgleich des Rust-Lockfiles: 414 Registry-Pakete geprüft, einschließlich der ergänzten nativen Export-Abhängigkeiten. Offen sind glib 0.18.5 (VariantStrIter-Unsoundness, korrigiert ab 0.20.0) und ein Wartungshinweis zu proc-macro-error 1.0.4. Das betrifft den GTK/Linux-Abhängigkeitszweig; keine vollständige Linux-Sicherheitsfreigabe. Externe Downloadwerkzeuge wurden nicht vollständig mit einer eigenen Advisory-Datenbank auditiert. FFmpeg und yt-dlp ebenfalls aktuell halten.
 
 Primärquellen: [OSV](https://osv.dev/), [filelock](https://github.com/advisories/GHSA-8mx5-7m5m-r77g), [PyTorch](https://github.com/advisories/GHSA-rrmf-rvhw-rf47), [Transformers](https://github.com/advisories/GHSA-x9r9-c232-4q39).
 

@@ -6,6 +6,7 @@ import subprocess
 import threading
 import uuid
 import tempfile
+import re
 from contextlib import contextmanager
 from typing import Literal
 from concurrent.futures import ThreadPoolExecutor
@@ -838,13 +839,15 @@ def save_stem_visibility(identity:str,request:StemVisibility):
 
 @app.get('/api/tracks/{identity}/mix')
 def stem_mix(identity:str,sources:str,model:Literal['htdemucs','htdemucs_6s','htdemucs_ft','htdemucs_auto']='htdemucs',gains:str | None=None,download:bool=False):
-    track(identity)
+    metadata=track(identity)
     try:
         if len(sources)>80 or (gains is not None and len(gains)>100):raise ValueError('Ungültiger Quellenmix')
         weights=[float(v) for v in gains.split(',')] if gains is not None else None
         path=separation.mix(DATA,identity,model,sources.split(','),weights)
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
-    name='moodscope-'+(sources if ',' not in sources else 'mix')+'.wav' if download else None
+    title=metadata.get('title') or Path(metadata['name']).stem
+    safe=re.sub(r'[<>:"/\\|?*\x00-\x1f]','_',title+' - '+sources.replace(',', ' + ')).strip()[:160]
+    name=(safe or 'MoodScope-Mix')+'.wav' if download else None
     return FileResponse(path,media_type='audio/wav',filename=name)
 
 

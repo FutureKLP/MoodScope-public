@@ -20,7 +20,7 @@ Vorher die optionale Erweiterung projektlokal installieren: `python -m pip insta
 
 Unter **Modelle & API** können Gemini, OpenAI, Anthropic, DeepSeek und OpenAI-kompatible Textserver wie Ollama/LM Studio mit Basis-URL und exakter Modell-ID hinzugefügt werden. In **Interpretation** lässt sich das Textmodell unabhängig von der Audioanalyse auswählen. Vor dem Versand ist eine ausdrückliche Zustimmung nötig. Anbieter können kostenpflichtig sein; es gibt keine pauschale Gratiszusage. Profilangaben bleiben lokal gespeichert, Schlüssel nur im Arbeitsspeicher. Diese Adapter sind für Textdeutung vorbereitet, nicht für beliebige Audio- oder Bildmodelle. Unterstützt werden die dokumentierten Chat-Completions- bzw. Messages-Protokolle, nicht automatisch jede proprietäre API.
 
-KI-Deutungen werden automatisch gespeichert und beim erneuten Öffnen angezeigt. **Gesamtdeutung neu erstellen** umgeht ihren Cache; **Analyse-Cache löschen** entfernt auch die KI-Deutungen, erhält aber eigene Notizen und Audio. Getrennte Hörspuren werden separat gespeichert.
+KI-Deutungen werden automatisch gespeichert und beim erneuten Öffnen angezeigt. Gesamt- und Zeilendeutung werden getrennt aufbewahrt; eine Zeilendeutung überschreibt die Gesamtdeutung nicht. **Gesamtdeutung neu erstellen** umgeht ihren Cache; **Analyse-Cache löschen** entfernt auch die KI-Deutungen, erhält aber eigene Notizen und Audio. Getrennte Hörspuren werden separat gespeichert.
 
 Die Diagnoseansicht zeigt lokale Fehlertypen, Codepositionen, Auftragsstatus und Laufzeiten. Jede Fehlermeldung enthält eine Fehler-ID zum Abgleich mit `data/logs/moodscope.log`. Die Logs rotieren bei 2 MB mit drei Sicherungen; Texte, Audio und Zugangsdaten werden nicht protokolliert.
 
@@ -32,7 +32,7 @@ Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTun
 
 - Import von MP3, WAV und FLAC sowie einzelnen öffentlichen YouTube- und SoundCloud-Songlinks.
 - Stereo-Wiedergabe, Lautstärke, Positionsregler und Sprünge in beide Richtungen.
-- Audio- und Textkurven folgen der Wiedergabezeit; Textzeilen und Kurve können angesprungen werden.
+- Audio- und Textkurven folgen der Wiedergabezeit; Textzeilen können angesprungen und die Position in der Kurve gezogen werden. A/B-Loops werden per Rechtsklick in Kurve oder Player gemeinsam gesetzt und mit dem dritten Rechtsklick entfernt.
 - Automatische Lyrics-Suche bei LRCLIB anhand vorhandener Interpret-/Titel-Tags.
 - Import synchronisierter LRC-Dateien oder Einfügen eigener zeitmarkierter Lyrics.
 - Lokale Whisper-Transkription als zuschaltbarer Fallback.
@@ -48,8 +48,8 @@ Vorhandene Ergebnisse werden beim Import geladen, ohne erneut KI-Inferenz auszuf
 
 ### Songdetails
 
-- Lokale Tonart-Kandidaten, zeitliche Dur-/Moll-Dreiklangschätzungen, Tempo, Beat-Regelmäßigkeit, Energie, spektrale Helligkeit und Dynamik. Unter **Methode & Werte** sind Messung, Unsicherheit und tatsächliche Rechenbeiträge einsehbar.
-- Die Endvalenz ergänzt CLAP um eine explizite Merkmalskorrektur (maximal ±0,12); Dynamik beeinflusst die Aktivierung. Diese Regeln sind heuristisch, keine wissenschaftlich kalibrierte Emotionsmessung. Septakkorde, Umkehrungen und Modulationen werden nicht zuverlässig transkribiert.
+- Lokale Tonart-Kandidaten, zeitliche Akkordkandidaten einschließlich Sept-, verminderten, übermäßigen und sus-Akkorden, Tempo, Beat-Regelmäßigkeit, Energie, spektrale Helligkeit und Dynamik. Unter **Methode & Werte** sind Messung, Unsicherheit und tatsächliche Rechenbeiträge einsehbar.
+- Die Endvalenz ergänzt CLAP um eine explizite Merkmalskorrektur (maximal ±0,12); Dynamik beeinflusst die Aktivierung. Diese Regeln sind heuristisch, keine wissenschaftlich kalibrierte Emotionsmessung. Lokale Tonart-Kandidaten, Stufen und V–I-Auflösungen sind unsichere Schätzungen; Umkehrungen und Modulationen werden nicht zuverlässig transkribiert. Ein zeitlicher 1:2:1-Filter glättet anschließend die Kurve; Rohwert, Merkmalsbeitrag und Glättung bleiben pro Abschnitt sichtbar.
 - Relative CLAP-Ähnlichkeiten für mögliche Instrumente in mehreren Audioausschnitten.
 - Eigene Angaben zu Genre, BPM, Instrumenten und Mitwirkenden.
 
@@ -218,7 +218,7 @@ Native Release-Builds müssen die Oberfläche einbetten. `npm run tauri build --
 
 Ausgeblendete Spuren bleiben im Bereich **Ausgeblendete Spuren** direkt wiederherstellbar. Das gilt auch für automatisch als leise eingestufte Gruppen. Pro erzeugter Spur lassen sich Pegel setzen und mit **Mix anwenden** gemeinsam anhören. **Demucs Fine-tuned** bietet ein aufwendigeres Vier-Gruppen-Ensemble; die Sechs-Gruppen-Variante ergänzt experimentelle Gitarre/Klavier. Katalogeinträge erzeugen keine zusätzlichen Audiospuren.
 
-**Methode & Werte** zeigt pro Song und Abschnitt die gespeicherten Ähnlichkeiten, Kontextfenster, Gewichtung und Valenzrechnung. Messwerte wie BPM und spektrale Helligkeit sind getrennt von dieser Formel. **Atmosphäre** im Player schaltet ein sphärisches Visual ein; Farben folgen den Mood-Werten, Bewegung der Wiedergabe und gespeicherten RMS-Energie. Kein Live-Frequenzspektrum. Reduzierte Bewegung wird respektiert.
+**Methode & Werte** zeigt pro Song und Abschnitt die gespeicherten Ähnlichkeiten, Kontextfenster, Gewichtung und Valenzrechnung. Die neue Pipeline berücksichtigt Tonart-/Akkordmodus, Auflösungskandidaten, Tempo und Helligkeit als begrenzte, explizite Valenzbeiträge; die einzelnen Terme und die anschließende Glättung werden ausgewiesen. **Atmosphäre** im Player schaltet ein sphärisches Visual ein; Farben folgen den Mood-Werten, Bewegung der Wiedergabe und gespeicherten RMS-Energie. Kein Live-Frequenzspektrum. Reduzierte Bewegung wird respektiert.
 
 Die Bestätigungen für Bibliotheks-/Cache-Aktionen und Anbieterprofile verwenden denselben Dialog wie Neustart/Beenden. Ein fehlgeschlagener Bibliotheks-Refresh nach erfolgreichem Löschen stellt keine gelöschte Audioadresse mehr her. Modelldownloads für Demucs haben Zeit-/Größenlimits, atomare Dateien und die Prüfsummen des Herausgebers; das Laden erzwingt `weights_only=True` mit einer engen Typfreigabe für die kuratierten HTDemucs-Pakete.
 
@@ -234,8 +234,14 @@ Die optionale **Atmosphäre** färbt das gesamte Layout anhand der analysierten 
 
 Im Hörstudio steuert **Live-Mix** die Pegel der tatsächlichen Audiospuren direkt per Web Audio. Solo, Spurwahl und Regler benötigen keine neu gerenderte Mixdatei; Pause, Positionssprünge und Abhörlautstärke folgen dem Hauptplayer. Die Spuren werden lokal gestreamt. Bei Browser-/Audioproblemen lässt sich Live-Mix ausschalten und der dateibasierte Mix verwenden.
 
-Jede erzeugte Spur lässt sich als WAV exportieren. **Mix als WAV exportieren** rendert die gewählten Spuren mit ihren eingestellten Pegeln; die Abhörlautstärke beeinflusst den Export nicht. Bei Übersteuerung wird der gesamte Mix gleichmäßig abgesenkt. Originaldateien werden nicht verändert. Exportformat ist derzeit WAV, keine MP3-/FLAC-Ausgabe und kein gespeichertes Mix-Preset.
+Jede erzeugte Spur lässt sich als WAV exportieren. Die Desktop-App öffnet einen nativen Speichern-unter-Dialog mit Songtitel und gewählten Spurgruppen als Dateinamenvorschlag. Im Browser wird die Dateiauswahl verwendet, sofern unterstützt; sonst gilt dessen Download-Einstellung. Ein Abbruch erzeugt keine Exportdatei. **Mix als WAV exportieren** rendert die gewählten Spuren mit ihren eingestellten Pegeln; die Abhörlautstärke beeinflusst den Export nicht. Bei Übersteuerung wird der gesamte Mix gleichmäßig abgesenkt. Originaldateien werden nicht verändert. Exportformat ist derzeit WAV, keine MP3-/FLAC-Ausgabe und kein gespeichertes Mix-Preset.
 
-Rechtsklick auf die untere Positionsleiste setzt zuerst A, dann B. Der Bereich wird bei Wiedergabe wiederholt; ein dritter Rechtsklick entfernt beide Markierungen. Zwei Punkte in umgekehrter Reihenfolge werden geordnet. Die A/B-Schaltfläche oder Shift+F10 setzen den Punkt an der aktuellen Position. Neben **Song importieren** steht zusätzlich **Song neu analysieren**.
+Rechtsklick auf die Stimmungskurve oder die untere Positionsleiste setzt zuerst A, dann B; beide Ansichten teilen dieselben Markierungen. Der Bereich wird bei Wiedergabe wiederholt; ein dritter Rechtsklick entfernt beide Markierungen. Zwei Punkte in umgekehrter Reihenfolge werden geordnet. Die A/B-Schaltfläche oder Shift+F10 setzen den Punkt an der aktuellen Position. Neben **Song importieren** steht zusätzlich **Song neu analysieren**.
 
 Dropdowns verwenden in aktuellen Chromium-/WebView2-Browsern ein gestaltetes natives Auswahlmenü; Tastatur- und Fokussteuerung bleiben erhalten. Ältere Browser behalten die dunkel gestaltete Standardauswahl. Animationen respektieren die Betriebssystemoption für reduzierte Bewegung.
+
+## Importierte Audiodaten und Nutzungsrechte
+
+Datei- und Linkimporte behalten eine verwaltete lokale Wiedergabekopie und gegebenenfalls getrennte Hörspuren. Analysen und Deutungen werden getrennt zwischengespeichert. Der Analyse-Cache löscht keine Audiodateien; **Song vollständig entfernen** entfernt auch die verwalteten Kopien. Externe Originaldateien bleiben erhalten.
+
+Ein öffentlich abspielbarer Link ist keine pauschale Download- oder Bearbeitungserlaubnis. Import, Trennung und Export nur mit den erforderlichen Rechten und unter Beachtung der Plattformbedingungen verwenden. Auch vorübergehende Speicherung ersetzt keine erforderliche Erlaubnis. Die App kann die Rechtslage eines einzelnen Songs nicht verlässlich feststellen. Sie umgeht keine Anmeldung oder DRM-Sperre. Orientierung für Deutschland: [§ 53 UrhG](https://www.gesetze-im-internet.de/urhg/__53.html); zusätzlich gelten die Bedingungen der jeweiligen Quelle.

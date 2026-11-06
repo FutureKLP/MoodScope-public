@@ -1,4 +1,5 @@
 import {LiveMixConfig} from './LiveMix';
+import {exportWave} from './exportWave';
 import {t as tr,useLanguage} from './i18n';
 import {useEffect,useState} from 'react';
 import {api,API,json} from './api';
@@ -15,7 +16,7 @@ export function SourceStudio({track,busy,perform,job,onSource,onLiveMix,liveActi
   useEffect(()=>{let live=true;setInfo(null);setChosen([]);setGains({});setError('');if(track)api(`/tracks/${track.id}/stems?model=${model}`).then(r=>{if(live)setInfo(r)}).catch(()=>{if(live)setError('Gespeicherte Spuren konnten nicht geladen werden. Bitte erneut laden.')});return()=>{live=false}},[track?.id,model]);
   if(!track)return <section className="panel workspace-panel"><h2>{tr('Zuerst einen Song importieren')}</h2></section>;
   function select(sources:string[],label:string,levels=gains){setChosen(sources);setGains(levels);if(sources.length&&live&&onLiveMix){onLiveMix({trackId:track!.id,model,sources:info?.sources||sources,selected:sources,gains:levels});return}onSource(sources.length?`${API}/api/tracks/${track!.id}/mix?model=${model}&sources=${sources.join(',')}&gains=${sources.map(s=>levels[s]??1).join(',')}`:`${API}/api/tracks/${track!.id}/audio`,label)}
-  function exportMix(sources:string[],levels:Record<string,number>={}){const anchor=document.createElement('a');anchor.href=`${API}/api/tracks/${track!.id}/mix?model=${model}&sources=${sources.join(',')}&gains=${sources.map(s=>levels[s]??1).join(',')}&download=true`;anchor.download=sources.length===1?`moodscope-${sources[0]}.wav`:'moodscope-mix.wav';document.body.append(anchor);anchor.click();anchor.remove()}
+  function exportMix(sources:string[],levels:Record<string,number>={}){void perform(async()=>{await exportWave(track!,model,sources,levels)})}
   function changeModel(value:string){select([],tr('Originalmix'));setModel(value)}
   const sources:string[]=info?.sources||[],hidden:string[]=info?.hidden_sources||[],shown:string[]=info?.shown_sources||[];
   const visible=sources.filter(s=>!hidden.includes(s)&&((info.audible_sources||sources).includes(s)||shown.includes(s)));

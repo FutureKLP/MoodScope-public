@@ -381,9 +381,10 @@ def test_stem_and_full_mix_exports_are_attachments_with_range_support(client):
     (root/'manifest.json').write_text(json.dumps({'sources':['vocals','drums'],'sample_rate':48000}))
     base=f'/api/tracks/{identity}/mix?model=htdemucs&download=true'
     stem=client.get(base+'&sources=vocals')
-    assert stem.status_code==200 and 'attachment' in stem.headers['content-disposition'] and 'moodscope-vocals.wav' in stem.headers['content-disposition']
+    from urllib.parse import unquote
+    assert stem.status_code==200 and 'attachment' in stem.headers['content-disposition'] and 'test - vocals.wav' in unquote(stem.headers['content-disposition'])
     mixed=client.get(base+'&sources=vocals,drums&gains=1,0.5')
-    assert 'moodscope-mix.wav' in mixed.headers['content-disposition']
+    assert 'test - vocals + drums.wav' in unquote(mixed.headers['content-disposition'])
     audio,sr=sf.read(io.BytesIO(mixed.content));assert sr==48000 and np.allclose(audio,.15)
     partial=client.get(base+'&sources=vocals',headers={'Range':'bytes=0-31'})
     assert partial.status_code==206 and len(partial.content)==32
