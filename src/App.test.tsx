@@ -54,6 +54,26 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it('does not restore a deleted playback source when only the subsequent library refresh fails',async()=>{
+    vi.spyOn(HTMLMediaElement.prototype,'load').mockImplementation(()=>{});
+    const original=vi.mocked(fetch).getMockImplementation()!;let deleted=false;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      const path=String(input).split('/api')[1];
+      if(path==='/tracks/test-song/delete'){deleted=true;return new Response(JSON.stringify({removed_ids:['test-song']}),{status:200})}
+      if(path==='/library'&&deleted)return new Response(JSON.stringify({detail:'Authored refresh failure'}),{status:503});
+      return original(input,init);
+    }));
+    render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    await userEvent.click(screen.getByRole('button',{name:'Bibliothek'}));
+    await userEvent.click(await screen.findByRole('button',{name:'Song vollständig entfernen'}));
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button',{name:'Song vollständig entfernen'}));
+    await screen.findByText(/Song entfernt. Die Bibliotheksansicht/);
+    expect(document.querySelector('audio')!.hasAttribute('src')).toBe(false);
+    expect(screen.queryByRole('button',{name:'Öffnen'})).toBeNull();
+  });
+
   it('switches all workspace sections to English, preserves notes and sends the interpretation language',async()=>{
     render(<App/>);
     await userEvent.selectOptions(screen.getByLabelText('App-Sprache'),'en');

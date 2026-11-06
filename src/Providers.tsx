@@ -1,3 +1,4 @@
+import {useConfirm} from './ConfirmDialog';
 import {t as tr,useLanguage} from './i18n';
 import {useEffect,useState} from 'react';
 import {api,json} from './api';
@@ -14,13 +15,14 @@ const presets:Record<string,{name:string;protocol:string;url:string}>={
 
 export function ProviderSettings({perform,busy}:Props){
   const language=useLanguage();
+  const {confirm,dialog}=useConfirm();
   const [profiles,setProfiles]=useState<any[]>([]),[name,setName]=useState(''),[url,setUrl]=useState(presets.ollama.url);
   const [protocol,setProtocol]=useState('openai'),[model,setModel]=useState(''),[key,setKey]=useState('');
   const [editing,setEditing]=useState<string|null>(null),[free,setFree]=useState(false),[message,setMessage]=useState('');
   async function refresh(){setProfiles((await api('/providers')).profiles||[])}
   useEffect(()=>{void perform(refresh)},[]);
   function preset(type:string){const p=presets[type];setEditing(null);setKey('');setModel('');setFree(false);setProtocol(p.protocol);setName(p.name);setUrl(p.url);setMessage('')}
-  return <section className="panel workspace-panel">
+  return <>{dialog}<section className="panel workspace-panel">
     <h2>{tr("KI-Anbieter und eigene Modellserver")}</h2>
     <p>{tr("Eine gemeinsame Profilverwaltung für Gemini, OpenAI, Claude, DeepSeek und lokale Server. Du wählst das Profil für Textdeutungen im Reiter Interpretation. Lokale KI auf diesem Rechner bleibt der Standard.")}</p>
     <div className="provider-presets">{Object.entries(presets).map(([id,p])=><button key={id} onClick={()=>preset(id)}>{p.name}</button>)}</div>
@@ -40,7 +42,7 @@ export function ProviderSettings({perform,busy}:Props){
       <div><h3>{p.name} · {p.model}</h3><p>{p.base_url} · {p.configured?tr("Sitzungs-Key vorhanden"):tr("Kein Sitzungs-Key")} · {p.protocol==='gemini'?tr("Text + Audio möglich"):tr("Textdeutung")}</p></div>
       {p.protocol==='gemini'&&<button disabled={busy||!p.configured||!p.free_project_confirmed} onClick={()=>void perform(async()=>{const result=await api(`/providers/${p.id}/audio`,json({}));setMessage(tr("{0} / {1} für den ausdrücklich gewählten Audio-API-Modus vorbereitet.",[result.provider,result.model]))})}>{tr("Für Audio-API verwenden")}</button>}
       <button disabled={busy} onClick={()=>{setEditing(p.id);setName(p.name);setUrl(p.base_url);setProtocol(p.protocol);setModel(p.model);setFree(p.free_project_confirmed||false);setKey('')}}>{tr("Bearbeiten / Key setzen")}</button>
-      <button disabled={busy} onClick={()=>void perform(async()=>{await api(`/providers/${p.id}/remove`,json({}));await refresh()})}>{tr("Profil entfernen")}</button>
+      <button disabled={busy} onClick={async()=>{if(await confirm({title:'Profil entfernen',message:'Dieses Serverprofil und den gespeicherten Sitzungs-Key entfernen? Songdaten bleiben erhalten.',confirmLabel:'Profil entfernen',danger:true}))void perform(async()=>{await api(`/providers/${p.id}/remove`,json({}));await refresh()})}}>{tr("Profil entfernen")}</button>
     </article>)}</div>
-  </section>;
+  </section></>;
 }

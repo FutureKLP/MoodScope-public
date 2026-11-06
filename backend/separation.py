@@ -42,7 +42,7 @@ def separate(data,identity,model_name,engine,progress):
     cached=status(data,identity,model_name)
     if cached['ready']:return cached
     try:
-        from demucs.pretrained import get_model
+        from .demucs_models import load_model
         from demucs.apply import apply_model
     except ImportError:
         raise RuntimeError('Quellentrennung fehlt. Projektlokal: python -m pip install -r backend/requirements-separation.txt') from None
@@ -51,7 +51,7 @@ def separate(data,identity,model_name,engine,progress):
     catalog.unload_models(engine)
     torch.hub.set_dir(str(catalog.ROOT/'models'/'demucs'))
     progress('Lade lokales Demucs-Modell; beim ersten Mal Modelldownload',5)
-    model=get_model(model_name).to(engine.device()).eval()
+    model=load_model(model_name,progress).to(engine.device()).eval()
     y,sr=sf.read(Path(data)/(identity+'.wav'),dtype='float32',always_2d=True)
     import librosa
     y=librosa.resample(y.T,orig_sr=sr,target_sr=model.samplerate)

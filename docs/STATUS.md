@@ -4,7 +4,7 @@ Entwicklungsversion 0.3; aktuelle Erweiterungen und Prüfungen: [Entwicklungssta
 
 ## Ausgeführte Prüfungen
 
-- Aktuell 99 Python-Tests und 19 Frontend-Tests bestanden. Ein Starlette-Testclient-Deprecation-Hinweis bleibt vorhanden.
+- 24 Frontend-Tests bestanden. Backend: zuletzt 110 Tests im Volltest und danach 39 gezielte Tests nach weiteren Änderungen bestanden; aktueller Umfang 113 Tests. Ein Starlette-Testclient-Deprecation-Hinweis bleibt vorhanden.
 - React/TypeScript-Produktionsbuild und nativer Tauri-Windows-Releasebuild bestanden. Neuer Build unter `src-tauri/target/v02/release/moodscope.exe`; der Starter berücksichtigt auch den normalen Releaseordner.
 - MP3, WAV und FLAC durch FFmpeg dekodiert; Stereo-WAV-Wiedergabe mit Range-Anfragen und Seeking. Player, Lautstärke, zwei Kurven, Lyrics-Synchronisierung und Biggest-Split-Sprung wurden geprüft.
 - Echte lokale CLAP- und XLM-EMO-Inferenz auf CUDA, auch vollständig offline. Private Songtests und ihre Ergebnisse werden nicht veröffentlicht.

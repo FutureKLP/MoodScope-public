@@ -10,7 +10,7 @@ React und TypeScript bilden die Oberfläche, Tauri das native Fenster und Python
 
 ## Funktionen
 
-Neu in Version 0.3: ausführlichere Gesamt- und Zeilendeutung, automatisches Wiederanzeigen gespeicherter KI-Deutungen, lokales Hörstudio mit Demucs, SoundCloud-Suchtreffer-Auswahl, MusicBrainz-Recherche und gemeinsame Anbieterprofile einschließlich Gemini und DeepSeek. Der aktuelle Nachweisstand steht in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+Neu in Version 0.3: ausführlichere Gesamt- und Zeilendeutung, automatisches Wiederanzeigen gespeicherter KI-Deutungen, lokales Hörstudio mit Demucs, SoundCloud-Suchtreffer-Auswahl, automatische Recherche-Fallbacks und gemeinsame Anbieterprofile einschließlich Gemini und DeepSeek. Der aktuelle Nachweisstand steht in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ### Hörstudio und Diagnose
 
@@ -26,7 +26,7 @@ Die Diagnoseansicht zeigt lokale Fehlertypen, Codepositionen, Auftragsstatus und
 
 ### Öffentliche Aufnahmedaten
 
-Unter **Songdetails** können Interpret und Titel bei MusicBrainz recherchiert werden. Suchtreffer werden erst nach Auswahl einer konkreten Aufnahme übernommen; verfügbare Mitwirkende, Instrumentangaben, Genres und Veröffentlichungen werden mit Quellenlink gezeigt. Fehlende Angaben werden nicht durch die KI erfunden. MusicBrainz benötigt für diese Abfragen keinen Key; private, nichtkommerzielle Nutzung ist kostenlos. Der Dienst kann zeitweise nicht erreichbar sein. Quellen: [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API), [Demucs](https://github.com/facebookresearch/demucs), [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Anthropic Messages](https://platform.claude.com/docs/en/api/messages), [Ollama-Kompatibilität](https://docs.ollama.com/api/openai-compatibility).
+Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTunes und Deezer. Leere Suchen versuchen bereinigte Plattformtitel und eine Suche ohne Interpret. Ausgefallene Quellen werden sichtbar angezeigt. Eine eindeutig passende Katalogaufnahme kann automatisch übernommen werden; mehrdeutige Treffer müssen ausgewählt werden. Für Instrumentcredits werden verknüpfte **Discogs-Veröffentlichungen** und ergänzende **Wikidata-Werkdaten** abgefragt. Discogs-Releaseabrufe funktionieren hier ohne Key; eine anmeldepflichtige Discogs-Such-API wird nicht verwendet. Song-, Album- und Werkangaben bleiben getrennt und tragen Quellenlinks. Nicht jede Aufnahme hat vollständige Credits, insbesondere Mashups. Quellen: [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API), [Discogs API-Client](https://github.com/discogs/discogs_client/blob/master/docs/quickstart.md), [Wikidata Instrumentierung](https://www.wikidata.org/wiki/Property:P870), [Demucs](https://github.com/facebookresearch/demucs).
 
 ### Verlauf
 
@@ -214,3 +214,5 @@ Native Release-Builds müssen die Oberfläche einbetten. `npm run tauri build --
 Ausgeblendete Spuren bleiben im Bereich **Ausgeblendete Spuren** direkt wiederherstellbar. Das gilt auch für automatisch als leise eingestufte Gruppen. Pro erzeugter Spur lassen sich Pegel setzen und mit **Mix anwenden** gemeinsam anhören. **Demucs Fine-tuned** bietet ein aufwendigeres Vier-Gruppen-Ensemble; die Sechs-Gruppen-Variante ergänzt experimentelle Gitarre/Klavier. Katalogeinträge erzeugen keine zusätzlichen Audiospuren.
 
 **Methode & Werte** zeigt pro Song und Abschnitt die gespeicherten Ähnlichkeiten, Kontextfenster, Gewichtung und Valenzrechnung. Messwerte wie BPM und spektrale Helligkeit sind getrennt von dieser Formel. **Atmosphäre** im Player schaltet ein sphärisches Visual ein; Farben folgen den Mood-Werten, Bewegung der Wiedergabe und gespeicherten RMS-Energie. Kein Live-Frequenzspektrum. Reduzierte Bewegung wird respektiert.
+
+Die Bestätigungen für Bibliotheks-/Cache-Aktionen und Anbieterprofile verwenden denselben Dialog wie Neustart/Beenden. Ein fehlgeschlagener Bibliotheks-Refresh nach erfolgreichem Löschen stellt keine gelöschte Audioadresse mehr her. Modelldownloads für Demucs haben Zeit-/Größenlimits, atomare Dateien und die Prüfsummen des Herausgebers; das Laden erzwingt `weights_only=True` mit einer engen Typfreigabe für die kuratierten HTDemucs-Pakete.

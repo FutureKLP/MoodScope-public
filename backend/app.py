@@ -53,7 +53,8 @@ async def local_only(request: Request, call_next):
     # Block browser cross-origin form writes and DNS rebinding to the loopback service.
     host = request.headers.get('host', '').split(':')[0]
     origin = request.headers.get('origin')
-    if host not in {'127.0.0.1', 'localhost', 'testserver'} or (origin and origin not in ORIGINS):
+    same_origin=f'{request.url.scheme}://{request.headers.get("host","")}'
+    if host not in {'127.0.0.1', 'localhost', 'testserver'} or (origin and origin not in ORIGINS and origin!=same_origin):
         return JSONResponse({'detail':'Untrusted local origin'}, status_code=403)
     result=await call_next(request)
     locale=language.language(request.headers.get('accept-language'))
@@ -107,7 +108,7 @@ def local_version(active):
 
 @app.get('/api/health')
 def health():
-    return {'status':'ok', 'version':'0.3.0','api_revision':4,'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
+    return {'status':'ok', 'version':'0.3.0','api_revision':5,'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -815,7 +816,7 @@ class ResearchQuery(BaseModel):
 @app.post('/api/tracks/{identity}/research')
 def research_search(identity:str,query:ResearchQuery):
     metadata=track(identity);identity=canonical(identity)
-    key='research-search-v3:'+identity+':'+hashlib.sha256(json.dumps([query.artist,query.title]).encode()).hexdigest()
+    key='research-search-v4:'+identity+':'+hashlib.sha256(json.dumps([query.artist,query.title]).encode()).hexdigest()
     try:
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not query.force:return {**json.loads(cached[0]),'cached':True}
@@ -826,19 +827,27 @@ def research_search(identity:str,query:ResearchQuery):
             matches=[r for r in result['candidates'] if library.normalized(r.get('artist',''))==library.normalized(query.artist)
                 and library.normalized(r.get('title',''))==library.normalized(query.title)
                 and abs(r.get('duration',0)-metadata['duration'])<3]
-            if len(matches)==1:result['matched']=research_recording(identity,matches[0]['id'],force=query.force)
+            if matches and len({r.get('source') for r in matches})==len(matches):
+                priority={'MusicBrainz':0,'Deezer':1,'Apple iTunes':2};selected=min(matches,key=lambda r:priority.get(r.get('source'),3))
+                try:result['matched']=research_recording(identity,selected['id'],force=query.force)
+                except HTTPException:result['details_unavailable']=True
         with db() as conn:
             for cache_key in [key,f'research-results:{identity}']:
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(cache_key,json.dumps(result)));own(conn,cache_key,identity)
         return result
-    except Exception as exc:raise HTTPException(502,diagnostics.user_error(DATA,'research-search',exc,'Katalogrecherche nicht erreichbar; gespeicherte Analysen bleiben verfügbar.')) from None
+    except Exception as exc:
+        failure={'candidates':[],'attempts':[{'source':name,'status':'unavailable'} for name in ['MusicBrainz','Apple iTunes','Deezer']],
+            'note':'Die automatische Recherche war nicht erreichbar. Vorhandene Angaben wurden nicht aktualisiert. Verbindung prüfen und erneut recherchieren.','failed':True}
+        with db() as conn:
+            conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(f'research-results:{identity}',json.dumps(failure)));own(conn,f'research-results:{identity}',identity)
+        raise HTTPException(502,diagnostics.user_error(DATA,'research-search',exc,'Katalogrecherche nicht erreichbar; gespeicherte Analysen bleiben verfügbar.')) from None
 
 
 @app.post('/api/tracks/{identity}/research/{recording}')
 def research_recording(identity:str,recording:str,force:bool=False):
     identity=canonical(identity)
     import re
-    if not re.fullmatch(r'(?:[0-9a-fA-F-]{36}|itunes:[0-9]{1,20})',recording):raise HTTPException(422,'Ungültige Aufnahme-ID')
+    if not re.fullmatch(r'(?:[0-9a-fA-F-]{36}|(?:itunes|deezer):[0-9]{1,20})',recording):raise HTTPException(422,'Ungültige Aufnahme-ID')
     key='research-recording:'+identity+':'+recording
     try:
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()

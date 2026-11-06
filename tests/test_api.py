@@ -310,3 +310,27 @@ def test_busy_jobs_are_not_lost(client):
 
 def test_invalid_link_fails_before_downloader(client):
     assert client.post('/api/tracks/link',json={'url':'https://127.0.0.1/music'}).status_code==422
+
+def test_automatic_research_keeps_candidates_when_recording_details_fail(client,monkeypatch):
+    module=importlib.import_module('backend.app');identity=client.post('/api/tracks',files={'file':('authored.wav',wav_bytes())}).json()['id']
+    recording='12345678-1234-1234-1234-123456789abc'
+    monkeypatch.setattr(module.research,'search',lambda *a:{'candidates':[{'id':recording,'artist':'Artist','title':'Title','duration':1,'source':'MusicBrainz'}]})
+    monkeypatch.setattr(module.research,'details',lambda *a:(_ for _ in ()).throw(RuntimeError('catalogue outage')))
+    result=client.post(f'/api/tracks/{identity}/research',json={'artist':'Artist','title':'Title','auto_match':True}).json()
+    assert result['candidates'] and result['details_unavailable']
+
+
+def test_failed_automatic_research_is_visible_and_cleared_with_cache(client,monkeypatch):
+    module=importlib.import_module('backend.app');identity=client.post('/api/tracks',files={'file':('authored.wav',wav_bytes())}).json()['id']
+    monkeypatch.setattr(module.research,'search',lambda *a:(_ for _ in ()).throw(RuntimeError('offline')))
+    assert client.post(f'/api/tracks/{identity}/research',json={'title':'Title'}).status_code==502
+    assert client.get(f'/api/tracks/{identity}/research/candidates').json()['failed']
+    client.post(f'/api/tracks/{identity}/cache/delete',json={})
+    assert client.get(f'/api/tracks/{identity}/research/candidates').json() is None
+
+def test_same_origin_browser_assets_work_on_isolated_local_port_without_trusting_other_ports(client,monkeypatch):
+    module=importlib.import_module('backend.app')
+    monkeypatch.setattr(module.engines,'device',lambda:'cpu')
+    with TestClient(module.app,base_url='http://127.0.0.1:8877') as isolated:
+        assert isolated.get('/api/health',headers={'Origin':'http://127.0.0.1:8877'}).status_code==200
+        assert isolated.get('/api/health',headers={'Origin':'http://127.0.0.1:8878'}).status_code==403

@@ -33,9 +33,9 @@ it('applies actual per-source gains and keeps remaining selected sources when hi
  for(const name of ['Gesang / Stimmen','Schlagzeug'])await userEvent.click(within(screen.getByRole('heading',{name}).closest('article')!).getByRole('button',{name:'Zum Mix hinzufügen'}));
  fireEvent.change(screen.getByLabelText('Spurpegel Schlagzeug'),{target:{value:'50'}});
  await userEvent.click(screen.getByRole('button',{name:'Mix anwenden'}));
- expect(source.mock.calls.at(-1)[0]).toContain('gains=1,0.5');
+ expect(source.mock.calls.at(-1)![0]).toContain('gains=1,0.5');
  await userEvent.click(within(screen.getByRole('heading',{name:'Gesang / Stimmen'}).closest('article')!).getByRole('button',{name:'Spur ausblenden'}));
- await waitFor(()=>expect(source.mock.calls.at(-1)[0]).toContain('sources=drums&gains=0.5'));
+ await waitFor(()=>expect(source.mock.calls.at(-1)![0]).toContain('sources=drums&gains=0.5'));
 });
 it('shows the actual weighted calculation, context and seek selection without inventing metadata',async()=>{
  const seek=vi.fn();const analysis:any={audio:[{start:0,end:5,valence:-.2,scores:{joy:.4,sadness:.6},confidence:.1,rms:.2,context_start:0,context_end:7.5},{start:5,end:10,valence:0,scores:{}}],lyrics:[],models:{audio:'authored model'},device:'cpu',cached:true,method:'fixture',audio_method:{id:'clap-prompt-ensemble-v4',recording:'recorded',grid_seconds:5,context_seconds:10,labels:[{id:'joy',valence_weight:1,arousal_weight:.8,prompts:['Authored positive description']},{id:'sadness',valence_weight:-1,arousal_weight:.3,prompts:['Authored negative description']} ]}};
