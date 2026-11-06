@@ -21,6 +21,11 @@ it('shows a styled keyboard-accessible tooltip and dismisses it with Escape',()=
  fireEvent.focusIn(button);act(()=>vi.advanceTimersByTime(200));expect(screen.getByRole('tooltip').textContent).toBe('Authored loop instructions');expect(button.getAttribute('aria-describedby')).toContain('moodscope-tooltip');
  fireEvent.keyDown(document,{key:'Escape'});expect(screen.queryByRole('tooltip')).toBeNull();expect(button.hasAttribute('aria-describedby')).toBe(false);
 });
+it('positions mouse instructions beside the pointer rather than the control centre',()=>{
+ vi.useFakeTimers();render(<><button data-tooltip="Authored hover help">Help</button><TooltipLayer/></>);
+ fireEvent(screen.getByRole('button'),new MouseEvent('pointerover',{bubbles:true,clientX:120,clientY:180}));act(()=>vi.advanceTimersByTime(200));
+ const tip=screen.getByRole('tooltip');expect(tip.style.left).toBe('134px');expect(tip.style.top).toBe('198px');
+});
 it('saves custom prompt variants, activates explicitly and resets without deleting them',async()=>{
  const value:any={defaults:{audio:'Authored comparison lines',whole_en:'Interpret the supplied words carefully.'},active:{audio:'default',whole_en:'default'},presets:[]};const actions:any[]=[];
  vi.stubGlobal('fetch',vi.fn(async(_url,init)=>{if(init?.body){const body=JSON.parse(String(init.body));actions.push(body);if(body.action==='save')value.presets.push({id:'authored',purpose:body.purpose,name:body.name,content:body.content});if(body.action==='select')value.active[body.purpose]=body.preset_id}return new Response(JSON.stringify(value))}));

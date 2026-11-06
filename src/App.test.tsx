@@ -28,7 +28,7 @@ beforeEach(()=>{
     const body=typeof init?.body==='string'?JSON.parse(init.body):null;
     requests.push({path,body});
     let value:any={};
-    if(path==='/health')value={device:'cpu'};
+    if(path.startsWith('/health'))value={device:'cpu',device_name:'CPU',api_model:'authored-cloud-model'};
     else if(path==='/tracks')value=track;
     else if(path.startsWith('/tracks/test-song/analysis')){
       if(freshAnalysis)return new Response(JSON.stringify({detail:'Not cached'}),{status:404});
@@ -48,6 +48,7 @@ beforeEach(()=>{
     else if(path==='/library')value={tracks:[{...track,analysis_modes:['local']}]};
     else if(path==='/models')value={models:[]};
     else if(path==='/devices')value={devices:[{id:'auto',name:'Automatisch'},{id:'cpu',name:'CPU'}],active:{audio:'auto',lyrics:'auto',whisper:'auto',interpretation:'auto',separation:'auto'}};
+    else if(path==='/prompts')value={defaults:{audio:'Authored sound descriptions.',whole_de:'Deute die gelieferten Worte.',line_de:'Deute die gelieferte Zeile.',whole_en:'Interpret the supplied words.',line_en:'Interpret the supplied line.'},active:{audio:'default',whole_de:'default',line_de:'default',whole_en:'default',line_en:'default'},presets:[]};
     else if(path==='/settings')value={cloud:{configured:false,free_project_confirmed:false}};
     return new Response(JSON.stringify(value),{status:200,headers:{'Content-Type':'application/json'}});
   }));
@@ -113,6 +114,7 @@ describe('workspace flows',()=>{
   it('uses a shared profile editor for Gemini, Claude, OpenAI, DeepSeek and local servers',async()=>{
     render(<App/>);
     await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
     await screen.findByLabelText('KI-Server API-Key');
     expect(screen.queryByText('Optionale Online-KI: Google Gemini')).toBeNull();
     for(const label of ['Google Gemini','OpenAI / ChatGPT','Anthropic Claude','DeepSeek','Ollama','LM Studio'])expect(screen.getByRole('button',{name:label})).toBeTruthy();
@@ -195,6 +197,7 @@ describe('workspace flows',()=>{
     await userEvent.click(screen.getByRole('button',{name:'Öffnen'}));
     await screen.findByText(/keine erneute KI-Inferenz/);
     await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
     expect(await screen.findByLabelText('KI-Server API-Key')).toBeTruthy();
     expect(requests.some(r=>r.path==='/settings/cloud')).toBe(false);
   });
@@ -206,7 +209,7 @@ describe('workspace flows',()=>{
     await userEvent.type(screen.getByLabelText('YouTube- oder SoundCloud-Link'),'https://youtu.be/BaW_jenozKc');
     await userEvent.click(screen.getByRole('button',{name:'Link importieren'}));
     await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
-    await screen.findByLabelText('KI-Server API-Key');
+    await screen.findByLabelText('Modellzweck');
     expect((screen.getByLabelText('Modellzweck') as HTMLSelectElement).disabled).toBe(true);
     expect(screen.getByRole('button',{name:'Abbrechen'})).toBeTruthy();
     finish({status:'done',progress:100,message:'Import complete',result:track});
@@ -227,4 +230,15 @@ describe('workspace flows',()=>{
     await waitFor(()=>expect((screen.getByLabelText('Meine eigene Interpretation') as HTMLTextAreaElement).value).toBe('Previously saved note'));
     expect(screen.getByLabelText('Meine eigene Interpretation').hasAttribute('disabled')).toBe(false);
   });
+  it('shares local/API selection across settings and prompts and reports the chosen mode',async()=>{
+    render(<App/>);await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
+    await screen.findByLabelText('Audio Mood · Rechengerät');await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
+    await screen.findByLabelText('KI-Server API-Key');expect(screen.queryByLabelText('Audio Mood · Rechengerät')).toBeNull();
+    expect(document.querySelector('.local-badge')?.textContent).toContain('API-Modus');expect(document.querySelector('.local-badge')?.textContent).toContain('authored-cloud-model');
+    await userEvent.click(screen.getByRole('button',{name:'Prompts'}));await screen.findByLabelText('Prompt-Aufgabe');
+    expect((screen.getByLabelText('Analysemodus') as HTMLSelectElement).value).toBe('cloud');expect((screen.getByLabelText('Prompt-Aufgabe') as HTMLSelectElement).value).toBe('whole_de');
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'local');await waitFor(()=>expect((screen.getByLabelText('Prompt-Aufgabe') as HTMLSelectElement).value).toBe('audio'));
+    expect(document.querySelector('.local-badge')?.textContent).toContain('CPU');
+  });
+
 });

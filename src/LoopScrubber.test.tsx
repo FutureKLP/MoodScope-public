@@ -13,7 +13,7 @@ it('orders two right-click markers and clears both on the third click',()=>{
 });
 it('provides the same loop markers through the keyboard in English',()=>{
  setLanguage('en');const change=vi.fn();const view=render(<LoopScrubber duration={100} time={15} disabled={false} onSeek={vi.fn()} onLoopChange={change}/>);
- fireEvent.keyDown(screen.getByLabelText('Playback position'),{key:'F10',shiftKey:true});
+ fireEvent.click(screen.getByRole('button',{name:'Mark loop point at current position'}));
  view.rerender(<LoopScrubber duration={100} time={25} disabled={false} onSeek={vi.fn()} onLoopChange={change}/>);
- fireEvent.keyDown(screen.getByLabelText('Playback position'),{key:'F10',shiftKey:true});expect(change.mock.calls.at(-1)![0]).toEqual({a:15,b:25});
+ fireEvent.click(screen.getByRole('button',{name:'Mark loop point at current position'}));expect(change.mock.calls.at(-1)![0]).toEqual({a:15,b:25});
 });

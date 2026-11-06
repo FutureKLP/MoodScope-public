@@ -769,5 +769,10 @@
   "Vorlage nicht gefunden.": "Preset not found.",
   "Maximal 60 eigene Prompt-Vorlagen.": "A maximum of 60 custom prompt presets is supported.",
   "Nur verfügbare Rechengeräte auswählen.": "Select available compute devices only.",
-  "Gespeichertes Rechengerät fehlt. Unter Modelle & API erneut auswählen.": "The saved compute device is unavailable. Select it again in Models & API."
+  "Gespeichertes Rechengerät fehlt. Unter Modelle & API erneut auswählen.": "The saved compute device is unavailable. Select it again in Models & API.",
+  "Für diesen Modus ist noch keine Analyse gespeichert.": "No analysis has been saved for this mode yet.",
+  "Text-Server": "Text server",
+  "API-Modus": "API mode",
+  "Zum Löschen eine eigene Vorlage auswählen. Der Standard bleibt erhalten.": "Select a custom preset to delete it. The default is preserved.",
+  "Rechtsklick: A setzen, B setzen, beim dritten Mal Loop löschen. Der A/B-Knopf rechts markiert die aktuelle Position.": "Right-click to set A, then B; a third click clears the loop. The A/B button on the right marks the current position."
 }

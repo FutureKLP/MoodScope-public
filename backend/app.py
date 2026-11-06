@@ -114,9 +114,11 @@ def local_version(active):
 
 
 @app.get('/api/health')
-def health():
+def health(purpose:Literal['audio','lyrics','whisper','interpretation','separation']='audio'):
     from scripts.runtime import environment_id
-    return {'status':'ok', 'version':'0.3.0','api_revision':10,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
+    device=engines.device() if purpose=='audio' else engines.device(purpose)
+    name=next((d['name'] for d in runtime_devices.available() if d['id']==('cuda:0' if device=='cuda' else device)),device)
+    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':10,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
