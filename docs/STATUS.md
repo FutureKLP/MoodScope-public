@@ -4,7 +4,7 @@ Entwicklungsversion 0.3; aktuelle Erweiterungen und Prüfungen: [Entwicklungssta
 
 ## Ausgeführte Prüfungen
 
-- 24 Frontend-Tests bestanden. Backend: zuletzt 110 Tests im Volltest und danach 39 gezielte Tests nach weiteren Änderungen bestanden; aktueller Umfang 113 Tests. Ein Starlette-Testclient-Deprecation-Hinweis bleibt vorhanden.
+- 24 Frontend-Tests bestanden. Backend: 113 Tests im Volltest der neuen Python-Umgebung bestanden; danach neun gezielte Start-/CUDA-Pfadtests bestanden. Der Umfang beträgt durch vier zusätzliche Regressionen jetzt 117 Tests.
 - React/TypeScript-Produktionsbuild und nativer Tauri-Windows-Releasebuild bestanden. Neuer Build unter `src-tauri/target/v02/release/moodscope.exe`; der Starter berücksichtigt auch den normalen Releaseordner.
 - MP3, WAV und FLAC durch FFmpeg dekodiert; Stereo-WAV-Wiedergabe mit Range-Anfragen und Seeking. Player, Lautstärke, zwei Kurven, Lyrics-Synchronisierung und Biggest-Split-Sprung wurden geprüft.
 - Echte lokale CLAP- und XLM-EMO-Inferenz auf CUDA, auch vollständig offline. Private Songtests und ihre Ergebnisse werden nicht veröffentlicht.
@@ -30,6 +30,6 @@ Native MP3-/FLAC-Imports und SoundCloud im tatsächlichen Brave-Fenster wurden g
 
 ## Reproduzierbarkeit
 
-JavaScript: `package-lock.json`; Rust: `src-tauri/Cargo.lock`; Python: `backend/requirements.txt` plus lokaler Paketsnapshot `backend/requirements.local-lock.txt`. Der Snapshot enthält nicht die geerbte PyTorch-/NumPy-Installation und ist kein universeller Plattformlock. Standard-Emotionsmodelle sind auf Hugging-Face-Revisionen festgelegt. Modellwahl und Pipelineversion fließen in Analyse-Cacheschlüssel ein.
+JavaScript: `package-lock.json`; Rust: `src-tauri/Cargo.lock`; Python: `backend/requirements.txt` plus lokaler Paketsnapshot `backend/requirements.local-lock.txt`. Der Snapshot enthält die isolierte Windows-/CUDA-Umgebung einschließlich PyTorch und NumPy. Er ist kein universeller Plattformlock. Standard-Emotionsmodelle sind auf Hugging-Face-Revisionen festgelegt. Modellwahl und Pipelineversion fließen in Analyse-Cacheschlüssel ein.
 
 Abhängigkeitsprüfung und offene Sicherheitsmeldungen: [Sicherheitsstand](SECURITY.md).

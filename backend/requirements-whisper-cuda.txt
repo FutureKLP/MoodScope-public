@@ -1,0 +1,2 @@
+# Optional Windows Whisper CUDA libraries, installed only in the project environment.
+nvidia-cublas-cu12==12.9.2.10; platform_system == "Windows"

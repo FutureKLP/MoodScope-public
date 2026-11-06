@@ -578,5 +578,6 @@
   "Besetzungs-Fallback: MusicBrainz, verknüpfte Discogs-Veröffentlichungen und Wikidata-Werkdaten.": "Personnel fallback: MusicBrainz, linked Discogs releases and Wikidata work data.",
   "Unerwartete Modellklasse": "Unexpected model class",
   "Song entfernt. Die Bibliotheksansicht konnte nicht neu geladen werden; Reiter erneut öffnen.": "Song removed. The library view could not be refreshed; reopen the tab.",
-  "Tempo-Schätzung": "Tempo estimate"
+  "Tempo-Schätzung": "Tempo estimate",
+  "Whisper-CUDA benötigt cuBLAS 12 und cuDNN 9 in der Projektumgebung.": "Whisper CUDA requires cuBLAS 12 and cuDNN 9 in the project environment."
 }

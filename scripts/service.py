@@ -7,6 +7,11 @@ import sys
 import threading
 import time
 
+if __package__:
+    from .runtime import preferred_python
+else:
+    from runtime import preferred_python
+
 ROOT=Path(__file__).resolve().parents[1]
 
 
@@ -44,6 +49,14 @@ def worker(port):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--port',type=int,default=8765);parser.add_argument('--worker',action='store_true')
     args=parser.parse_args();os.chdir(ROOT)
+    selected=preferred_python(ROOT)
+    if selected.is_file() and selected.resolve()!=Path(sys.executable).resolve():
+        child=subprocess.Popen([str(selected),'-m','scripts.service',*sys.argv[1:]],cwd=ROOT,stdout=sys.stdout,stderr=sys.stderr,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+        try:return child.wait()
+        except KeyboardInterrupt:return 0
+        finally:
+            if child.poll() is None:stop_children()
     if args.worker:return worker(args.port)
     child=None
     try:

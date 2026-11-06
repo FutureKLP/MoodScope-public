@@ -90,3 +90,10 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 - Same-Origin-Auslieferung funktioniert auch auf einem isolierten lokalen Backend-Port; andere nicht freigegebene Ursprünge bleiben gesperrt. Die Browseroberfläche verwendet bei lokaler Backend-Auslieferung denselben Ursprung; native App und Vite behalten ihren konfigurierten Dienst.
 - Frontend: 24 Tests bestanden, TypeScript-/Produktionsbuild erfolgreich. Backend: Volltest mit 110 Fällen bestanden; nach den letzten Ergänzungen 39 betroffene API-/Recherche-/Download-/Startertests bestanden. Der Testumfang umfasst jetzt 113 Fälle. Ein Starlette-Testclient-Deprecation-Hinweis bleibt. Neuer nativer Windows-Releasebuild erfolgreich.
 - Sicherheitsrest: Eine getrennte aktuelle Python-/CUDA-Umgebung wird projektlokal vorbereitet. Die produktive ältere Umgebung ist noch nicht umgestellt; verbleibende Meldungen stehen in SECURITY.md. Linux und Windows 10 wurden nicht lokal ausgeführt.
+
+## Isolierte aktuelle Modellumgebung
+
+- Projektlokales Python 3.13, PyTorch 2.15/CUDA 13.2 und Transformers 5.22.1 ohne geerbte Systempakete. Startskripte bevorzugen die Umgebung erst mit Validierungsmarker. API-Revision 6 und Umgebungskennung verhindern die stille Wiederverwendung eines älteren Dienstes.
+- Tatsächliche CUDA-Ausführung von CLAP, XLM-EMO, Qwen (Deutsch/Englisch), Demucs Fine-tuned und Whisper mit selbst erzeugtem Testmaterial. Whisper benötigt zusätzlich projektlokale CUDA-12-Bibliotheken; nach dem beobachteten DLL-Fehler wurde genau dieser Pfad korrigiert und erneut erfolgreich geprüft.
+- 113 Backend-Tests im neuen Volltest bestanden, anschließend neun gezielte Start-/CUDA-Pfadtests bestanden (aktueller Umfang 117). Isolierter tatsächlicher Supervisor-Start über den alten Interpreter bestätigte API 6, Startprotokoll und sauberes Beenden. PowerShell-Setup-/Startskripte syntaktisch geprüft. Windows-Releasebuild aktualisiert.
+- pip check ohne Konflikte; OSV-Abgleich von 92 Python-Paketen ohne Befund. Offene Rust-/Linux-Hinweise bleiben in SECURITY.md dokumentiert. Keine erneuten privaten Songtests oder zusätzlichen sichtbaren Desktopprüfungen.

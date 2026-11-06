@@ -75,7 +75,7 @@ Downloads erfolgen nur aus einem kuratierten Katalog. Fremde Modell-Python-Skrip
 
 ## Voraussetzungen
 
-- Python 3.10 oder neuer.
+- Python 3.11 oder neuer unter Linux; das Windows-Setup richtet Python 3.13 projektlokal ein.
 - Node.js 22.12 oder neuer mit npm.
 - Für das native Fenster: Rust und die [Tauri-Systemvoraussetzungen](https://v2.tauri.app/start/prerequisites/).
 - Windows: MSVC C++ Build Tools, Windows SDK und WebView2.
@@ -93,6 +93,8 @@ Repository lokal auschecken und im Projektordner ausführen:
 .\scripts\setup.ps1
 .\scripts\start.ps1
 ```
+
+Das Windows-Setup lädt ein prüfsummengeprüftes offizielles Python-Paket und richtet `.venv-modern` ohne geerbte Systempakete ein. Standard ist PyTorch mit CUDA 13.2; Treiber und GPU müssen dazu passen. Für CPU: zuerst `scripts/setup_runtime.ps1 -Cpu`, anschließend `npm ci` und `npm run build`. Ältere GTX-Karten benötigen gegebenenfalls einen anderen geeigneten PyTorch-Build. Es werden weder System-Python noch Treiber installiert. Der Starter bevorzugt diese Umgebung erst nach erfolgreicher Import-/Kernelprüfung.
 
 Danach [http://127.0.0.1:8765](http://127.0.0.1:8765) im Browser öffnen. Der Dienst liefert das gebaute Frontend aus. Strg+C beendet ihn.
 
@@ -127,10 +129,10 @@ Windows- und Linux-Builds müssen auf ihren jeweiligen Zielsystemen geprüft wer
 Einmal das offizielle portable Downloadwerkzeug projektlokal einrichten:
 
 ```powershell
-.venv\Scripts\python.exe scripts\setup_links.py
+.venv-modern\Scripts\python.exe scripts\setup_links.py
 ```
 
-Unter Linux entsprechend `.venv/bin/python scripts/setup_links.py`. Der Installer lädt die offizielle yt-dlp-Standalone-Datei nach `.tools/yt-dlp/` und vergleicht deren SHA256 mit der offiziellen Release-Prüfsumme. Für YouTube benötigt yt-dlp zusätzlich eine unterstützte JavaScript-Laufzeit; MoodScope nutzt vorhandenes Node.js.
+Unter Linux entsprechend `.venv-modern/bin/python scripts/setup_links.py`. Der Installer lädt die offizielle yt-dlp-Standalone-Datei nach `.tools/yt-dlp/` und vergleicht deren SHA256 mit der offiziellen Release-Prüfsumme. Für YouTube benötigt yt-dlp zusätzlich eine unterstützte JavaScript-Laufzeit; MoodScope nutzt vorhandenes Node.js.
 
 Im Linkfeld wird ein einzelner HTTPS-Songlink eingefügt. Playlists und SoundCloud-Kurzlinks werden nicht angenommen. Private, gelöschte oder gesperrte Inhalte können nicht importiert werden. Es werden keine Browser-Cookies oder Anmeldedaten übernommen. Bei einem Plattformfehler kann derselbe Song weiterhin als lokale Datei importiert werden. Nur Inhalte verwenden, die heruntergeladen und analysiert werden dürfen.
 
@@ -173,19 +175,19 @@ Songdetails enthalten zusätzlich verfügbare Originalformat-/Tagangaben. Öffen
 Im Hörstudio werden nahezu leere Modellspuren anhand ihrer relativen Energie ausgeblendet. Das ist kein Nachweis realer Instrumentanwesenheit. Falsch zugeordnete Gruppen lassen sich manuell ausblenden und wieder anzeigen.
 
 ```powershell
-.venv\Scripts\python.exe -m pytest -q
+.venv-modern\Scripts\python.exe -m pytest -q
 npm test
 npm run build
 # Optionale echte Modellprüfungen:
-.venv\Scripts\python.exe -m scripts.smoke_models
-.venv\Scripts\python.exe -m scripts.evaluate_local
-.venv\Scripts\python.exe -m scripts.smoke_pipeline
-.venv\Scripts\python.exe -m scripts.smoke_interpretation
+.venv-modern\Scripts\python.exe -m scripts.smoke_models
+.venv-modern\Scripts\python.exe -m scripts.evaluate_local
+.venv-modern\Scripts\python.exe -m scripts.smoke_pipeline
+.venv-modern\Scripts\python.exe -m scripts.smoke_interpretation
 ```
 
 Echte Modelltests können Gewichte laden und GPU-Zeit benötigen. Normale Unit-/API-/DOM-Tests verwenden für gezielte Fehler- und UI-Fälle Mocks; solche Testwerte erscheinen nicht in der produktiven App. Die laufend aktualisierten Nachweise und Grenzen stehen in [docs/STATUS.md](docs/STATUS.md) und [docs/RELEASE-0.2.md](docs/RELEASE-0.2.md).
 
-Für die Oberfläche `npm run dev` und für das Backend separat `.venv\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8765` starten. `VITE_API_URL` kann für eine getrennte Testumgebung gesetzt werden. `MOODSCOPE_DATA` wählt einen separaten Datenordner. Der Dienst ist nur für lokale Nutzung vorgesehen.
+Für die Oberfläche `npm run dev` und für das Backend separat `.venv-modern\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8765` starten. `VITE_API_URL` kann für eine getrennte Testumgebung gesetzt werden. `MOODSCOPE_DATA` wählt einen separaten Datenordner. Der Dienst ist nur für lokale Nutzung vorgesehen.
 
 ## Datenschutz und Veröffentlichung
 

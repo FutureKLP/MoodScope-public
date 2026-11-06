@@ -103,12 +103,15 @@ def own(conn,key,identity):
 
 
 def local_version(active):
-    return PIPELINE_VERSION+json.dumps({k:active[k] for k in ['audio','lyrics','whisper']},sort_keys=True)
+    from importlib.metadata import version
+    runtime={name:version(name) for name in ['torch','transformers','librosa']}
+    return PIPELINE_VERSION+json.dumps({k:active[k] for k in ['audio','lyrics','whisper']},sort_keys=True)+json.dumps(runtime,sort_keys=True)
 
 
 @app.get('/api/health')
 def health():
-    return {'status':'ok', 'version':'0.3.0','api_revision':5,'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
+    from scripts.runtime import environment_id
+    return {'status':'ok', 'version':'0.3.0','api_revision':6,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -404,8 +407,8 @@ def run_job(job_id, identity, request):
                       'models':{'audio':catalog.CATALOG[active['audio']]['repo'] if request.mode=='local' else cloud.MODEL,
                                 'lyrics':catalog.CATALOG[active['lyrics']]['repo'] if request.mode=='local' else cloud.MODEL},
                       'method':'CLAP Prompt-Ensemble und XLM-EMO mit Textkontext' if request.mode=='local' else 'Gemini: getrennte Audio- und Textanalyse; subjektive unkalibrierte Valenz.'}
-            result=audio_method.with_method(result)
-            if request.mode=='local':result['audio_method']['recording']='recorded'
+            if request.mode=='local':result['audio_method']=audio_method.describe(result['models']['audio'],request.audio_resolution)
+            else:result=audio_method.with_method(result)
             result['warnings'].append('Modellwerte und Unsicherheit sind nicht wissenschaftlich kalibriert.')
             with db() as conn:
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))

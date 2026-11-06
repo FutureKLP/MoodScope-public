@@ -1,2 +1,3 @@
-# Optional source separation; install into the project venv.
+# Optional source separation; install into the project environment.
 demucs==4.0.1
+torchaudio>=2.11,<3

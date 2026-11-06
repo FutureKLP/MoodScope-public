@@ -4,6 +4,20 @@ from pathlib import Path
 import numpy as np
 
 _dll_handles=[]
+_dll_directories=set()
+
+
+def windows_cuda_directories(torch_folder):
+    from importlib.metadata import distribution,PackageNotFoundError
+    folders=[Path(torch_folder)]
+    for package in ['nvidia-cublas-cu12','nvidia-cudnn-cu12','nvidia-cuda-nvrtc-cu12']:
+        try:installed=distribution(package)
+        except PackageNotFoundError:continue
+        for entry in installed.files or []:
+            if entry.suffix.lower()=='.dll':
+                folder=Path(installed.locate_file(entry)).parent
+                if folder not in folders:folders.append(folder)
+    return folders
 
 
 def device_for(engine):
@@ -11,12 +25,16 @@ def device_for(engine):
     if requested=='cpu' or (requested=='auto' and engine.device()!='cuda'):return 'cpu'
     if os.name=='nt':
         import torch
-        folder=Path(torch.__file__).parent/'lib'
-        if (folder/'cudnn64_9.dll').exists():
-            if not _dll_handles:_dll_handles.append(os.add_dll_directory(str(folder)))
-            if str(folder) not in os.environ['PATH'].split(os.pathsep):os.environ['PATH']=str(folder)+os.pathsep+os.environ['PATH']
+        folders=windows_cuda_directories(Path(torch.__file__).parent/'lib')
+        available=all(any((folder/name).exists() for folder in folders) for name in ['cudnn64_9.dll','cublas64_12.dll'])
+        if available:
+            for folder in folders:
+                if folder.is_dir() and str(folder) not in _dll_directories:
+                    _dll_handles.append(os.add_dll_directory(str(folder)));_dll_directories.add(str(folder))
+                    if str(folder) not in os.environ.get('PATH','').split(os.pathsep):os.environ['PATH']=str(folder)+os.pathsep+os.environ.get('PATH','')
             return 'cuda'
-        return 'cuda' if requested=='cuda' else 'cpu'
+        if requested=='cuda':raise RuntimeError('Whisper-CUDA benötigt cuBLAS 12 und cuDNN 9 in der Projektumgebung.')
+        return 'cpu'
     if requested=='cuda':return 'cuda'
     import ctypes.util
     return 'cuda' if ctypes.util.find_library('cudnn') else 'cpu'

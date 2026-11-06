@@ -16,3 +16,15 @@ def test_coverage_merges_overlaps_without_claiming_word_accuracy():
     report=text_coverage([{'start':0,'end':4,'text':'Own text'},{'start':3,'end':6,'text':'More words'}],20)
     assert report['covered_seconds']==6 and report['gaps']==[{'start':6,'end':20}]
     assert 'keine Wortgenauigkeit' in report['note']
+
+def test_windows_cuda_directories_find_separately_installed_project_libraries(tmp_path,monkeypatch):
+    from pathlib import PurePosixPath
+    import importlib.metadata
+    from backend.transcription import windows_cuda_directories
+    entry=PurePosixPath('nvidia/cublas/bin/cublas64_12.dll')
+    class Installed:
+        files=[entry]
+        def locate_file(self,value):return tmp_path/value
+    monkeypatch.setattr(importlib.metadata,'distribution',lambda name:Installed())
+    folders=windows_cuda_directories(tmp_path/'torch/lib')
+    assert folders==[tmp_path/'torch/lib',tmp_path/'nvidia/cublas/bin']
