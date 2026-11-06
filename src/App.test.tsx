@@ -47,6 +47,7 @@ beforeEach(()=>{
     else if(path==='/jobs/test-import')value=await(pendingJob||Promise.resolve({status:'done',progress:100,result:track}));
     else if(path==='/library')value={tracks:[{...track,analysis_modes:['local']}]};
     else if(path==='/models')value={models:[]};
+    else if(path==='/devices')value={devices:[{id:'auto',name:'Automatisch'},{id:'cpu',name:'CPU'}],active:{audio:'auto',lyrics:'auto',whisper:'auto',interpretation:'auto',separation:'auto'}};
     else if(path==='/settings')value={cloud:{configured:false,free_project_confirmed:false}};
     return new Response(JSON.stringify(value),{status:200,headers:{'Content-Type':'application/json'}});
   }));

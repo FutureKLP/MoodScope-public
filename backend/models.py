@@ -18,20 +18,21 @@ class Engines:
         self.audio_model = self.processor = self.lyric_pipe = None
         self.data=ROOT/'data'
 
-    def device(self):
+    def device(self,purpose='audio'):
         import torch
-        requested = os.environ.get('MOODSCOPE_DEVICE', 'auto')
+        from .runtime_devices import resolve
+        requested = resolve(self.data,purpose)
         if requested == 'cpu':
             return 'cpu'
         if torch.cuda.is_available():
             try:
                 # Probe an actual CUDA kernel, not merely driver presence.
-                (torch.ones(4, device='cuda') * 2).sum().item()
-                return 'cuda'
+                (torch.ones(4, device=requested) * 2).sum().item()
+                return requested
             except RuntimeError:
-                if requested == 'cuda':
+                if requested.startswith('cuda'):
                     raise
-        if requested == 'cuda':
+        if requested.startswith('cuda'):
             raise RuntimeError('CUDA requested but no usable GPU is available')
         return 'cpu'
 
@@ -49,8 +50,9 @@ class Engines:
             kwargs={'revision':AUDIO_REVISION} if source==AUDIO_MODEL else {}
             self.processor = ClapProcessor.from_pretrained(source,**kwargs)
             self.audio_model = ClapModel.from_pretrained(source,**kwargs).to(device).eval()
-        from .audio_method import LABELS,VALENCE,AROUSAL,PROMPTS
-        prompts=list(PROMPTS)
+        from .audio_method import LABELS,VALENCE,AROUSAL
+        from .prompt_presets import content
+        prompts=content(self.data,'audio').splitlines()
         labels=list(LABELS)
         values=torch.tensor(VALENCE,device=device)
         arousal=torch.tensor(AROUSAL,device=device)
@@ -91,7 +93,7 @@ class Engines:
             kwargs={'revision':LYRIC_REVISION} if source==LYRIC_MODEL else {}
             self.lyric_pipe = pipeline('text-classification', model=source, **kwargs,
                                        model_kwargs={'use_safetensors':catalog.entries(self.data)[catalog.configuration(self.data)['active']['lyrics']].get('custom',False)},
-                                       device=0 if self.device() == 'cuda' else -1)
+                                       device=self.device('lyrics'))
         results = self.lyric_pipe([l['text'] for l in lines], top_k=None,
                                  truncation=True, max_length=256, batch_size=8)
         contexts=[]
@@ -130,6 +132,8 @@ class Engines:
                  'The music features piano.','The music features synthesizers.',
                  'The music features a string ensemble.','The music features brass instruments.',
                  'The music features singing vocals.']
+        from .prompt_presets import content
+        prompts=content(self.data,'instruments').splitlines()
         estimates=[];duration=len(y)/sr;device=self.device()
         for fraction in [.2,.5,.8]:
             start=max(0.,duration*fraction-5)

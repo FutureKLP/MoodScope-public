@@ -8,7 +8,8 @@ export function interpolatePoint(points:Point[],time:number):Point|undefined{
   const right=points[i],left=points[i-1],a=(left.start+left.end)/2,b=(right.start+right.end)/2;
   if(time<=b){const ratio=Math.max(0,Math.min(1,(time-a)/Math.max(.001,b-a)));
    const blend=(key:'valence'|'arousal'|'rms')=>{const x=left[key],y=right[key];return x!==undefined&&y!==undefined?x+(y-x)*ratio:x??y};
-   return {...left,valence:blend('valence')!,arousal:blend('arousal'),rms:blend('rms')};
+   const scores=Object.fromEntries([...new Set([...Object.keys(left.scores),...Object.keys(right.scores)])].map(key=>[key,(left.scores[key]??0)+((right.scores[key]??0)-(left.scores[key]??0))*ratio]));
+   return {...left,scores,valence:blend('valence')!,arousal:blend('arousal'),rms:blend('rms')};
   }
  }
  return points.at(-1);

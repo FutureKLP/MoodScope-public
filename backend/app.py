@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, SecretStr
 
 from .core import parse_lrc, biggest_split,text_coverage
 from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
-from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method,cancellation
+from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method,cancellation,prompt_presets,runtime_devices
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
@@ -110,13 +110,13 @@ def own(conn,key,identity):
 def local_version(active):
     from importlib.metadata import version
     runtime={name:version(name) for name in ['torch','transformers','librosa']}
-    return PIPELINE_VERSION+json.dumps({k:active[k] for k in ['audio','lyrics','whisper']},sort_keys=True)+json.dumps(runtime,sort_keys=True)
+    return PIPELINE_VERSION+prompt_presets.fingerprint(DATA,['audio'])+json.dumps({k:active[k] for k in ['audio','lyrics','whisper']},sort_keys=True)+json.dumps(runtime,sort_keys=True)
 
 
 @app.get('/api/health')
 def health():
     from scripts.runtime import environment_id
-    return {'status':'ok', 'version':'0.3.0','api_revision':9,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
+    return {'status':'ok', 'version':'0.3.0','api_revision':10,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':engines.device(),
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -389,7 +389,7 @@ def run_job(job_id, identity, request):
                 warnings.append('Whisper-Zeitstempel und Gesangserkennung können ungenau sein.')
             if request.mode=='cloud' and request.whisper:
                 warnings.append('Im API-Modus wird kein lokales Whisper gestartet. Für Textkurve synchronisierte LRC-Lyrics verwenden.')
-            audio_version=PIPELINE_VERSION+':audio-model:'+active['audio'] if request.mode=='local' else cloud.VERSION+cloud.MODEL
+            audio_version=PIPELINE_VERSION+prompt_presets.fingerprint(DATA,['audio'])+':audio-model:'+active['audio'] if request.mode=='local' else cloud.VERSION+cloud.MODEL
             audio_key = f'audio:{cache_identity}:{audio_version}:resolution{request.audio_resolution}'
             with db() as conn:
                 audio_cached = conn.execute('SELECT result FROM cache WHERE key=?',(audio_key,)).fetchone()
@@ -421,7 +421,7 @@ def run_job(job_id, identity, request):
                       'models':{'audio':catalog.entries(DATA)[active['audio']]['repo'] if request.mode=='local' else cloud.MODEL,
                                 'lyrics':catalog.entries(DATA)[active['lyrics']]['repo'] if request.mode=='local' else cloud.MODEL},
                       'method':'CLAP Prompt-Ensemble und XLM-EMO mit Textkontext' if request.mode=='local' else 'Gemini: getrennte Audio- und Textanalyse; subjektive unkalibrierte Valenz.'}
-            if request.mode=='local':result['audio_method']=audio_method.describe_musical(result['models']['audio'],request.audio_resolution)
+            if request.mode=='local':result['audio_method']=audio_method.describe_musical(result['models']['audio'],request.audio_resolution,DATA)
             else:result=audio_method.with_method(result)
             result['warnings'].append('Modellwerte und Unsicherheit sind nicht wissenschaftlich kalibriert.')
             with db() as conn:
@@ -472,6 +472,48 @@ def cancel_job(job_id:str):
 
 @app.get('/api/models')
 def models():return catalog.status(DATA)
+
+
+@app.get('/api/prompts')
+def prompt_settings():return prompt_presets.status(DATA)
+
+
+class PromptChange(BaseModel):
+    action:Literal['save','select','delete']
+    purpose:Literal['audio','instruments','whole_de','whole_en','line_de','line_en']
+    preset_id:str | None=Field(default=None,max_length=64)
+    name:str=Field(default='',max_length=80)
+    content:str=Field(default='',max_length=6000)
+
+
+@app.post('/api/prompts')
+def update_prompts(request:PromptChange):
+    with job_lock:
+        if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
+        try:return prompt_presets.change(DATA,request.action,request.purpose,request.preset_id,request.name,request.content)
+        except ValueError as exc:raise HTTPException(422,str(exc)) from None
+
+
+@app.get('/api/devices')
+def device_settings():return {'devices':runtime_devices.available(),'active':runtime_devices.configuration(DATA)}
+
+
+class DeviceChoices(BaseModel):
+    audio:str=Field(max_length=20)
+    lyrics:str=Field(max_length=20)
+    whisper:str=Field(max_length=20)
+    interpretation:str=Field(max_length=20)
+    separation:str=Field(max_length=20)
+
+
+@app.post('/api/devices')
+def update_devices(request:DeviceChoices):
+    with job_lock:
+        if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
+        try:runtime_devices.save(DATA,request.model_dump())
+        except ValueError as exc:raise HTTPException(422,str(exc)) from None
+        catalog.unload_models(engines);engines.data=DATA
+        return device_settings()
 
 
 class ModelChoice(BaseModel):
@@ -573,12 +615,13 @@ def run_interpretation(job_id,identity,request):
         selected=json.dumps(providers.profile(DATA,request.provider_id),sort_keys=True) if request.provider_id else catalog.configuration(DATA)['active']['interpretation']
         # Add measured instrument hints when available, keeping them out of the text-only LLM prompt.
         with db() as conn:
-            detail=conn.execute('SELECT result FROM cache WHERE key=?',(f'details:{identity}:{catalog.configuration(DATA)["active"]["audio"]}:v3-harmony',)).fetchone()
+            detail=conn.execute('SELECT result FROM cache WHERE key=?',(f'details:{identity}:{catalog.configuration(DATA)["active"]["audio"]}:v4-harmony-prompts:{prompt_presets.fingerprint(DATA,["instruments"])}',)).fetchone()
         if detail:analysis['instruments']=json.loads(detail[0]).get('instruments',[])
         with db() as conn:research_row=conn.execute('SELECT result FROM cache WHERE key=?',(f'research-selected:{cache_identity}',)).fetchone()
         research_facts=json.loads(research_row[0]) if research_row else None
         research_basis=hashlib.sha256(json.dumps(research_facts,sort_keys=True).encode()).hexdigest()
-        key='interpretation:'+hashlib.sha256(('whole-song-v9-stable-scope'+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent'}),sort_keys=True)+selected).encode()).hexdigest()
+        prompt_basis=prompt_presets.fingerprint(DATA,[('whole_' if request.time is None else 'line_')+request.language])
+        key='interpretation:'+hashlib.sha256(('whole-song-v10-prompt'+prompt_basis+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
         else:
@@ -591,6 +634,7 @@ def run_interpretation(job_id,identity,request):
             result['language']=request.language
             result['analysis_basis']=insights.analysis_basis(analysis)
             result['model_basis']=selected
+            result['prompt_basis']=prompt_basis
             result['saved_with_song']=True
             result['source_warning']='Diese Deutung basiert auf automatisch erkannten Wörtern. Whisper kann Wörter verwechseln; bitte den Text im Verlauf prüfen und gegebenenfalls korrigieren.' if analysis.get('lyrics_source')=='whisper' else 'Auch diese Deutung ist eine mögliche Lesart. Die Textquelle und konkrete Belege selbst prüfen.'
             result['source_warning']=language.translate(result['source_warning'],request.language)
@@ -638,7 +682,8 @@ def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',prov
     if not row:raise HTTPException(404,'Noch keine gespeicherte Deutung für dieses Modellprofil.')
     value=json.loads(row[0])
     with db() as conn:analysis=conn.execute('SELECT result FROM cache WHERE key=?',(f'latest:{identity}:{mode}',)).fetchone()
-    stale=not analysis or value.get('analysis_basis')!=insights.analysis_basis(json.loads(analysis[0]))
+    stale=value.get('prompt_basis') not in {None,prompt_presets.fingerprint(DATA,[('whole_' if value.get('time') is None else 'line_')+language])}
+    stale=stale or not analysis or value.get('analysis_basis')!=insights.analysis_basis(json.loads(analysis[0]))
     with db() as conn:research_row=conn.execute('SELECT result FROM cache WHERE key=?',(f'research-selected:{identity}',)).fetchone()
     current_research=json.loads(research_row[0]) if research_row else None
     research_basis=hashlib.sha256(json.dumps(current_research,sort_keys=True).encode()).hexdigest()
@@ -657,7 +702,7 @@ def run_details(job_id,identity):
     try:
         engines.data=DATA
         version=catalog.configuration(DATA)['active']['audio']
-        key=f'details:{identity}:{version}:v3-harmony'
+        key=f'details:{identity}:{version}:v4-harmony-prompts:{prompt_presets.fingerprint(DATA,["instruments"])}'
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached:result={**json.loads(cached[0]),'cached':True}
         else:

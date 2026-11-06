@@ -33,7 +33,10 @@ def windows_cuda_directories(torch_folder):
 
 def device_for(engine):
     requested=os.environ.get('MOODSCOPE_WHISPER_DEVICE','auto')
-    if requested=='cpu' or (requested=='auto' and engine.device()!='cuda'):return 'cpu'
+    from . import runtime_devices
+    chosen=requested if requested!='auto' else (runtime_devices.resolve(engine.data,'whisper') if hasattr(engine,'data') else engine.device())
+    explicit=requested!='auto' or (hasattr(engine,'data') and runtime_devices.configuration(engine.data).get('whisper','auto')!='auto')
+    if requested=='cpu' or (requested=='auto' and not chosen.startswith('cuda')):return 'cpu'
     if os.name=='nt':
         import torch
         folders=windows_cuda_directories(Path(torch.__file__).parent/'lib')
@@ -44,9 +47,9 @@ def device_for(engine):
                     _dll_handles.append(os.add_dll_directory(str(folder)));_dll_directories.add(str(folder))
                     if str(folder) not in os.environ.get('PATH','').split(os.pathsep):os.environ['PATH']=str(folder)+os.pathsep+os.environ.get('PATH','')
             return 'cuda'
-        if requested=='cuda':raise RuntimeError('Whisper-CUDA benötigt cuBLAS 12 und cuDNN 9 in der Projektumgebung.')
+        if explicit:raise RuntimeError('Whisper-CUDA benötigt cuBLAS 12 und cuDNN 9 in der Projektumgebung.')
         return 'cpu'
-    if requested=='cuda':return 'cuda'
+    if explicit:return 'cuda'
     import ctypes.util
     return 'cuda' if ctypes.util.find_library('cudnn') else 'cpu'
 
@@ -75,9 +78,12 @@ def transcribe(engine,path,progress,quality='standard',language=None):
     from faster_whisper import WhisperModel
     from . import catalog,diagnostics
     device=device_for(engine)
+    from .runtime_devices import resolve
+    chosen=resolve(engine.data,'whisper') if device=='cuda' else 'cpu'
+    device_index=int(chosen.split(':')[1]) if device=='cuda' and ':' in chosen else 0
     progress('Whisper: lokale Texterkennung auf '+('NVIDIA CUDA' if device=='cuda' else 'CPU'),5)
     catalog.unload_models(engine)
-    model=WhisperModel(catalog.model_source(engine.data,'whisper'),device=device,
+    model=WhisperModel(catalog.model_source(engine.data,'whisper'),device=device,device_index=device_index,
         compute_type='float16' if device=='cuda' else 'int8',download_root=str(catalog.ROOT/'models'/'whisper'))
     audio=decode_audio(str(path),sampling_rate=16000);duration=len(audio)/16000
     options={'beam_size':7 if quality=='precise' else 5,'vad_filter':False,

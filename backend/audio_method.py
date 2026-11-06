@@ -66,8 +66,13 @@ def musical_projection(rows,features):
     return result
 
 
-def describe_musical(model,grid_seconds):
-    return {**describe(model,grid_seconds),'id':'clap-musical-sequence-v6','features_used_in_valence':True,
+def describe_musical(model,grid_seconds,data=None):
+    base=describe(model,grid_seconds)
+    if data is not None:
+        from .prompt_presets import content
+        prompts=content(data,'audio').splitlines()
+        for i,label in enumerate(base['labels']):label['prompts']=prompts[2*i:2*i+2]
+    return {**base,'id':'clap-musical-sequence-v6','features_used_in_valence':True,
             'valence_formula':'duration_weighted_triangular_1_2_1(clip(clap_valence + clip(sum(feature * weight * reliability), -.12, .12), -1, 1))',
             'feature_weights':{'key_mode':.04,'triad_mode':.06,'tempo':.04,'brightness':.02,'harmonic_resolution':.025},
             'temporal_filter':{'weights':[1,2,1],'duration_weighted':True,'online':False},

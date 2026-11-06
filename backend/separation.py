@@ -52,11 +52,11 @@ def separate(data,identity,model_name,engine,progress):
     torch.hub.set_dir(str(catalog.ROOT/'models'/'demucs'))
     progress('Lade lokales Demucs-Modell; beim ersten Mal Modelldownload',5)
     actual_model='htdemucs_ft' if model_name=='htdemucs_auto' else model_name
-    model=load_model(actual_model,progress).to(engine.device()).eval()
+    model=load_model(actual_model,progress).to(engine.device('separation')).eval()
     y,sr=sf.read(Path(data)/(identity+'.wav'),dtype='float32',always_2d=True)
     import librosa
     y=librosa.resample(y.T,orig_sr=sr,target_sr=model.samplerate)
-    mixture=torch.from_numpy(y).to(engine.device())
+    mixture=torch.from_numpy(y).to(engine.device('separation'))
     reference=mixture.mean(0);mean=reference.mean();std=reference.std()
     std=std.clamp(min=1e-6)
     adaptive=model_name=='htdemucs_auto'
@@ -64,7 +64,7 @@ def separate(data,identity,model_name,engine,progress):
     try:
         progress('Trenne Gesang und Instrumentgruppen lokal; das kann mehrere Minuten dauern',15)
         with torch.inference_mode():
-            stems=apply_model(model,((mixture-mean)/std)[None],device=engine.device(),
+            stems=apply_model(model,((mixture-mean)/std)[None],device=engine.device('separation'),
                 shifts=plan['shifts'],split=True,overlap=plan['overlap'],progress=False,num_workers=0)[0]
         stems=(stems*std+mean/len(model.sources)).cpu().numpy()
         progress('Prüfe getrennte Spuren und Rekonstruktion',90)
