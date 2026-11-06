@@ -781,6 +781,5 @@
   "Fehlermeldung schließen": "Dismiss error message",
   "Schließen": "Close",
   "Mischt die Farbanteile von Freude, Ruhe, Trauer, Ärger, Angst und Zärtlichkeit weich. Farben sind eine Gestaltungswahl, keine zusätzliche Emotionsmessung.": "Softly blends the colour shares of joy, calm, sadness, anger, fear and tenderness. Colours are a design choice, not an additional emotion measurement.",
-  "Song geöffnet. Kein Analyse-Cache vorhanden; mit Song neu analysieren eine neue Analyse starten.": "Song opened. No cached analysis is available; use Reanalyse song to create a new analysis.",
   "Recherche verworfen: Bibliothek oder Analyse-Cache wurde inzwischen geändert. Bitte erneut recherchieren.": "Research discarded: the library or analysis cache changed while the request was running. Please run the research again."
 }

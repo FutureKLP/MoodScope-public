@@ -243,7 +243,7 @@ describe('workspace flows',()=>{
 
 });
 
-it('clears selected cached output and opens the uncached library song without regenerating it',async()=>{
+it('clears cached output and automatically analyses the song when reopened',async()=>{
  const original=vi.mocked(fetch).getMockImplementation()!;
  vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
   const path=String(input).split('/api')[1];
@@ -259,7 +259,8 @@ it('clears selected cached output and opens the uncached library song without re
  await waitFor(()=>expect(freshAnalysis).toBe(true));
  requests.length=0;
  await userEvent.click(screen.getByRole('button',{name:'Öffnen'}));
- await screen.findByText(/Song geöffnet. Kein Analyse-Cache/);
- expect(requests.some(r=>/\/analyze$|\/research$|\/lyrics\/search$/.test(r.path))).toBe(false);
- expect(screen.queryByRole('slider',{name:'Wiedergabeposition im Stimmungsverlauf'})).toBeNull();
+ await screen.findByRole('slider',{name:'Wiedergabeposition im Stimmungsverlauf'});
+ expect(requests.filter(r=>r.path==='/tracks/test-song/analyze')).toHaveLength(1);
+ expect(requests.some(r=>r.path==='/tracks/test-song/lyrics/search')).toBe(true);
+ expect(requests.some(r=>r.path==='/tracks/test-song/research')).toBe(true);
 });
