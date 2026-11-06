@@ -390,6 +390,7 @@ def run_job(job_id, identity, request):
                 summary = insights.acoustic_features(y,sr)
                 analyzer=engines.audio if request.mode=='local' else cloud.audio_mood
                 a=analyzer(y,sr,progress) if request.audio_resolution==5 else analyzer(y,sr,progress,request.audio_resolution)
+                if request.mode=='local':a=audio_method.musical_projection(a,summary)
                 with db() as conn:
                     conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',
                                  (audio_key,json.dumps({'audio':a,'features':summary})))
@@ -407,7 +408,7 @@ def run_job(job_id, identity, request):
                       'models':{'audio':catalog.CATALOG[active['audio']]['repo'] if request.mode=='local' else cloud.MODEL,
                                 'lyrics':catalog.CATALOG[active['lyrics']]['repo'] if request.mode=='local' else cloud.MODEL},
                       'method':'CLAP Prompt-Ensemble und XLM-EMO mit Textkontext' if request.mode=='local' else 'Gemini: getrennte Audio- und Textanalyse; subjektive unkalibrierte Valenz.'}
-            if request.mode=='local':result['audio_method']=audio_method.describe(result['models']['audio'],request.audio_resolution)
+            if request.mode=='local':result['audio_method']=audio_method.describe_musical(result['models']['audio'],request.audio_resolution)
             else:result=audio_method.with_method(result)
             result['warnings'].append('Modellwerte und Unsicherheit sind nicht wissenschaftlich kalibriert.')
             with db() as conn:
@@ -521,9 +522,9 @@ def run_interpretation(job_id,identity,request):
         selected=json.dumps(providers.profile(DATA,request.provider_id),sort_keys=True) if request.provider_id else catalog.configuration(DATA)['active']['interpretation']
         # Add measured instrument hints when available, keeping them out of the text-only LLM prompt.
         with db() as conn:
-            detail=conn.execute('SELECT result FROM cache WHERE key=?',(f'details:{identity}:{catalog.configuration(DATA)["active"]["audio"]}:v2',)).fetchone()
+            detail=conn.execute('SELECT result FROM cache WHERE key=?',(f'details:{identity}:{catalog.configuration(DATA)["active"]["audio"]}:v3-harmony',)).fetchone()
         if detail:analysis['instruments']=json.loads(detail[0]).get('instruments',[])
-        key='interpretation:'+hashlib.sha256(('whole-song-v6-language'+identity+json.dumps(analysis,sort_keys=True)+json.dumps(request.model_dump(exclude={'force'}),sort_keys=True)+selected).encode()).hexdigest()
+        key='interpretation:'+hashlib.sha256(('whole-song-v7-harmonic-evidence-language'+identity+json.dumps(analysis,sort_keys=True)+json.dumps(request.model_dump(exclude={'force'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
         else:
@@ -581,7 +582,7 @@ def run_details(job_id,identity):
     try:
         engines.data=DATA
         version=catalog.configuration(DATA)['active']['audio']
-        key=f'details:{identity}:{version}:v2'
+        key=f'details:{identity}:{version}:v3-harmony'
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached:result={**json.loads(cached[0]),'cached':True}
         else:
@@ -819,21 +820,30 @@ class ResearchQuery(BaseModel):
 @app.post('/api/tracks/{identity}/research')
 def research_search(identity:str,query:ResearchQuery):
     metadata=track(identity);identity=canonical(identity)
-    key='research-search-v4:'+identity+':'+hashlib.sha256(json.dumps([query.artist,query.title]).encode()).hexdigest()
+    key='research-search-v5:'+identity+':'+hashlib.sha256(json.dumps([query.artist,query.title,metadata['duration'],query.auto_match]).encode()).hexdigest()
     try:
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not query.force:return {**json.loads(cached[0]),'cached':True}
         result=research.search(query.artist,query.title)
         if query.force:
             with db() as conn:conn.execute('DELETE FROM cache WHERE key=?',(f'research-selected:{identity}',))
-        if query.auto_match and query.artist.strip() and query.title.strip():
-            matches=[r for r in result['candidates'] if library.normalized(r.get('artist',''))==library.normalized(query.artist)
-                and library.normalized(r.get('title',''))==library.normalized(query.title)
-                and abs(r.get('duration',0)-metadata['duration'])<3]
-            if matches and len({r.get('source') for r in matches})==len(matches):
-                priority={'MusicBrainz':0,'Deezer':1,'Apple iTunes':2};selected=min(matches,key=lambda r:priority.get(r.get('source'),3))
-                try:result['matched']=research_recording(identity,selected['id'],force=query.force)
-                except HTTPException:result['details_unavailable']=True
+        result['candidates']=research.ranked_candidates(result['candidates'],query.artist,query.title,metadata['duration'])
+        if query.auto_match:
+            matches=[r for r in result['candidates'] if r['auto_eligible']]
+            best=None;best_count=-1;trials=[]
+            for candidate in matches[:3]:
+                try:
+                    detail=research_recording(identity,candidate['id'],force=query.force)
+                    count=research.recording_credit_count(detail)
+                    trials.append({'id':candidate['id'],'source':candidate.get('source'),'duration_delta':candidate['duration_delta'],'recording_instrument_credits':count,'status':'found'})
+                    if count>best_count:best,best_count=candidate,count
+                    if count:break
+                except HTTPException:trials.append({'id':candidate['id'],'status':'unavailable'})
+            result['selection_attempts']=trials
+            if best:
+                result['matched']=research_recording(identity,best['id'])
+                result['auto_selection']={'id':best['id'],'duration_delta':best['duration_delta'],'method':'matching artist/title/version and closest duration; up to three compatible credit fallbacks'}
+            elif matches:result['details_unavailable']=True
         with db() as conn:
             for cache_key in [key,f'research-results:{identity}']:
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(cache_key,json.dumps(result)));own(conn,cache_key,identity)

@@ -97,3 +97,11 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 - Tatsächliche CUDA-Ausführung von CLAP, XLM-EMO, Qwen (Deutsch/Englisch), Demucs Fine-tuned und Whisper mit selbst erzeugtem Testmaterial. Whisper benötigt zusätzlich projektlokale CUDA-12-Bibliotheken; nach dem beobachteten DLL-Fehler wurde genau dieser Pfad korrigiert und erneut erfolgreich geprüft.
 - 113 Backend-Tests im neuen Volltest bestanden, anschließend neun gezielte Start-/CUDA-Pfadtests bestanden (aktueller Umfang 117). Isolierter tatsächlicher Supervisor-Start über den alten Interpreter bestätigte API 6, Startprotokoll und sauberes Beenden. PowerShell-Setup-/Startskripte syntaktisch geprüft. Windows-Releasebuild aktualisiert.
 - pip check ohne Konflikte; OSV-Abgleich von 92 Python-Paketen ohne Befund. Offene Rust-/Linux-Hinweise bleiben in SECURITY.md dokumentiert. Keine erneuten privaten Songtests oder zusätzlichen sichtbaren Desktopprüfungen.
+
+## Harmonie, Merkmalsbeiträge und appweite Atmosphäre
+
+- Lokales harmonisches STFT-Chroma, explizite Tonartprofile und Dur-/Moll-Dreiklänge auf Sekundenraster. Speicherbegrenzte Spektralblöcke, mehrdeutige Akkorde leer; kein Genauigkeitsnachweis für beliebige Musik.
+- CLAP-Rohwerte bleiben erhalten. Neue Pipeline ergänzt protokollierte heuristische Tonart-/Dreiklang-/Tempo-/Helligkeitsbeiträge mit insgesamt maximal ±0,12 Valenz. Relative Energie beeinflusst separat Aktivierung. Neue Cacheschlüssel, alte Analysen bleiben abrufbar; neue Messungen erfordern Neuanalyse.
+- Appweite optionale Farb-/Nebel-/Wasseratmosphäre ohne Eingriff in den Audiographen; Pause und reduzierte Bewegung berücksichtigt. F11 im nativen Fenster vorbereitet.
+- Aufnahmevorschläge nach kompatibler Identität und Laufzeit sortiert; bis zu drei automatische Credit-Fallbacks. Online-Werktonarten über MusicBrainz und Wikidata getrennt von gemessener Aufnahmetonart.
+- 42 betroffene Backend-Tests bestanden, einschließlich echter Analyse eines synthetischen C-Dur-Akkords. Frontend- und nativer Abschlussnachweis folgen nach den restlichen Hörstudioverbesserungen. Kein neuer privater Songdurchlauf.

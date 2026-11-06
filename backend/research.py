@@ -46,6 +46,23 @@ def clean_query(artist,title):
     return artist,title
 
 
+def ranked_candidates(candidates,artist,title,duration):
+    """Duration ranks compatible identities, never makes a different remix compatible."""
+    normalize=lambda s:re.sub(r'\W+','',s.casefold())
+    artist,title=clean_query(artist,title)
+    rows=[]
+    for candidate in candidates:
+        delta=abs(float(candidate.get('duration') or 0)-duration)
+        exact=bool(artist.strip()) and normalize(candidate.get('artist',''))==normalize(artist) and normalize(candidate.get('title',''))==normalize(title)
+        eligible=exact and candidate.get('duration',0)>0 and delta<=min(6,max(3,duration*.015))
+        rows.append({**candidate,'duration_delta':delta,'auto_eligible':eligible})
+    return sorted(rows,key=lambda r:(not r['auto_eligible'],r['duration_delta'],{'MusicBrainz':0,'Deezer':1}.get(r.get('source'),2)))
+
+
+def recording_credit_count(details):
+    return sum(bool(c.get('instruments')) and c.get('scope','recording')=='recording' for c in details.get('credits',[]))
+
+
 def musicbrainz_search(artist,title):
     query='recording:'+quote(title)
     if artist.strip():query+=' AND artist:'+quote(artist)
@@ -109,22 +126,25 @@ def musicbrainz_details(identity):
         'releases':[{'title':v.get('title',''),'date':v.get('date','')} for v in r.get('releases',[])][:12],
         'source':'MusicBrainz','url':'https://musicbrainz.org/recording/'+identity,
         'note':'Credits beziehen sich auf die ausgewählte Aufnahme. Werkangaben werden getrennt gekennzeichnet und belegen nicht die Besetzung eines Remixes.',
-        'instrumentation':[]}
+        'instrumentation':[],'musical_facts':[]}
     # Linked work data is a fallback, never silently promoted to recording credits.
     relations=list(r.get('relations',[]));warnings=[]
-    if not any(c['instruments'] for c in credits):
-        for rel in r.get('relations',[]):
-            work_id=rel.get('work',{}).get('id','')
-            if re.fullmatch(r'[0-9a-fA-F-]{36}',work_id):
-                try:relations+=request('work/'+work_id,{'inc':'url-rels'}).get('relations',[])
-                except Exception:warnings.append('MusicBrainz work')
-                break
+    for rel in r.get('relations',[]):
+        work_id=rel.get('work',{}).get('id','')
+        if re.fullmatch(r'[0-9a-fA-F-]{36}',work_id):
+            try:
+                work=request('work/'+work_id,{'inc':'url-rels'});relations+=work.get('relations',[])
+                result['musical_facts'] += [{'kind':'key','value':a.get('value',''),'source':'MusicBrainz','scope':'linked_work','url':'https://musicbrainz.org/work/'+work_id} for a in work.get('attributes',[]) if a.get('type','').casefold()=='key' and a.get('value')]
+            except Exception:warnings.append('MusicBrainz work')
+            break
     qids=[]
     for rel in relations:
         value=rel.get('url',{}).get('resource','');match=re.fullmatch(r'https://(?:www\.)?wikidata\.org/wiki/(Q[0-9]+)',value)
         if match and match[1] not in qids:qids.append(match[1])
     for qid in qids[:2]:
-        try:result['instrumentation']+=wikidata_instruments(qid)
+        try:
+            result['instrumentation']+=wikidata_instruments(qid)
+            result['musical_facts']+=wikidata_tonality(qid)
         except Exception:warnings.append('Wikidata')
     result['unavailable']=sorted(set(warnings))
     return enrich_discogs(result,r)
@@ -166,7 +186,7 @@ def details(identity):
         candidates=musicbrainz_search(result['artist'],result['title'])['candidates']
         exact=[c for c in candidates if normalize(c.get('artist',''))==normalize(result['artist']) and normalize(c.get('title',''))==normalize(result['title']) and abs(c.get('duration',0)-result['duration'])<3]
         if len(exact)==1:
-            extra=musicbrainz_details(exact[0]['id']);result['supplemental']=[extra];result['instrumentation']=extra.get('instrumentation',[])
+            extra=musicbrainz_details(exact[0]['id']);result['supplemental']=[extra];result['instrumentation']=extra.get('instrumentation',[]);result['musical_facts']=extra.get('musical_facts',[])
             result['credits']+=[{**c,'source':c.get('source','MusicBrainz'),'url':c.get('url',extra['url'])} for c in extra['credits']]
             result['album_credits']=extra.get('album_credits',[])
             result['supplemental']+=extra.get('supplemental',[])
@@ -218,3 +238,21 @@ def enrich_discogs(result,recording):
             result.setdefault('supplemental',[]).append({'source':'Discogs','url':extra['url'],'title':extra['title']})
         except Exception:result.setdefault('unavailable',[]).append('Discogs')
     return result
+
+
+def wikidata_tonality(qid):
+    if not re.fullmatch(r'Q[0-9]+',qid):raise ValueError('Invalid Wikidata ID')
+    base='https://www.wikidata.org/w/api.php'
+    data=get_json(base,{'action':'wbgetentities','ids':qid,'props':'claims','format':'json'})
+    rows=data.get('entities',{}).get(qid,{}).get('claims',{}).get('P826',[])
+    ids=[]
+    for row in rows:
+        if row.get('rank')=='deprecated':continue
+        identity=row.get('mainsnak',{}).get('datavalue',{}).get('value',{}).get('id','')
+        if re.fullmatch(r'Q[0-9]+',identity) and identity not in ids:ids.append(identity)
+    if not ids:return []
+    labels=get_json(base,{'action':'wbgetentities','ids':'|'.join(ids[:8]),'props':'labels','languages':'de|en','format':'json'})
+    return [{'kind':'key','value':r.get('labels',{}).get('en',{}).get('value',i),
+             'value_de':r.get('labels',{}).get('de',{}).get('value',''),
+             'scope':'linked_work_or_song','source':'Wikidata','url':'https://www.wikidata.org/wiki/'+qid}
+            for i,r in labels.get('entities',{}).items()]

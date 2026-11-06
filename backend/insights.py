@@ -24,7 +24,10 @@ def acoustic_features(y,sr):
         a=int(start*22050/512);b=max(a+1,int(min(len(audio)/22050,start+20)*22050/512))
         sections.append({'start':start,'end':min(len(audio)/22050,start+20),
             'rms':float(rms[a:b].mean()),'brightness_hz':float(brightness[a:b].mean())})
-    return {'duration':len(y)/sr,'rms_mean':float(rms.mean()),'bpm':bpm,
+    from . import harmony
+    harmonic=harmony.analyse(audio,22050)
+    crest=float(20*np.log10(max(1e-7,float(np.max(np.abs(audio))))/max(1e-7,float(np.sqrt(np.mean(audio**2))))))
+    return {'harmony':harmonic,'crest_factor_db':crest,'duration':len(y)/sr,'rms_mean':float(rms.mean()),'bpm':bpm,
             'bpm_note':'Geschätztes Tempo; halbes/doppeltes Tempo möglich.',
             'brightness_hz':float(brightness.mean()),'beat_regularity':regularity,
             'dynamic_range_db':dynamic_range,'sections':sections}
@@ -156,6 +159,10 @@ def audio_evidence(analysis,time_position=None,language='de'):
     elif strongest in {'anger','fear'}:
         text+='Das Modell ordnet die Aufnahme eher einem angespannten oder kraftvollen Ausdruck zu; laute oder helle Klänge allein beweisen diese Lesart nicht. '
     elif strongest=='joy':text+='Das Modell ordnet die Aufnahme eher einem heiteren oder lebhaften Ausdruck zu; schnelles Tempo allein beweist keine Freude. '
+    from .harmony import evidence
+    text+=evidence(features,time_position,language)
+    projected=[r for r in rows if 'clap_valence' in r]
+    if projected:text+=f'Die ausgewiesene Endvalenz enthält eine begrenzte musikalische Merkmalskorrektur von im Mittel {sum(r["musical_adjustment"] for r in projected)/len(projected):+.3f}; die Einzelbeiträge stehen unter Methode & Werte. '
     return text+'Die genannten Messwerte sind überprüfbare Begleitmerkmale, beweisen aber keine Ursache für Traurigkeit oder Freude. Ohne gesicherte Harmonieanalyse werden Tonart und Akkorde nicht als Fakten behauptet.'
 
 
@@ -220,4 +227,8 @@ def audio_evidence_english(analysis,time_position=None):
     if strongest in {'sadness','tenderness','calm'}:text+='The model associates this recording with calm, melancholy or softness; this does not establish a minor key or personal sadness. '
     elif strongest in {'anger','fear'}:text+='The model associates this recording with tension or force; loudness and brightness alone do not prove this reading. '
     elif strongest=='joy':text+='The model associates this recording with a cheerful or lively expression; fast tempo alone does not prove joy. '
+    from .harmony import evidence
+    text+=evidence(f,time_position,'en')
+    projected=[r for r in rows if 'clap_valence' in r]
+    if projected:text+=f'The final valence includes a bounded musical feature adjustment averaging {sum(r["musical_adjustment"] for r in projected)/len(projected):+.3f}; individual contributions are shown in Method & values. '
     return text+'These measurements are verifiable accompanying features, not proof of what causes sadness or joy. Without validated harmonic analysis, key and chords are not claimed as facts.'

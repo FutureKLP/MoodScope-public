@@ -5,7 +5,7 @@ import {render,screen,within,waitFor,cleanup,fireEvent} from '@testing-library/r
 import userEvent from '@testing-library/user-event';
 import {SourceStudio} from './SongTools';
 import {AnalysisReport} from './AnalysisReport';
-import {Atmosphere} from './Atmosphere';
+import {Atmosphere,atmosphereStyle} from './Atmosphere';
 import {setLanguage} from './i18n';
 const track={id:'authored',name:'Authored fixture',duration:10};
 let info:any,calls:any[];
@@ -44,11 +44,10 @@ it('shows the actual weighted calculation, context and seek selection without in
  await userEvent.selectOptions(screen.getByLabelText('Abschnitt auswählen'),'1');expect(seek).toHaveBeenCalledWith(5);
  expect(screen.getByText(/gehen nicht direkt in die CLAP/)).toBeTruthy();
 });
-it('pauses atmospheric animation with playback and uses analysed valence without altering audio',()=>{
- setLanguage('en');const {rerender}=render(<Atmosphere audio={{start:0,end:5,valence:-.5,scores:{},rms:.1}} playing={false}/>);
- expect(screen.getByLabelText('Atmosphere player').classList.contains('is-playing')).toBe(false);
- expect(screen.getByText('-0.50')).toBeTruthy();
- rerender(<Atmosphere audio={{start:0,end:5,valence:.6,scores:{},rms:.3}} playing={true}/>);
- expect(screen.getByLabelText('Atmosphere player').classList.contains('is-playing')).toBe(true);
- expect(document.querySelector('audio')).toBeNull();
+it('renders decorative global atmosphere without audio interception or controls',()=>{
+ const {container}=render(<Atmosphere/>);
+ expect(container.querySelector('.ambient-field')?.getAttribute('aria-hidden')).toBe('true');
+ expect(container.querySelectorAll('button,audio,canvas').length).toBe(0);
+ const style=atmosphereStyle({start:0,end:5,valence:-.5,scores:{},rms:.1},undefined,120) as any;
+ expect(style['--mood-hue']).toBe(260);expect(style['--breath-duration']).toBe('2s');
 });

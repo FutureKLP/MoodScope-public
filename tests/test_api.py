@@ -334,3 +334,19 @@ def test_same_origin_browser_assets_work_on_isolated_local_port_without_trusting
     with TestClient(module.app,base_url='http://127.0.0.1:8877') as isolated:
         assert isolated.get('/api/health',headers={'Origin':'http://127.0.0.1:8877'}).status_code==200
         assert isolated.get('/api/health',headers={'Origin':'http://127.0.0.1:8878'}).status_code==403
+
+def test_automatic_research_tries_next_compatible_recording_for_missing_credits(client,monkeypatch):
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('test.wav',wav_bytes())}).json()['id']
+    candidates=[{'id':'itunes:1','artist':'Artist','title':'Title','duration':1,'source':'Apple iTunes'},
+                {'id':'deezer:2','artist':'Artist','title':'Title','duration':1.2,'source':'Deezer'}]
+    monkeypatch.setattr(module.research,'search',lambda *a:{'candidates':candidates})
+    calls=[]
+    def details(recording):
+        calls.append(recording)
+        return {'id':recording,'credits':[] if recording=='itunes:1' else [{'instruments':['piano'],'scope':'recording'}]}
+    monkeypatch.setattr(module.research,'details',details)
+    result=client.post(f'/api/tracks/{identity}/research',json={'artist':'Artist','title':'Title','auto_match':True}).json()
+    assert calls==['itunes:1','deezer:2']
+    assert result['matched']['id']=='deezer:2' and len(result['selection_attempts'])==2
+    assert client.get(f'/api/tracks/{identity}/research').json()['id']=='deezer:2'

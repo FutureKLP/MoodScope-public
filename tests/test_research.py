@@ -1,6 +1,28 @@
 from backend import research
 
 
+def test_duration_ranking_never_auto_matches_a_different_version():
+    candidates=[{'id':'long','artist':'Artist','title':'Title','duration':245},
+                {'id':'near','artist':'Artist','title':'Title','duration':240.5},
+                {'id':'remix','artist':'Artist','title':'Title (Remix)','duration':240}]
+    result=research.ranked_candidates(candidates,'Artist','Title',240)
+    assert result[0]['id']=='near' and result[0]['auto_eligible']
+    assert not next(r for r in result if r['id']=='remix')['auto_eligible']
+
+
+def test_online_tonality_is_scoped_and_ignores_deprecated_claims(monkeypatch):
+    def get(url,params):
+        if params['props']=='claims':return {'entities':{'Q1':{'claims':{'P826':[
+            {'mainsnak':{'datavalue':{'value':{'id':'Q2'}}}},
+            {'rank':'deprecated','mainsnak':{'datavalue':{'value':{'id':'Q3'}}}}]}}}}
+        assert params['ids']=='Q2'
+        return {'entities':{'Q2':{'labels':{'en':{'value':'C major'},'de':{'value':'C-Dur'}}}}}
+    monkeypatch.setattr(research,'get_json',get)
+    result=research.wikidata_tonality('Q1')[0]
+    assert result['value']=='C major' and result['value_de']=='C-Dur'
+    assert result['scope']=='linked_work_or_song'
+
+
 def test_catalog_fallback_survives_musicbrainz_outage(monkeypatch):
     def unavailable(*a):raise RuntimeError('upstream unavailable')
     monkeypatch.setattr(research,'musicbrainz_search',unavailable)

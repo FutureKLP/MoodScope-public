@@ -26,7 +26,7 @@ Die Diagnoseansicht zeigt lokale Fehlertypen, Codepositionen, Auftragsstatus und
 
 ### Öffentliche Aufnahmedaten
 
-Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTunes und Deezer. Leere Suchen versuchen bereinigte Plattformtitel und eine Suche ohne Interpret. Ausgefallene Quellen werden sichtbar angezeigt. Eine eindeutig passende Katalogaufnahme kann automatisch übernommen werden; mehrdeutige Treffer müssen ausgewählt werden. Für Instrumentcredits werden verknüpfte **Discogs-Veröffentlichungen** und ergänzende **Wikidata-Werkdaten** abgefragt. Discogs-Releaseabrufe funktionieren hier ohne Key; eine anmeldepflichtige Discogs-Such-API wird nicht verwendet. Song-, Album- und Werkangaben bleiben getrennt und tragen Quellenlinks. Nicht jede Aufnahme hat vollständige Credits, insbesondere Mashups. Quellen: [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API), [Discogs API-Client](https://github.com/discogs/discogs_client/blob/master/docs/quickstart.md), [Wikidata Instrumentierung](https://www.wikidata.org/wiki/Property:P870), [Demucs](https://github.com/facebookresearch/demucs).
+Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTunes und Deezer. Leere Suchen versuchen bereinigte Plattformtitel und eine Suche ohne Interpret. Ausgefallene Quellen werden sichtbar angezeigt. Passende Interpret-/Titel-/Versionsangaben werden anhand der Songlänge geordnet. Die automatische Auswahl prüft bis zu drei kompatible Treffer auf Instrumentcredits; mehrdeutige Treffer müssen ausgewählt werden. Für Instrumentcredits werden verknüpfte **Discogs-Veröffentlichungen** und ergänzende **Wikidata-Werkdaten** abgefragt. Discogs-Releaseabrufe funktionieren hier ohne Key; eine anmeldepflichtige Discogs-Such-API wird nicht verwendet. Tonartangaben können zusätzlich aus verknüpften MusicBrainz-Werken und [Wikidata P826](https://www.wikidata.org/wiki/Property:P826) stammen; sie bestätigen nicht automatisch die Tonart eines Remixes. Song-, Album- und Werkangaben bleiben getrennt und tragen Quellenlinks. Nicht jede Aufnahme hat vollständige Credits, insbesondere Mashups. Quellen: [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API), [Discogs API-Client](https://github.com/discogs/discogs_client/blob/master/docs/quickstart.md), [Wikidata Instrumentierung](https://www.wikidata.org/wiki/Property:P870), [Demucs](https://github.com/facebookresearch/demucs).
 
 ### Verlauf
 
@@ -48,7 +48,8 @@ Vorhandene Ergebnisse werden beim Import geladen, ohne erneut KI-Inferenz auszuf
 
 ### Songdetails
 
-- Geschätztes Tempo mit librosa, Energie und spektrale Helligkeit.
+- Lokale Tonart-Kandidaten, zeitliche Dur-/Moll-Dreiklangschätzungen, Tempo, Beat-Regelmäßigkeit, Energie, spektrale Helligkeit und Dynamik. Unter **Methode & Werte** sind Messung, Unsicherheit und tatsächliche Rechenbeiträge einsehbar.
+- Die Endvalenz ergänzt CLAP um eine explizite Merkmalskorrektur (maximal ±0,12); Dynamik beeinflusst die Aktivierung. Diese Regeln sind heuristisch, keine wissenschaftlich kalibrierte Emotionsmessung. Septakkorde, Umkehrungen und Modulationen werden nicht zuverlässig transkribiert.
 - Relative CLAP-Ähnlichkeiten für mögliche Instrumente in mehreren Audioausschnitten.
 - Eigene Angaben zu Genre, BPM, Instrumenten und Mitwirkenden.
 
@@ -218,3 +219,5 @@ Ausgeblendete Spuren bleiben im Bereich **Ausgeblendete Spuren** direkt wiederhe
 **Methode & Werte** zeigt pro Song und Abschnitt die gespeicherten Ähnlichkeiten, Kontextfenster, Gewichtung und Valenzrechnung. Messwerte wie BPM und spektrale Helligkeit sind getrennt von dieser Formel. **Atmosphäre** im Player schaltet ein sphärisches Visual ein; Farben folgen den Mood-Werten, Bewegung der Wiedergabe und gespeicherten RMS-Energie. Kein Live-Frequenzspektrum. Reduzierte Bewegung wird respektiert.
 
 Die Bestätigungen für Bibliotheks-/Cache-Aktionen und Anbieterprofile verwenden denselben Dialog wie Neustart/Beenden. Ein fehlgeschlagener Bibliotheks-Refresh nach erfolgreichem Löschen stellt keine gelöschte Audioadresse mehr her. Modelldownloads für Demucs haben Zeit-/Größenlimits, atomare Dateien und die Prüfsummen des Herausgebers; das Laden erzwingt `weights_only=True` mit einer engen Typfreigabe für die kuratierten HTDemucs-Pakete.
+
+Die optionale **Atmosphäre** färbt das gesamte Layout anhand der analysierten Stimmung. Nebel-/Wasserbewegungen folgen Wiedergabe, geschätztem Tempo und gespeicherter Energie, keinem Live-Frequenzspektrum. Pausieren hält sie an; reduzierte Bewegung wird respektiert. F11 schaltet im nativen Fenster Vollbild um; im Browser gilt dessen Vollbildfunktion.

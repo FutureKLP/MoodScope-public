@@ -10,7 +10,7 @@ AUDIO_MODEL = 'laion/clap-htsat-unfused'
 LYRIC_MODEL = 'MilaNLProc/xlm-emo-t'
 AUDIO_REVISION = '8fa0f1c6d0433df6e97c127f64b2a1d6c0dcda8a'
 LYRIC_REVISION = 'a6ee7c9fad08d60204e7ae437d41d392381496f0'
-PIPELINE_VERSION = f'clap-ensemble-context-v4-features-grid5-coverage50:{AUDIO_REVISION}:{LYRIC_REVISION}'
+PIPELINE_VERSION = f'clap-musical-features-v5-harmony-v1-grid5-coverage50:{AUDIO_REVISION}:{LYRIC_REVISION}'
 
 
 class Engines:
