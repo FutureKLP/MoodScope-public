@@ -209,3 +209,8 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 
 - Farbtöne, relative Emotionsgewichte und Übergangszeiten bleiben unverändert. Hintergrund-Farbanteile von 12/9 auf 16/12 Prozent erhöht, Nebeldeckkraft moderat angehoben und Sättigung der rein dekorativen Nebel auf 1,2 gesetzt. Panels, Player und Header erhalten entsprechend etwas mehr Farbanteil, ohne Text und Bedienelemente zu filtern.
 - Untere Header-Ecken von 12 auf 28 Pixel verstärkt, bei schmaler Ansicht 20 Pixel. Fade, matte Oberfläche und Scrollgeometrie bleiben erhalten. Hintergrundprüfung der Nebelebene bestätigt die erhöhte Deckkraft und Sättigung bei unveränderten Bewegungszeiten.
+
+
+## Weiter auslaufender Header-Fade
+
+- Matte Headerfläche läuft am Seitenanfang über 96 statt 24 Pixel mit mehreren weichen Deckkraftstufen aus. Beim Scrollen verkürzt sich die Strecke kontinuierlich auf 44 Pixel im kompakten Zustand. Maskiert wird ausschließlich die dekorative Glasfläche; Texte und Steuerelemente behalten ihre Deckkraft und Geometrie.
