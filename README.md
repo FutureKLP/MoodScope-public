@@ -68,6 +68,9 @@ Gefühl gleichgesetzt. Textdeutung und Musikvergleich werden getrennt gespeicher
 Kleine lokale Modelle können dabei weiterhin scheitern oder unplausibel deuten;
 unbelegte Antworten werden verworfen. Es erfolgt kein automatischer Anbieterwechsel.
 
+Der [Vergleich spezialisierter Musikmodelle](docs/EMOTION-MODELS.md) dokumentiert
+Music2Emo, Moody und AudioMuse sowie das neue getrennte Offline-Vergleichswerkzeug.
+
 Der [externe Vergleich mit menschlichen Musikbewertungen](docs/HUMAN-REFERENCE.md)
 beschreibt die verwendeten Referenzen und ihre Grenzen. Die neue lokale Methode v7 kontrolliert den Analysepegel und verzichtet auf feste
 Valenzzuschlaege durch Tempo, Helligkeit und Harmonie. Das ist noch kein Nachweis

@@ -271,3 +271,12 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 - Oeffentliche Alternativen werden anhand ihrer tatsaechlichen Inferenz geprueft: Music2Emo mittelt standardmaessig lange Aufnahmen, Moody nutzt Essentia-Modelle fuer Verlaeufe, AudioMuse bietet lokale ONNX-Inferenz. Noch kein spezialisiertes Ersatzmodell produktiv aktiviert und keine hoehere semantische Genauigkeit behauptet.
 
 - Echter Offline-Produktionslauf auf dem festgelegten Diagnosesatz abgeschlossen: Original und -12-dB-Variante mit identischen vorhandenen CLAP-Gewichten, Quellpruefsummen unveraendert. Pegelstabilitaet wurde geprueft; fehlende menschliche Zeitreferenzen erlauben weiterhin keine Aussage zur Emotionsgenauigkeit. Detailausgaben bleiben im ignorierten Evaluationsordner.
+
+
+## Wiederverwendbare Music2Emo-Vergleichsinferenz
+
+- Spezialisierte oeffentliche Projekte und konkrete Wiederverwendungsgrenzen in [EMOTION-MODELS.md](EMOTION-MODELS.md) dokumentiert. Music2Emo mit freigegebenen Gewichten und isolierten Zusatzpaketen tatsaechlich lokal ausgefuehrt; keine Aenderung der aktiven Modellwahl.
+- Offline-Adapter mit Quellstandpruefung der angepassten Stellen, Gewichtspruefsummen, lokalem Modellzugriff, getrennten Rohregressionen und unabhaengigen Tags ergaenzt. Ungueltige Ausgaben werden nicht als neutrale Emotion umgedeutet. Keine erfundenen sechs Kategorien aus den Mood-Tags.
+- Ein-Zeitframe-Tensorfehler und uebergewichtete Decoderrestsegmente behandelt. Eine getrennte Option untersucht den im Upstream-Code verwechselten Tonikanamen und Dur/Moll-Modus. Ergebnisse dieser Varianten sind diagnostisch und keine nachgewiesene allgemeine Genauigkeit.
+- Neuer Adapter real auf 16 Kontexten ausgefuehrt. 8 Adaptertests und 5 Pegelkontrolltests bestanden; die zuvor geprueften 203 Backend- und 62 Frontend-Tests bleiben der letzte komplette Produktcheck. Nativer Windows-Releasebuild der v7-Oberflaeche erfolgreich bereitgestellt. Keine neue interaktive Bedienpruefung.
+- DEAM-Audio aus einem oeffentlichen Spiegel anhand einer vor Inferenz eingefrorenen Auswahl von 32 IDs des veroeffentlichten Testsplits geladen, nur mit begrenzten ZIP-Teilabrufen und CRC-Pruefung. Die Bewertungs-/Splitdateien stammen vom gepinnten Forschungsprojekt. Die offizielle Audioquelle bleibt nicht erreichbar. Der neue Kurvenvergleich laeuft getrennt; Ergebnisse und Quelleigenschaften werden nicht vorweggenommen.
