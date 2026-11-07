@@ -13,3 +13,20 @@ it('keeps motion timing unchanged while exposing continuous palette shares',()=>
  expect(style['--emotion-joy']).toBe(.25);expect(style['--emotion-sadness']).toBe(.75);expect(style['--flow-duration']).toBe('24s');expect(style['--breath-duration']).toBe('2s');
  expect(style['--mood-color']).toContain('oklab');expect(emotionMix(point({joy:NaN,anger:-2})).color).not.toContain('NaN');
 });
+it('uses the leading audio category while keeping subordinate shares proportional',()=>{
+ const mix=emotionMix(point({anger:.8,joy:.15,calm:.05}));
+ expect(mix.dominant).toBe('anger');expect(mix.dominance).toBeCloseTo(.65);
+ expect(mix.leadColor).toMatch(/^color-mix\(in oklab, #ce897f /);
+ expect(mix.weights.joy).toBeCloseTo(.15);expect(mix.weights.calm).toBeCloseTo(.05);
+ const style=atmosphereStyle(point({anger:1}),point({joy:1})) as Record<string,string>;
+ expect(style['--lyric-color']).toContain('88%');
+ const noLyrics=atmosphereStyle(point({sadness:1})) as Record<string,string>;
+ expect(noLyrics['--lyric-color']).toBe(noLyrics['--mood-color']);
+});
+it('removes dominant accent at a tie and uses neutral colors for missing evidence',()=>{
+ const mix=emotionMix(point({joy:.5,sadness:.5}));
+ expect(mix.dominance).toBe(0);expect(mix.leadColor).toContain(' 0%,');
+ expect(emotionMix(point({})).dominant).toBeNull();
+ const style=atmosphereStyle({...point({}),valence:NaN,rms:NaN,arousal:NaN});
+ expect(JSON.stringify(style)).not.toMatch(/NaN|null/);
+});

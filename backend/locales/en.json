@@ -829,5 +829,17 @@
   "Lade separates Music2Emo-Vergleichsmodell": "Loading separate Music2Emo comparison model",
   "Vergleiche musikalischen Ausdruck mit Music2Emo": "Comparing musical expression with Music2Emo",
   "Musikvergleich fertig": "Music comparison complete",
-  "Music2Emo-Vergleich ist nicht lokal eingerichtet.": "Music2Emo comparison is not installed locally."
+  "Music2Emo-Vergleich ist nicht lokal eingerichtet.": "Music2Emo comparison is not installed locally.",
+  "Musikalischer Ausdruck und eigenes Erleben": "Musical expression and personal experience",
+  "Valenz und Aktivierung des aktuellen Abschnitts": "Valence and arousal of the current section",
+  "Angeregt": "Activated",
+  "Ruhig": "Calm",
+  "Negativ": "Negative",
+  "Positiv": "Positive",
+  "Wie Musik Gefühle beeinflussen kann": "How music can influence feelings",
+  "Forschung": "Research",
+  "Valenz beschreibt die geschätzte positive oder negative Färbung; Aktivierung beschreibt ruhig bis angeregt. Hohe Aktivierung kann zu Freude, Spannung oder Ärger passen. Traurig klingende Musik kann angenehm erlebt werden.": "Valence describes estimated positive or negative character; arousal ranges from calm to activated. High arousal can accompany joy, tension or anger. Sad-sounding music can feel pleasant.",
+  "Tempo, Lautstärke und Klangfarbe können die Aktivierung beeinflussen. Harmonie, Rhythmus und musikalische Erwartungen wirken zusammen. Dur und Moll sind Hinweise im jeweiligen musikalischen und kulturellen Kontext, keine festen Gefühlsregeln.": "Tempo, loudness and timbre can influence arousal. Harmony, rhythm and musical expectations interact. Major and minor are cues within a musical and cultural context, not fixed rules for feelings.",
+  "Erinnerungen, Vertrautheit, Vorlieben und die Hörsituation verändern das eigene Erleben. Aus der Audiodatei lassen sich weder persönliche Erinnerungen noch Dopaminausschüttung oder Gehirnaktivität bestimmen. Diese Einordnung verändert keine Modellwerte.": "Memories, familiarity, preferences and listening context affect personal experience. An audio file cannot reveal personal memories, dopamine release or brain activity. This explanation does not alter model scores.",
+  "Die Atmosphärenfarben sind eine konsistente Gestaltungshilfe: die führende Modellkategorie prägt die Grundfarbe, kleinere Anteile mischen sich dezent darunter. Farben sind keine universelle biologische Zuordnung und keine zusätzliche Emotionsmessung.": "Atmosphere colors are a consistent visual guide: the leading model category shapes the base color, with smaller shares subtly mixed underneath. Colors are not a universal biological mapping or an additional emotion measurement."
 }

@@ -107,3 +107,12 @@ html{scrollbar-gutter:stable}.ambient-dialog{transition:--mood-hue 1.6s ease,--l
 }
 .ambient-enabled .ambient-mist {filter:blur(65px) saturate(2.2);opacity:calc(.27 + var(--ambient-energy)*.2)}
 @keyframes ambient-breathe{50%{scale:1.08;opacity:calc(.34 + var(--ambient-energy)*.23)}}
+
+/* Center the leading audio color; smaller category shares remain proportional. */
+.ambient-enabled .ambient-mist.mist-one{inset:-15% -15%;width:130%;height:130%;background:radial-gradient(ellipse at 45% 40%,var(--mood-color),transparent 72%);filter:blur(65px) saturate(1.65)}
+.ambient-enabled .ambient-mist.mist-two{opacity:.12;background:radial-gradient(ellipse,var(--lyric-color),transparent 68%)}
+.ambient-undertones{position:absolute;inset:0;pointer-events:none;filter:blur(75px)}
+.ambient-undertones span{position:absolute;inset:20% -10% -30%;transition:opacity 1.8s ease}
+.ambient-undertones span:nth-child(even){inset:-30% -10% 30%}
+.emotion-reading{margin-top:24px;padding-top:20px;border-top:1px solid #30434b}.emotion-reading p{line-height:1.7;color:#b5c7cc}.emotion-plane{display:block;width:min(100%,480px);margin:14px auto;color:#c8d8df}.emotion-plane text{fill:currentColor;font-size:12px}.emotion-reading a{text-decoration:underline}.emotion-reading details{margin-top:14px}
+@media(prefers-reduced-motion:reduce){.ambient-undertones span{transition:none}}

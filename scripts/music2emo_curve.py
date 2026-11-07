@@ -33,10 +33,8 @@ def predict_spans(samples,sr,spans,predict,progress):
     return rows
 
 
-def run(audio,weights,output,device):
-    import soundfile as sf
-    import torch
-    source_hash=digest(audio)
+def verify_installation(weights):
+    weights=Path(weights).resolve()
     provenance=json.loads((weights/'provenance.json').read_text(encoding='utf8'))
     for entry in provenance['files']:
         path=(weights/entry['file']).resolve()
@@ -45,6 +43,13 @@ def run(audio,weights,output,device):
     for name,expected in installation['source_sha256'].items():
         path=(weights/'source'/name).resolve()
         if not path.is_relative_to(weights/'source') or digest(path)!=expected:raise ValueError('Source checksum mismatch')
+
+
+def run(audio,weights,output,device):
+    import soundfile as sf
+    import torch
+    source_hash=digest(audio)
+    verify_installation(weights)
     runtime=output/'runtime';runtime.mkdir()
     prepare_runtime(weights/'source',runtime,correct_key_mode=True)
     model=load_local_model(weights,runtime,output,device,str(weights/'packages'))

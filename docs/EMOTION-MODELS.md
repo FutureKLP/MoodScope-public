@@ -103,6 +103,23 @@ Die README-Aussage zur Generalisierung ersetzt keine unabhaengige Pruefung.
 
 ## Konkreter lokaler Vergleich
 
+Ein weiterer tatsaechlicher Parameterlauf verglich Music2Emo mit 10 und 20
+Sekunden Kontext gegen die vorhandenen 30-Sekunden-Kurven und CLAP auf allen
+32 diagnostischen DEAM-Stuecken. Anzeigeintervall, Annotationen und Ausrichtung
+blieben konstant. Kuerzere Kontexte lieferten keinen verlaesslichen Vorteil
+fuer die zeitlichen Schwankungen; der Produktstandard bleibt bei 30 Sekunden.
+Die wiederverwendbare CLI `scripts.emotion_parameter_sweep` prueft Quell- und
+Gewichtspruefsummen, verwendet nur lokale Dateien und haelt Protokoll und
+Zwischenergebnisse in einem neuen privaten Ausgabeordner fest. Beispiel:
+
+```powershell
+python -m scripts.emotion_parameter_sweep --weights models/music2emo --baseline .tools/evaluation/results.json --selection .tools/evaluation/selected.json --audio-directory .tools/evaluation/audio --valence .tools/evaluation/valence.csv --arousal .tools/evaluation/arousal.csv --output .tools/evaluation/context-sweep --contexts 10 20 --device cpu
+```
+
+Die Auswahldatei enthaelt `tracks` mit `track_id` und `sha256`; die vorhandenen
+Vorhersagen entsprechen dem oben dokumentierten Timeline-Format. Jeder
+Parameterlauf ist diagnostisch und aktiviert sich nicht automatisch in der App.
+
 Music2Emo wurde als erster spezialisierter Kandidat ausgewaehlt. Nach Freigabe
 wurden MERT-95M (rund 378 MB), ein Emotionskopf (rund 13 MB) und das Akkordmodell
 (rund 12 MB) geladen. Downloadrevisionen und SHA256-Pruefsummen werden privat
