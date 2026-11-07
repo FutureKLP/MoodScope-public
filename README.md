@@ -277,3 +277,5 @@ Im Atmosphärenmodus verwenden Hintergrund, Panels, Sidebar, Header und Player w
 Der Live-Mix verwendet einen lokal erzeugten stummen Wiedergabetakt und bis zu sechs echte Audiospuren. Steueranfragen nutzen den jeweils anderen Loopback-Namen auf demselben Port, damit volle Audiostream-Verbindungen die Bibliothek und Bedienung nicht blockieren. Ein Songwechsel beendet die alten Decoder und startet mit einem frischen Player. Misslingt der Live-Start oder antwortet eine Quelle nicht innerhalb von 20 Sekunden, wird der Originalmix mit Fehlermeldung wiederhergestellt.
 
 **Gespeicherte Spuren laden** liest vorhandene Ergebnisse direkt ein und zeigt eine Bereitschaftsmeldung. Dafür wird kein neuer Trennauftrag gestartet. Fehlende Spuren werden weiterhin durch einen echten lokalen Trennauftrag erzeugt.
+
+Bei einem anhand Metadaten und Audio erkannten Wiederimport findet das Hörstudio auch die vorhandenen Trennspuren der bestätigten Aufnahme. Bereits separat erzeugte Spuren einer älteren Importvariante bleiben verfügbar. Das gilt auch für Quellenmix, Export und manuellen Hörfokus. Monospuren werden für den Hörfokus auf beide Wiedergabekanäle gelegt.

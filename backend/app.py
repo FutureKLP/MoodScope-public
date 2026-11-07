@@ -885,12 +885,20 @@ class SeparationRequest(BaseModel):
     model: Literal['htdemucs','htdemucs_6s','htdemucs_ft','htdemucs_auto']='htdemucs'
 
 
+def studio_identity(identity,model):
+    root=canonical(identity)
+    # Preserve a variant's existing legacy separation; otherwise reuse the
+    # recording already verified by the metadata-and-audio import match.
+    if identity!=root and separation.status(DATA,identity,model)['ready']:return identity
+    return root
+
+
 def run_separation(job_id,identity,request):
     def progress(message,value):
         cancellation.check()
         with job_lock:jobs[job_id].update(message=message,progress=value)
     try:
-        result=separation.separate(DATA,identity,request.model,engines,progress)
+        result=separation.separate(DATA,studio_identity(identity,request.model),request.model,engines,progress)
         result={**stem_status(identity,request.model),'cached':result.get('cached',False)}
         with job_lock:jobs[job_id].update(status='done',progress=100,message='Quellen getrennt',result=result)
     except Exception as exc:
@@ -907,7 +915,7 @@ def separate_track(identity:str,request:SeparationRequest):
 
 @app.get('/api/tracks/{identity}/stems')
 def stem_status(identity:str,model:Literal['htdemucs','htdemucs_6s','htdemucs_ft','htdemucs_auto']='htdemucs'):
-    track(identity)
+    identity=studio_identity(identity,model)
     info=separation.status(DATA,identity,model)
     with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(f'stem-visibility:{identity}:{model}',)).fetchone()
     visibility=json.loads(row[0]) if row else {}
@@ -923,7 +931,7 @@ class StemVisibility(BaseModel):
 
 @app.post('/api/tracks/{identity}/stems/visibility')
 def save_stem_visibility(identity:str,request:StemVisibility):
-    track(identity)
+    identity=studio_identity(identity,request.model)
     if set(request.hidden)&set(request.shown):raise HTTPException(422,'Eine Spur kann nicht zugleich ausgeblendet und eingeblendet sein.')
     key=f'stem-visibility:{identity}:{request.model}'
     with db() as conn:
@@ -937,7 +945,7 @@ def stem_mix(identity:str,sources:str,model:Literal['htdemucs','htdemucs_6s','ht
     try:
         if len(sources)>80 or (gains is not None and len(gains)>100):raise ValueError('Ungültiger Quellenmix')
         weights=[float(v) for v in gains.split(',')] if gains is not None else None
-        path=separation.mix(DATA,identity,model,sources.split(','),weights)
+        path=separation.mix(DATA,studio_identity(identity,model),model,sources.split(','),weights)
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
     title=metadata.get('title') or Path(metadata['name']).stem
     safe=re.sub(r'[<>:"/\\|?*\x00-\x1f]','_',title+' - '+sources.replace(',', ' + ')).strip()[:160]
@@ -958,6 +966,7 @@ class FocusRequest(BaseModel):
 
 def run_focus(job_id,identity,request):
     try:
+        if request.source!='original':identity=studio_identity(identity,request.model)
         with job_lock:jobs[job_id].update(progress=15,message='Filtere gewählte Quelle, Stereoposition und Frequenzband lokal')
         key=focus.render(DATA,identity,request.model_dump())
         result={'focus_id':key,'url':f'/api/tracks/{identity}/focus/{key}',
@@ -979,6 +988,7 @@ def focused_audio(identity:str,key:str):
     track(identity)
     if not re.fullmatch(r'[a-f0-9]{64}',key):raise HTTPException(422,'Ungültige Fokus-ID')
     path=DATA/'stems'/identity/'focus'/(key+'.wav')
+    if not path.exists():path=DATA/'stems'/canonical(identity)/'focus'/(key+'.wav')
     if not path.exists():raise HTTPException(404,'Fokusdatei fehlt; Filter erneut anwenden.')
     return FileResponse(path,media_type='audio/wav')
 

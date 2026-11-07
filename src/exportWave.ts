@@ -1,5 +1,5 @@
 import {invoke,isTauri} from '@tauri-apps/api/core';
-import {API} from './api';
+import {CONTROL_API} from './api';
 import {getLanguage,t} from './i18n';
 import {Track} from './types';
 
@@ -14,7 +14,7 @@ export async function exportWave(track:Track,model:string,sources:string[],level
  const filename=waveFilename(track,sources),gains=sources.map(s=>levels[s]??1);
  try{
   if(isTauri())return await invoke<boolean>('save_wave_export',{trackId:track.id,model,sources,gains,filename,language:getLanguage()});
-  const url=`${API}/api/tracks/${track.id}/mix?model=${model}&sources=${sources.join(',')}&gains=${gains.join(',')}`;
+  const url=`${CONTROL_API}/api/tracks/${track.id}/mix?model=${model}&sources=${sources.join(',')}&gains=${gains.join(',')}`;
   const picker=(window as unknown as {showSaveFilePicker?:Picker}).showSaveFilePicker;
   if(picker){
    const handle=await picker.call(window,{suggestedName:filename,types:[{description:'WAV audio',accept:{'audio/wav':['.wav']}}]});

@@ -16,3 +16,13 @@ def test_manual_focus_filters_real_audio_and_keeps_original_timeline(tmp_path):
     assert np.sqrt(np.mean(filtered[sr//2:sr]**2))>.1
     assert focus.render(tmp_path,'song',options)==key
     assert np.allclose(sf.read(original)[0],source)
+
+def test_manual_focus_accepts_mono_sources_and_outputs_dual_mono(tmp_path):
+    sr=16000;t=np.arange(sr)/sr
+    sf.write(tmp_path/'mono.wav',.2*np.sin(2*np.pi*220*t),sr)
+    options={'source':'original','model':'htdemucs','stereo':'stereo','start':0,'end':None,'low_hz':80,'high_hz':1000,'gain_db':0}
+    key=focus.render(tmp_path,'mono',options)
+    rendered,rate=sf.read(tmp_path/'stems/mono/focus'/(key+'.wav'))
+    assert rate==sr and rendered.shape==(sr,2)
+    assert np.allclose(rendered[:,0],rendered[:,1])
+    assert np.sqrt(np.mean(rendered**2))>.1

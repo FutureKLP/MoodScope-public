@@ -2,6 +2,7 @@
 import {it,expect,vi,afterEach} from 'vitest';
 import {exportWave,waveFilename} from './exportWave';
 import {setLanguage} from './i18n';
+import {API} from './api';
 vi.mock('@tauri-apps/api/core',()=>({isTauri:()=>false}));
 afterEach(()=>{vi.unstubAllGlobals();delete (window as any).showSaveFilePicker;setLanguage('de')});
 it('suggests song and selected instruments and writes only after destination selection',async()=>{
@@ -12,7 +13,7 @@ it('suggests song and selected instruments and writes only after destination sel
  const track={id:'fixture',title:'Song: One',name:'song.mp3',duration:10};
  expect(await exportWave(track,'htdemucs',['vocals','drums'],{drums:.5})).toBe(true);
  expect(order).toEqual(['picker','download']);expect(picker.mock.calls[0][0]).toMatchObject({suggestedName:'Song_ One - Gesang + Schlagzeug.wav'});
- expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain('gains=1,0.5');expect(write).toHaveBeenCalledOnce();expect(close).toHaveBeenCalledOnce();
+ expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain('gains=1,0.5');expect(new URL(String(vi.mocked(fetch).mock.calls[0][0])).origin).not.toBe(new URL(API).origin);expect(write).toHaveBeenCalledOnce();expect(close).toHaveBeenCalledOnce();
  setLanguage('en');expect(waveFilename(track,['vocals','drums'])).toBe('Song_ One - vocals + drums.wav');
 });
 it('cancelling the destination does not download or report an error',async()=>{

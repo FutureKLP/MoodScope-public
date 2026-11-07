@@ -433,3 +433,35 @@ def test_control_alias_cors_is_limited_to_same_loopback_port(client):
         assert local.options('/api/tracks',headers={**preflight,'Access-Control-Request-Headers':'Authorization'}).status_code==403
         for untrusted in ['http://127.0.0.1:8878','http://localhost:8878','https://evil.example']:
             assert local.get('/api/health',headers={'Origin':untrusted}).status_code==403
+
+@pytest.mark.parametrize('legacy_variant',[False,True])
+def test_verified_reimport_reuses_studio_sources_and_focus_without_new_inference(client,monkeypatch,legacy_variant):
+    import shutil
+    module=importlib.import_module('backend.app')
+    original=client.post('/api/tracks',files={'file':('authored.wav',wav_bytes())}).json()
+    alias='b'*64
+    with module.db() as conn:
+        conn.execute('INSERT INTO tracks VALUES (?,?)',(alias,json.dumps({**original,'id':alias,'reuse_source_id':original['id']})))
+    shutil.copy2(module.DATA/(original['id']+'.wav'),module.DATA/(alias+'.wav'))
+    owner=alias if legacy_variant else original['id']
+    model='htdemucs_6s';root=module.DATA/'stems'/owner/model;root.mkdir(parents=True)
+    for source in ['vocals','guitar']:(root/(source+'.wav')).write_bytes(wav_bytes())
+    (root/'manifest.json').write_text(json.dumps({'model':model,'sources':['vocals','guitar'],'sample_rate':48000,'activity':{'vocals':.5,'guitar':.5},'audible_sources':['vocals','guitar']}))
+    status=client.get(f'/api/tracks/{alias}/stems?model={model}')
+    assert status.status_code==200 and status.json()['ready']
+    mixed=client.get(f'/api/tracks/{alias}/mix?model={model}&sources=guitar')
+    assert mixed.status_code==200 and mixed.content==wav_bytes()
+    assert client.post(f'/api/tracks/{alias}/stems/visibility',json={'model':model,'hidden':['guitar']}).status_code==200
+    assert client.get(f'/api/tracks/{alias}/stems?model={model}').json()['hidden_sources']==['guitar']
+    seen=[]
+    monkeypatch.setattr(module.separation,'separate',lambda data,identity,*args:seen.append(identity) or {'cached':True})
+    module.jobs['separation-fixture']={'status':'running'}
+    module.run_separation('separation-fixture',alias,module.SeparationRequest(model=model))
+    assert seen==[owner] and module.jobs['separation-fixture']['result']['cached']
+    module.jobs['focus-fixture']={'status':'running'}
+    module.run_focus('focus-fixture',alias,module.FocusRequest(model=model,source='guitar'))
+    result=module.jobs['focus-fixture']
+    assert result['status']=='done',result
+    key=result['result']['focus_id']
+    assert client.get(result['result']['url']).status_code==200
+    assert client.get(f'/api/tracks/{alias}/focus/{key}').status_code==200

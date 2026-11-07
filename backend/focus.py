@@ -26,6 +26,7 @@ def render(data,identity,options):
             while True:
                 block=audio.read(65536,dtype='float32',always_2d=True)
                 if not len(block):break
+                if block.shape[1]==1:block=np.repeat(block,2,axis=1)
                 if options['stereo']=='left':block=np.repeat(block[:,:1],2,axis=1)
                 elif options['stereo']=='right':block=np.repeat(block[:,1:2],2,axis=1)
                 elif options['stereo']=='center':block=np.repeat(block.mean(axis=1,keepdims=True),2,axis=1)
