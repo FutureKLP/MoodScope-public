@@ -805,5 +805,12 @@
   "Klanghärte und emotionale Spannung sind hier noch nicht unabhängig validiert. Tonarten und Akkorde sind Schätzungen und bestimmen kein Gefühl.": "Timbral harshness and emotional tension are not independently validated here yet. Keys and chords are estimates and do not determine a feeling.",
   "Energieentwicklung": "Energy development",
   "Kräftigster gemessener Abschnitt": "Strongest measured section",
-  "Experimenteller Musikvergleich: Kleine lokale Modelle können Belege falsch verknüpfen. Nicht belegte Antworten werden verworfen; eine neue Modellwahl kann nötig sein.": "Experimental music comparison: small local models may connect evidence incorrectly. Unsupported answers are rejected; another model choice may be needed."
+  "Experimenteller Musikvergleich: Kleine lokale Modelle können Belege falsch verknüpfen. Nicht belegte Antworten werden verworfen; eine neue Modellwahl kann nötig sein.": "Experimental music comparison: small local models may connect evidence incorrectly. Unsupported answers are rejected; another model choice may be needed.",
+  "Der Analysepegel wird pro Kontext durch einen konstanten Faktor angeglichen. Dynamik innerhalb des Fensters und Originalwiedergabe bleiben erhalten. Tempo, Helligkeit, Dur/Moll und Energie erzeugen keine zusätzlichen Emotionszuschläge. Die Kurve nutzt überlappende Audiokontexte ohne nachträgliche Dreipunktglättung.": "Each context receives constant analysis gain. Within-window dynamics and original playback are preserved. Tempo, brightness, major/minor and energy do not add emotion offsets. The curve uses overlapping audio contexts without subsequent three-point smoothing.",
+  "Dieser gespeicherte Stand verwendet eine ältere Methode. Neu analysieren verwendet Pegelkontrolle ohne feste musikalische Emotionszuschläge.": "This saved analysis uses an older method. Reanalysis uses level control without fixed musical emotion offsets.",
+  "Formulierungssensitivität": "Wording sensitivity",
+  "Beide Beschreibungsvarianten bevorzugen dieselbe Kategorie.": "Both wording variants prefer the same category.",
+  "Die Beschreibungsvarianten bevorzugen unterschiedliche Kategorien.": "The wording variants prefer different categories.",
+  "Diese Spannweite ist kein Konfidenzintervall und keine Trefferwahrscheinlichkeit.": "This range is not a confidence interval or an accuracy probability.",
+  "Analyse-Pegelkorrektur": "Analysis gain adjustment"
 }

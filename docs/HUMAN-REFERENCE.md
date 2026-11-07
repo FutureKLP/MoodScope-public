@@ -1,5 +1,10 @@
 # Menschliche Musikbewertungen als externe Referenz
 
+Aktualisierung: Die neue Pipeline v7 integriert die technische Pegelkontrolle und
+entfernt untrainierte Merkmalszuschlaege. Die folgenden Vergleiche beschreiben
+den vorherigen Stand; ein semantisch validierter Modellwechsel steht weiterhin
+aus. Aktueller Implementierungsstand: [DEVELOPMENT.md](DEVELOPMENT.md).
+
 Menschliche Emotionsurteile und Interpretationsprosa beantworten unterschiedliche
 Fragen. Rezensionen und Songdeutungen koennen Gegenlesarten liefern; sie
 bestaetigen weder gemessene Akkorde noch die emotionale Absicht einer Aufnahme.

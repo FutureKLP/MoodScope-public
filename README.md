@@ -36,7 +36,8 @@ Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTun
 - Automatische Lyrics-Suche bei LRCLIB anhand vorhandener Interpret-/Titel-Tags.
 - Import synchronisierter LRC-Dateien oder Einfügen eigener zeitmarkierter Lyrics.
 - Lokale Whisper-Transkription als zuschaltbarer Fallback.
-- Anzeige von Modelltrennschärfe und Unsicherheit; diese sind keine kalibrierte Genauigkeit.
+- Anzeige von Modelltrennschärfe und Formulierungssensitivität; diese sind keine kalibrierte Genauigkeit.
+- Lokale Emotionskurve v7: konstanter Analysepegel je Kontext, keine festen Emotionszuschläge durch musikalische Merkmale und keine zusätzliche Dreipunktglättung. Original-RMS und Wiedergabe bleiben erhalten. Bestehende Analysen verwenden weiterhin ihre gespeicherte Methode; Neu analysieren verwendet v7.
 
 ### Bibliothek
 
@@ -49,7 +50,7 @@ Vorhandene Ergebnisse werden beim Import geladen, ohne erneut KI-Inferenz auszuf
 ### Songdetails
 
 - Lokale Tonart-Kandidaten, zeitliche Akkordkandidaten einschließlich Sept-, verminderten, übermäßigen und sus-Akkorden, Tempo, Beat-Regelmäßigkeit, Energie, spektrale Helligkeit und Dynamik. Unter **Methode & Werte** sind Messung, Unsicherheit und tatsächliche Rechenbeiträge einsehbar.
-- Die Endvalenz ergänzt CLAP um eine explizite Merkmalskorrektur (maximal ±0,12); Dynamik beeinflusst die Aktivierung. Diese Regeln sind heuristisch, keine wissenschaftlich kalibrierte Emotionsmessung. Lokale Tonart-Kandidaten, Stufen und V–I-Auflösungen sind unsichere Schätzungen; Umkehrungen und Modulationen werden nicht zuverlässig transkribiert. Ein zeitlicher 1:2:1-Filter glättet anschließend die Kurve; Rohwert, Merkmalsbeitrag und Glättung bleiben pro Abschnitt sichtbar.
+- Neue Analysen verwenden die pegelkontrollierte CLAP-Projektion v7 ohne feste Valenzzuschläge oder nachträgliche Dreipunktglättung. Tonart, Akkorde und Dynamik bleiben getrennte Musikbelege. Ältere Analysen zeigen weiterhin ihre damals verwendeten heuristischen Beiträge.
 - Relative CLAP-Ähnlichkeiten für mögliche Instrumente in mehreren Audioausschnitten.
 - Eigene Angaben zu Genre, BPM, Instrumenten und Mitwirkenden.
 
@@ -68,9 +69,9 @@ Kleine lokale Modelle können dabei weiterhin scheitern oder unplausibel deuten;
 unbelegte Antworten werden verworfen. Es erfolgt kein automatischer Anbieterwechsel.
 
 Der [externe Vergleich mit menschlichen Musikbewertungen](docs/HUMAN-REFERENCE.md)
-beschreibt die verwendeten Referenzen und ihre Grenzen. Die bisherige Audio-
-Emotionskurve wurde damit noch nicht durch einen vermeintlich genaueren Ersatz
-ausgetauscht. Insbesondere sind ausgelöste Gefühle und wahrgenommener Ausdruck
+beschreibt die verwendeten Referenzen und ihre Grenzen. Die neue lokale Methode v7 kontrolliert den Analysepegel und verzichtet auf feste
+Valenzzuschlaege durch Tempo, Helligkeit und Harmonie. Das ist noch kein Nachweis
+einer genaueren Emotionserkennung. Insbesondere sind ausgelöste Gefühle und wahrgenommener Ausdruck
 unterschiedliche Bewertungsziele.
 
 Die KI-Deutung und **Meine eigene Interpretation** sind getrennte Bereiche. Eigene Notizen werden lokal gespeichert und nicht zur Online-KI gesendet. Interpretationen können trotz dieser Begrenzung falsch sein; sie sind keine gesicherten Aussagen über die Absicht eines Künstlers.
@@ -241,7 +242,7 @@ Native Release-Builds müssen die Oberfläche einbetten. `npm run tauri build --
 
 Ausgeblendete Spuren bleiben im Bereich **Ausgeblendete Spuren** direkt wiederherstellbar. Das gilt auch für automatisch als leise eingestufte Gruppen. Pro erzeugter Spur lassen sich Pegel setzen und mit **Mix anwenden** gemeinsam anhören. **Demucs Fine-tuned** bietet ein aufwendigeres Vier-Gruppen-Ensemble; die Sechs-Gruppen-Variante ergänzt experimentelle Gitarre/Klavier. Katalogeinträge erzeugen keine zusätzlichen Audiospuren.
 
-**Methode & Werte** zeigt pro Song und Abschnitt die gespeicherten Ähnlichkeiten, Kontextfenster, Gewichtung und Valenzrechnung. Die neue Pipeline berücksichtigt Tonart-/Akkordmodus, Auflösungskandidaten, Tempo und Helligkeit als begrenzte, explizite Valenzbeiträge; die einzelnen Terme und die anschließende Glättung werden ausgewiesen. **Atmosphäre** im Player schaltet ein sphärisches Visual ein; Farben folgen den Mood-Werten, Bewegung der Wiedergabe und gespeicherten RMS-Energie. Kein Live-Frequenzspektrum. Reduzierte Bewegung wird respektiert.
+**Methode & Werte** zeigt pro Song und Abschnitt die gespeicherten Ähnlichkeiten, Kontextfenster, Gewichtung und Valenzrechnung. Die neue Pipeline weist Analyse-Pegelkorrektur und Formulierungssensitivität aus. Feste Valenzzuschläge und nachträgliche Dreipunktglättung werden nicht mehr angewendet; ältere Rechenwege bleiben nachvollziehbar. **Atmosphäre** im Player schaltet ein sphärisches Visual ein; Farben folgen den Mood-Werten, Bewegung der Wiedergabe und gespeicherten RMS-Energie. Kein Live-Frequenzspektrum. Reduzierte Bewegung wird respektiert.
 
 Die Bestätigungen für Bibliotheks-/Cache-Aktionen und Anbieterprofile verwenden denselben Dialog wie Neustart/Beenden. Ein fehlgeschlagener Bibliotheks-Refresh nach erfolgreichem Löschen stellt keine gelöschte Audioadresse mehr her. Modelldownloads für Demucs haben Zeit-/Größenlimits, atomare Dateien und die Prüfsummen des Herausgebers; das Laden erzwingt `weights_only=True` mit einer engen Typfreigabe für die kuratierten HTDemucs-Pakete.
 

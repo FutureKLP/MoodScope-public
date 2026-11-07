@@ -452,7 +452,6 @@ def run_job(job_id, identity, request):
                 summary = insights.acoustic_features(y,sr)
                 analyzer=engines.audio if request.mode=='local' else cloud.audio_mood
                 a=analyzer(y,sr,progress) if request.audio_resolution==5 else analyzer(y,sr,progress,request.audio_resolution)
-                if request.mode=='local':a=audio_method.musical_projection(a,summary)
                 with db() as conn:
                     conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',
                                  (audio_key,json.dumps({'audio':a,'features':summary})))
@@ -470,7 +469,7 @@ def run_job(job_id, identity, request):
                       'models':{'audio':catalog.entries(DATA)[active['audio']]['repo'] if request.mode=='local' else cloud.MODEL,
                                 'lyrics':catalog.entries(DATA)[active['lyrics']]['repo'] if request.mode=='local' else cloud.MODEL},
                       'method':'CLAP Prompt-Ensemble und XLM-EMO mit Textkontext' if request.mode=='local' else 'Gemini: getrennte Audio- und Textanalyse; subjektive unkalibrierte Valenz.'}
-            if request.mode=='local':result['audio_method']=audio_method.describe_musical(result['models']['audio'],request.audio_resolution,DATA)
+            if request.mode=='local':result['audio_method']=audio_method.describe_current(result['models']['audio'],request.audio_resolution,DATA)
             else:result=audio_method.with_method(result)
             result['warnings'].append('Modellwerte und Unsicherheit sind nicht wissenschaftlich kalibriert.')
             with db() as conn:

@@ -1,5 +1,10 @@
 # Vergleichskonzept fuer musikalischen Ausdruck
 
+Aktualisierung: Die neue Pipeline v7 integriert die technische Pegelkontrolle und
+entfernt untrainierte Merkmalszuschlaege. Die folgenden Vergleiche beschreiben
+den vorherigen Stand; ein semantisch validierter Modellwechsel steht weiterhin
+aus. Aktueller Implementierungsstand: [DEVELOPMENT.md](DEVELOPMENT.md).
+
 Status: Diagnose und Architekturvorschlag, keine neue produktive Analysemethode.
 Die anschließend freigegebene erste Integrationsstufe und die externe menschliche
 Referenz sind in [HUMAN-REFERENCE.md](HUMAN-REFERENCE.md) dokumentiert. Die

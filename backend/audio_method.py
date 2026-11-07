@@ -5,6 +5,7 @@ import math
 LABELS=['joy','calm','sadness','anger','fear','tenderness']
 VALENCE=[1.,.3,-1.,-.7,-.75,.5]
 AROUSAL=[.8,.15,.3,.95,.85,.3]
+CURRENT_METHOD='clap-level-controlled-v7'
 PROMPTS=[
     'This music sounds joyful, happy and uplifting.','The musical expression is bright, cheerful and celebratory.',
     'This music sounds peaceful, calm and relaxed.','The musical expression is serene and soothing.',
@@ -87,3 +88,45 @@ def with_method(result):
     if str(result.get('pipeline_version','')).startswith('clap-ensemble-context-v4-features-grid5-coverage50:'):
         return {**result,'audio_method':describe(result.get('models',{}).get('audio'),result.get('audio_resolution',5),'reconstructed')}
     return result
+
+
+def prepare_emotion_audio(audio):
+    """Constant analysis gain; never modify playback or the source array.
+
+    Match the evaluated -20 dBFS control, preserving within-window dynamics.
+    Digital silence stays silent; reject malformed samples before inference.
+    """
+    import numpy as np
+    samples=np.asarray(audio,dtype=np.float32)
+    if samples.ndim!=1 or not samples.size or not np.isfinite(samples).all():
+        raise ValueError('Emotion analysis requires finite, nonempty mono audio')
+    rms=float(np.sqrt(np.mean(samples.astype(np.float64)**2)))
+    peak=float(np.max(np.abs(samples)))
+    gain=min(.1/rms,.99/peak) if rms>1e-12 and peak>1e-12 else 1.
+    return samples*gain, {'rms':rms,'analysis_gain_db':20*math.log10(gain)}
+
+
+def prompt_diagnostics(pair_logits):
+    """Two wording views, not independent raters or a confidence interval."""
+    import numpy as np
+    values=np.asarray(pair_logits,dtype=float)
+    if values.shape!=(6,2) or not np.isfinite(values).all():
+        raise ValueError('Expected six finite prompt pairs')
+    exp=np.exp(values-values.max(axis=0,keepdims=True))
+    scores=exp/exp.sum(axis=0,keepdims=True)
+    valences=np.asarray(VALENCE)@scores
+    return {'prompt_valence_min':float(valences.min()),
+            'prompt_valence_max':float(valences.max()),
+            'prompt_winners_agree':bool(scores[:,0].argmax()==scores[:,1].argmax())}
+
+
+def describe_current(model,grid_seconds,data=None):
+    base=describe(model,grid_seconds)
+    if data is not None:
+        from .prompt_presets import content
+        prompts=content(data,'audio').splitlines()
+        for i,label in enumerate(base['labels']):label['prompts']=prompts[2*i:2*i+2]
+    return {**base,'id':CURRENT_METHOD,'mix':'mono-level-controlled',
+            'level_control':{'target_rms_dbfs':-20,'peak_ceiling':.99,'scope':'context'},
+            'temporal_filter':None,'features_used_in_valence':False,
+            'note':'No handcrafted acoustic offsets. Prompt ranges describe wording sensitivity, not calibrated uncertainty.'}

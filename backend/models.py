@@ -10,7 +10,7 @@ AUDIO_MODEL = 'laion/clap-htsat-unfused'
 LYRIC_MODEL = 'MilaNLProc/xlm-emo-t'
 AUDIO_REVISION = '8fa0f1c6d0433df6e97c127f64b2a1d6c0dcda8a'
 LYRIC_REVISION = 'a6ee7c9fad08d60204e7ae437d41d392381496f0'
-PIPELINE_VERSION = f'clap-musical-sequence-v6-harmony-v2-grid5-coverage50:{AUDIO_REVISION}:{LYRIC_REVISION}'
+PIPELINE_VERSION = f'clap-level-controlled-v7-harmony-v2-grid5-coverage50:{AUDIO_REVISION}:{LYRIC_REVISION}'
 
 
 class Engines:
@@ -50,7 +50,7 @@ class Engines:
             kwargs={'revision':AUDIO_REVISION} if source==AUDIO_MODEL else {}
             self.processor = ClapProcessor.from_pretrained(source,**kwargs)
             self.audio_model = ClapModel.from_pretrained(source,**kwargs).to(device).eval()
-        from .audio_method import LABELS,VALENCE,AROUSAL
+        from .audio_method import LABELS,VALENCE,AROUSAL,prepare_emotion_audio,prompt_diagnostics
         from .prompt_presets import content
         prompts=content(self.data,'audio').splitlines()
         labels=list(LABELS)
@@ -64,20 +64,21 @@ class Engines:
             center=(start+end)/2
             context_start=max(0.,center-5);context_end=min(duration,center+5)
             clip = y[int(context_start * sr):int(context_end * sr)]
+            clip,signal_info=prepare_emotion_audio(clip)
             inputs = self.processor(text=prompts, audio=clip, sampling_rate=sr,
                                     return_tensors='pt', padding=True).to(device)
             with torch.inference_mode():
-                logits=self.audio_model(**inputs).logits_per_audio[0].reshape(6,2).mean(dim=1)
+                pairs=self.audio_model(**inputs).logits_per_audio[0].reshape(6,2)
+                logits=pairs.mean(dim=1)
                 scores = logits.softmax(dim=-1)
                 confidence=1-float((-(scores*scores.clamp_min(1e-8).log()).sum()/np.log(len(labels))).cpu())
-            rms = float(np.sqrt(np.mean(clip ** 2)))
             result.append({'start': float(start), 'end': float(end),
                            'valence': float((scores * values).sum().cpu()),
                            'scores': dict(zip(labels, scores.cpu().tolist())),
                            'arousal':float((scores*arousal).sum().cpu()),
                            'confidence':max(0.,min(1.,confidence)),
                            'context_start':context_start,'context_end':context_end,
-                           'rms': rms})
+                           **signal_info,**prompt_diagnostics(pairs.cpu().numpy())})
             progress('Analysiere musikalischen Ausdruck', 15 + int(50 * end / duration))
         return result
 
