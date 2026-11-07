@@ -8,6 +8,16 @@ MoodScope ist eine lokale Desktop-App für die Frage, wie unterschiedlich Musik 
 
 React und TypeScript bilden die Oberfläche, Tauri das native Fenster und Python/FastAPI den lokalen Analysedienst. Windows 10/11 und Linux sind die Zielplattformen. Dies ist eine Entwicklungsversion, kein fertig paketierter Endkundeninstaller.
 
+Der eigene Projektcode steht unter der [MIT-Lizenz](LICENSE). Bibliotheken,
+Modelle und Datensätze behalten ihre jeweiligen Lizenzen; insbesondere stehen
+die optionalen MERT-Gewichte nicht unter MIT. Details und geprüfte Alternativen:
+[Emotionsmodelle](docs/EMOTION-MODELS.md).
+
+Die CLAP-Valenz ist eine Projektion von Beschreibungsähnlichkeiten mit festen
+Gewichten. Ein hoher Ärger-Score bestätigt kein empfundenes Gefühl. Auch der
+optionale Music2Emo-Verlauf ist experimentell: Der bisherige dynamische
+Referenzvergleich belegt noch keine präzise Erkennung von Stimmungswechseln.
+
 ## Funktionen
 
 Neu in Version 0.3: ausführlichere Gesamt- und Zeilendeutung, automatisches Wiederanzeigen gespeicherter KI-Deutungen, lokales Hörstudio mit Demucs, SoundCloud-Suchtreffer-Auswahl, automatische Recherche-Fallbacks und gemeinsame Anbieterprofile einschließlich Gemini und DeepSeek. Der aktuelle Nachweisstand steht in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
@@ -48,6 +58,8 @@ zu 30 Sekunden Kontext; die menschliche Validierung schneller Uebergaenge steht
 noch aus. Die bisherige Kurve, Playerfarben und aktive Modellwahl bleiben erhalten.
 Vergleiche werden beim Song gespeichert und mit **Analyse-Cache loeschen** entfernt.
 Abbruch beendet den separaten Modellprozess.
+Identische Audiokontexte am Songrand werden innerhalb eines Laufs nur einmal
+berechnet; sämtliche Anzeigeabschnitte bleiben erhalten.
 
 Diese optionale Erweiterung wird nicht automatisch heruntergeladen. Sie benoetigt
 die geprueften Music2Emo-/MERT-Gewichte, einen lokalen Quellstand sowie isolierte

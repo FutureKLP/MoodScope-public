@@ -2,18 +2,35 @@
 import argparse
 import json
 import os
+import math
 from pathlib import Path
 from scripts.audio_evaluation import digest
 from scripts.music2emo_evaluation import prepare_runtime,load_local_model,checked_result
 
 
 def context_spans(duration,step=5,context=30):
-    if duration<=0 or step<=0 or context<=0:raise ValueError('Positive durations required')
+    if not all(math.isfinite(v) and v>0 for v in (duration,step,context)):raise ValueError('Positive finite durations required')
     from backend.core import analysis_grid
     for span in analysis_grid(duration,step):
         center=(span['start']+span['end'])/2
         start=max(0,min(duration-context,center-context/2))
         yield {**span,'context_start':start,'context_end':min(duration,start+context)}
+
+
+def predict_spans(samples,sr,spans,predict,progress):
+    """Reuse exactly identical sample contexts, retaining every display interval."""
+    import numpy as np
+    if sr<=0 or len(samples)==0 or not np.isfinite(samples).all():
+        raise ValueError('Nonempty finite audio required')
+    rows=[];previous_key=None;previous_prediction=None
+    for span in spans:
+        key=(round(span['context_start']*sr),round(span['context_end']*sr))
+        if key!=previous_key:
+            previous_prediction=checked_result(predict(samples[key[0]:key[1]]))
+            previous_key=key
+        rows.append({**span,**previous_prediction})
+        progress(len(rows),len(spans))
+    return rows
 
 
 def run(audio,weights,output,device):
@@ -35,13 +52,13 @@ def run(audio,weights,output,device):
     duration=len(samples)/sr;rows=[];spans=list(context_spans(duration))
     previous=Path.cwd();os.chdir(runtime)
     try:
-        for span in spans:
-            clip=samples[round(span['context_start']*sr):round(span['context_end']*sr)]
+        def predict(clip):
             sf.write('context.wav',clip,sr,subtype='FLOAT')
-            with torch.inference_mode():prediction=checked_result(model.predict('context.wav'))
-            rows.append({**span,**prediction})
-            temporary=output/'progress.tmp';temporary.write_text(json.dumps({'done':len(rows),'total':len(spans)}))
+            with torch.inference_mode():return model.predict('context.wav')
+        def progress(done,total):
+            temporary=output/'progress.tmp';temporary.write_text(json.dumps({'done':done,'total':total}))
             temporary.replace(output/'progress.json')
+        rows=predict_spans(samples,sr,spans,predict,progress)
     finally:os.chdir(previous)
     if digest(audio)!=source_hash:raise RuntimeError('Source changed during analysis')
     result={'method':'music2emo-curve-v1','context_seconds':30,'grid_seconds':5,

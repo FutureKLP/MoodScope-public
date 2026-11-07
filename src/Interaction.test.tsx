@@ -8,12 +8,12 @@ import {DeviceSettings} from './DeviceSettings';
 import {setLanguage} from './i18n';
 beforeEach(()=>setLanguage('de'));
 afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.useRealTimers()});
-it('keeps the section dropdown and meter mounted while interpolating playback values',()=>{
+it('keeps the section dropdown and meter mounted while displaying stored section values',()=>{
  const analysis:any={audio:[{start:0,end:2,valence:-1,scores:{joy:0}},{start:2,end:4,valence:1,scores:{joy:1}}],lyrics:[],models:{audio:'authored'},device:'cpu',features:{},audio_method:{id:'clap-prompt-ensemble-v4',labels:[]}};
  const props={track:{id:'authored',name:'Authored signal',duration:4},analysis,onSeek:vi.fn(),onReanalyse:vi.fn(),busy:false};
  const view=render(<AnalysisReport {...props} time={0}/>),select=screen.getByLabelText('Abschnitt auswählen'),meter=screen.getByRole('meter');
  fireEvent.pointerDown(select);view.rerender(<AnalysisReport {...props} time={2}/>);
- expect(screen.getByLabelText('Abschnitt auswählen')).toBe(select);expect((select as HTMLSelectElement).value).toBe('0');expect(screen.getByRole('meter')).toBe(meter);expect(meter.getAttribute('aria-valuenow')).toBe('0.5');
+ expect(screen.getByLabelText('Abschnitt auswählen')).toBe(select);expect((select as HTMLSelectElement).value).toBe('0');expect(screen.getByRole('meter')).toBe(meter);expect(meter.getAttribute('aria-valuenow')).toBe('1');
  fireEvent.blur(select);expect((select as HTMLSelectElement).value).toBe('1');
 });
 it('shows a styled keyboard-accessible tooltip and dismisses it with Escape',()=>{

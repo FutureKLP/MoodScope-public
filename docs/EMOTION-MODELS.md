@@ -1,5 +1,68 @@
 # Spezialisierte Musikmodelle fuer die Emotionskurve
 
+## Weitere Vorschlaege und zeitlicher Pruefstand
+
+Das Ziel ist eine lokal nutzbare oeffentliche Entwicklungsversion. Eine
+kommerzielle Freigabe ist nicht das Projektziel. Bedingungen fremder Modelle
+gelten dennoch unabhaengig von der Lizenz des Anwendungscodes.
+
+- [Music Analysis Skill](https://mcpmarket.com/tools/skills/music-analysis-audio-intelligence):
+  lokale DSP-Messungen und zeitliche Zusammenfassung sind als Architekturidee
+  brauchbar. Ein validierter gelernter Emotionsverlauf ist damit nicht belegt.
+  Der verlinkte Marketplace ist inzwischen archiviert. Keine ungepruefte
+  Installation und keine Uebernahme fremden Codes ohne Lizenzklaerung.
+- [local-music-analyzer](https://github.com/chris-miaskowski/local-music-analyzer):
+  Die README unterscheidet macOS-Liveaufnahme von Dateianalyse. Die Aussage
+  "alles nur macOS" waere zu pauschal; Windows-Dateianalyse ist hier jedoch
+  nicht verifiziert. Optionale Essentia-Modelle und Demucs sind kein Nachweis
+  genauer Emotionen. Beim Abruf wurde keine Repository-Lizenz ausgewiesen;
+  daher keine Codeuebernahme. Die getrennten Status pro Analysestufe sind
+  ein nuetzliches Gestaltungsvorbild.
+- [music-emotion-analysis](https://github.com/ryhirz/music-emotion-analysis):
+  MIT-Code, lokale SVM-Inferenz. Laut eigener README werden GTZAN-Genres per
+  Regel in Emotionen umbenannt. Das Modell lernt vor allem Genreunterschiede,
+  keine menschlich annotierten Gefuehle. Kein geeigneter Ersatz fuer diese Kurve.
+- [Songfinder](https://songfinder.dev/tools/mood-detector): Der Anbieter nennt
+  handgebaute akustische Heuristiken und die ersten 60 Sekunden. Kostenloser
+  Webzugang ist keine Lizenz fuer wiederverwendbaren lokalen Anwendungscode.
+- [DEAM](https://cvml.unige.ch/databases/DEAM/) liefert relevante menschliche
+  Zeitreferenzen. Der Kaggle-Link ist ein Datenangebot, kein fertiges Modell.
+  Datenrechte, Modelltraining und Zielaufgabe bleiben getrennt zu pruefen.
+- Der verlinkte [Review](https://link.springer.com/article/10.1007/s42452-025-07178-9)
+  bietet einen Forschungsueberblick, keinen direkt integrierbaren Checkpoint.
+  Nicht eindeutig bezeichnete Projekte wie "music-mood-analysis" werden
+  ohne konkreten Quellverweis nicht als verifizierter Kandidat eingestuft.
+
+Die gespeicherten Kurven der bereits ausgewaehlten 32 DEAM-Stuecke wurden jetzt
+auch gegen dynamische Annotationen geprueft. Laut
+[DEAM-Handbuch](https://cvml.unige.ch/databases/DEAM/manual.pdf) fehlen die ersten
+15 Sekunden absichtlich; sie werden nicht durch kuenstliche Referenzwerte ersetzt.
+Die kleinen Annotationen stammen aus einem [oeffentlichen Spiegel](https://zenodo.org/records/11400122).
+`scripts.deam_timeline_evaluation` ordnet anhand der CSV-Zeitstempel gespeicherte
+Abschnittswerte zu, ohne Interpolation oder nachtraeglich optimierte Zeitverschiebung.
+Aktivierung wird fuer den Vergleich von [-1,1] auf die App-Skala [0,1] umgerechnet.
+
+Neben absoluten Fehlern und Concordance Correlation Coefficient (CCC) werden
+die Verlaeufe nach Abzug ihres jeweiligen Songmittels verglichen. Eine konstante
+Vorhersage aus dem jeweiligen Modellmittel dient als Kontrollwert. Das verhindert,
+dass unterschiedliche Songmittel allein als erfolgreiche Verlaufserkennung gelten.
+Alle vorhandenen Referenzpunkte des ausgewaehlten Sets waren abgedeckt.
+Music2Emo liegt absolut naeher an den Referenzen als CLAP. Die zeitlichen
+Schwankungen schlagen jedoch bei beiden Modellen den konstanten Kontrollwert
+im RMSE nicht. Damit ist ein praeziser zeitlicher Ersatz weiterhin nicht belegt.
+Dieses mehrfach betrachtete Set ist jetzt diagnostisch, kein neuer Holdout.
+
+Reproduktion mit eigenen lokalen Dateien:
+
+```powershell
+python -m scripts.deam_timeline_evaluation --predictions .tools/evaluation/results.json --valence .tools/evaluation/valence.csv --arousal .tools/evaluation/arousal.csv --output .tools/evaluation/timeline-metrics.json
+```
+
+Das Vorhersageformat enthaelt `rows` mit `track_id`, `music2emo_curve` und
+`clap_curve`; jede Kurve enthaelt `start`, `end`, `valence` und `arousal`.
+Ausgabedateien werden nicht ueberschrieben. Es gibt keine Downloads und keinen
+Zugriff auf die Bibliotheksdatenbank. Referenzen und Modellausgaben bleiben lokal.
+
 Die Zielaufgabe ist ein zeitlicher Verlauf wahrgenommenen musikalischen Ausdrucks.
 Eine hohe Energie kann verschiedene Gefuehle begleiten. Ein Gesamturteil ueber
 einen Song und ein gefuehlsbezogenes Suchergebnis sind keine validierte Zeitkurve.
