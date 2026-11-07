@@ -419,3 +419,17 @@ def test_whole_interpretation_survives_line_reading_and_cache_status_changes(cli
     client.post(f'/api/tracks/{identity}/cache/delete')
     assert client.get(f'/api/tracks/{identity}/interpretation').status_code==404
     assert client.get(f'/api/tracks/{identity}/interpretation?scope=position').status_code==404
+
+def test_control_alias_cors_is_limited_to_same_loopback_port(client):
+    module=importlib.import_module('backend.app')
+    with TestClient(module.app,base_url='http://localhost:8877') as local:
+        origin={'Origin':'http://127.0.0.1:8877'}
+        response=local.get('/api/health',headers=origin)
+        assert response.status_code==200
+        assert response.headers['access-control-allow-origin']==origin['Origin']
+        preflight={**origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type, accept-language'}
+        assert local.options('/api/tracks',headers=preflight).status_code==204
+        assert local.options('/api/tracks',headers={**preflight,'Access-Control-Request-Method':'DELETE'}).status_code==403
+        assert local.options('/api/tracks',headers={**preflight,'Access-Control-Request-Headers':'Authorization'}).status_code==403
+        for untrusted in ['http://127.0.0.1:8878','http://localhost:8878','https://evil.example']:
+            assert local.get('/api/health',headers={'Origin':untrusted}).status_code==403

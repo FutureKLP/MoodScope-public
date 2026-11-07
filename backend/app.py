@@ -18,7 +18,7 @@ import soundfile as sf
 from fastapi import FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field, SecretStr
 
 from .core import parse_lrc, biggest_split,text_coverage
@@ -56,9 +56,21 @@ async def local_only(request: Request, call_next):
     host = request.headers.get('host', '').split(':')[0]
     origin = request.headers.get('origin')
     same_origin=f'{request.url.scheme}://{request.headers.get("host","")}'
-    if host not in {'127.0.0.1', 'localhost', 'testserver'} or (origin and origin not in ORIGINS and origin!=same_origin):
+    # The two loopback names use separate browser connection pools. Only trust
+    # the counterpart on this exact port, never arbitrary local web origins.
+    port=f':{request.url.port}' if request.url.port else ''
+    sibling=host in {'127.0.0.1','localhost'} and request.url.scheme=='http' and origin in {f'http://127.0.0.1{port}',f'http://localhost{port}'}
+    if host not in {'127.0.0.1', 'localhost', 'testserver'} or (origin and origin not in ORIGINS and origin!=same_origin and not sibling):
         return JSONResponse({'detail':'Untrusted local origin'}, status_code=403)
+    if sibling and request.method=='OPTIONS':
+        requested={v.strip().lower() for v in request.headers.get('access-control-request-headers','').split(',') if v.strip()}
+        if request.headers.get('access-control-request-method') not in {'GET','POST'} or requested-{'content-type','accept-language'}:
+            return JSONResponse({'detail':'Untrusted local preflight'},status_code=403)
+        return Response(status_code=204,headers={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST','Access-Control-Allow-Headers':'Content-Type, Accept-Language','Vary':'Origin'})
     result=await call_next(request)
+    if sibling:
+        result.headers['Access-Control-Allow-Origin']=origin
+        result.headers.add_vary_header('Origin')
     locale=language.language(request.headers.get('accept-language'))
     if locale=='en' and result.headers.get('content-type','').startswith('application/json'):
         raw=b''.join([chunk async for chunk in result.body_iterator])

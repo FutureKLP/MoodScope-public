@@ -272,3 +272,8 @@ Die Atmosphärenfarben mischen sich aus den relativen Anteilen von Freude, Ruhe,
 Beim Löschen verwirft die App noch laufende Rechercheantworten, statt gelöschte Werte wieder zu speichern. Ein bestätigter Neustart beendet auch offene Recherche- und Streaming-Verbindungen; der Dienst startet als neuer Prozess. Reguläres Herunterfahren hat eine begrenzte Wartezeit.
 
 Im Atmosphärenmodus verwenden Hintergrund, Panels, Sidebar, Header und Player wieder dunkle, durchscheinende Farbflächen. Die Farbsättigung der Darstellung wird angehoben, damit gemischte Emotionsanteile sichtbar bleiben. Das verändert weder die Emotionswerte noch die Palette oder die Übergangszeiten. Browser ohne relative OKLCH-Farben verwenden die bisherige Farbdarstellung als Fallback.
+
+
+Der Live-Mix verwendet einen lokal erzeugten stummen Wiedergabetakt und bis zu sechs echte Audiospuren. Steueranfragen nutzen den jeweils anderen Loopback-Namen auf demselben Port, damit volle Audiostream-Verbindungen die Bibliothek und Bedienung nicht blockieren. Ein Songwechsel beendet die alten Decoder und startet mit einem frischen Player. Misslingt der Live-Start oder antwortet eine Quelle nicht innerhalb von 20 Sekunden, wird der Originalmix mit Fehlermeldung wiederhergestellt.
+
+**Gespeicherte Spuren laden** liest vorhandene Ergebnisse direkt ein und zeigt eine Bereitschaftsmeldung. Dafür wird kein neuer Trennauftrag gestartet. Fehlende Spuren werden weiterhin durch einen echten lokalen Trennauftrag erzeugt.

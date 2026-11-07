@@ -781,5 +781,8 @@
   "Fehlermeldung schließen": "Dismiss error message",
   "Schließen": "Close",
   "Mischt die Farbanteile von Freude, Ruhe, Trauer, Ärger, Angst und Zärtlichkeit weich. Farben sind eine Gestaltungswahl, keine zusätzliche Emotionsmessung.": "Softly blends the colour shares of joy, calm, sadness, anger, fear and tenderness. Colours are a design choice, not an additional emotion measurement.",
-  "Recherche verworfen: Bibliothek oder Analyse-Cache wurde inzwischen geändert. Bitte erneut recherchieren.": "Research discarded: the library or analysis cache changed while the request was running. Please run the research again."
+  "Recherche verworfen: Bibliothek oder Analyse-Cache wurde inzwischen geändert. Bitte erneut recherchieren.": "Research discarded: the library or analysis cache changed while the request was running. Please run the research again.",
+  "Gespeicherte Spuren sind bereit. Solo hören oder Quellen zum Mix hinzufügen.": "Saved stems are ready. Play a solo source or add sources to the mix.",
+  "Spuren sind bereit. Solo hören oder Quellen zum Mix hinzufügen.": "Stems are ready. Play a solo source or add sources to the mix.",
+  "Live-Mix konnte nicht geladen werden. Der Originalmix wurde wiederhergestellt.": "The live mix could not be loaded. Original playback has been restored."
 }

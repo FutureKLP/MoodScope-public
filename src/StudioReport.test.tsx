@@ -73,3 +73,16 @@ it('uses the selected separator model and offers only existing focus sources',as
  await waitFor(()=>expect(screen.queryByRole('option',{name:'Getrennte Gesangsspur'})).toBeNull());
  expect((screen.getByLabelText('Fokus Quelle') as HTMLSelectElement).value).toBe('original');
 });
+
+it('loads existing six-source results without queuing another separation job',async()=>{
+ info={ready:true,sources:['drums','bass','other','vocals','guitar','piano'],activity:{}};
+ const job=vi.fn(),onModelChange=vi.fn();
+ render(<SourceStudio track={track} busy={false} perform={async f=>f()} job={job} onSource={vi.fn()} onModelChange={onModelChange}/>);
+ await screen.findByRole('button',{name:'Gespeicherte Spuren laden'});
+ await userEvent.selectOptions(screen.getByLabelText('Trennmodell'),'htdemucs_6s');
+ await screen.findByRole('heading',{name:'Gitarre'});
+ await userEvent.click(screen.getByRole('button',{name:'Gespeicherte Spuren laden'}));
+ await screen.findByText(/Gespeicherte Spuren sind bereit/);
+ expect(onModelChange).toHaveBeenCalledWith('htdemucs_6s');expect(job).not.toHaveBeenCalled();
+ expect(calls.some(c=>c.url.includes('/stems?model=htdemucs_6s'))).toBe(true);
+});

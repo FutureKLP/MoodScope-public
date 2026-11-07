@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
-import {cleanup,render,screen,waitFor,fireEvent,within} from '@testing-library/react';
+import {act,cleanup,render,screen,waitFor,fireEvent,within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {App} from './main';
 import {setLanguage} from './i18n';
@@ -22,6 +22,7 @@ beforeEach(()=>{
   pendingJob=null;pendingNotes=null;
   savedInterpretation={};providerProfiles=[];freshAnalysis=false;
   vi.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});
+  vi.spyOn(HTMLMediaElement.prototype,'load').mockImplementation(()=>{});
   Element.prototype.scrollIntoView=vi.fn();
   vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
     const path=String(input).split('/api')[1];
@@ -263,4 +264,54 @@ it('clears cached output and automatically analyses the song when reopened',asyn
  expect(requests.filter(r=>r.path==='/tracks/test-song/analyze')).toHaveLength(1);
  expect(requests.some(r=>r.path==='/tracks/test-song/lyrics/search')).toBe(true);
  expect(requests.some(r=>r.path==='/tracks/test-song/research')).toBe(true);
+});
+
+it('releases the playing song and ignores late play failures when another library song opens',async()=>{
+ const second={...track,id:'second-song',name:'Second authored song',title:'Second authored song'};
+ const original=vi.mocked(fetch).getMockImplementation()!;
+ vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+  const path=String(input).split('/api')[1];
+  if(path==='/library')return new Response(JSON.stringify({tracks:[{...track,analysis_modes:['local']},{...second,analysis_modes:['local']}]}));
+  if(path.startsWith('/tracks/second-song/'))return new Response(JSON.stringify(path.includes('/analysis')?stored:path.endsWith('/notes')?notes:{}));
+  return original(input,init);
+ }));
+ const paused=new WeakMap<HTMLMediaElement,boolean>();let rejectOld!:(error:Error)=>void;
+ vi.spyOn(HTMLMediaElement.prototype,'paused','get').mockImplementation(function(this:HTMLMediaElement){return paused.get(this)??true});
+ vi.mocked(HTMLMediaElement.prototype.pause).mockImplementation(function(this:HTMLMediaElement){paused.set(this,true)});
+ const play=vi.spyOn(HTMLMediaElement.prototype,'play').mockImplementation(function(this:HTMLMediaElement){paused.set(this,false);fireEvent.play(this);return play.mock.calls.length===1?new Promise<void>((_,reject)=>{rejectOld=reject}):Promise.resolve()});
+ render(<App/>);
+ await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+ await screen.findByText(/keine erneute KI-Inferenz/);
+ const old=document.querySelector('audio')!;
+ fireEvent.change(screen.getByLabelText('Lautstärke'),{target:{value:'0.35'}});
+ await userEvent.click(screen.getByRole('button',{name:'Abspielen'}));
+ expect(screen.getByRole('button',{name:'Pause'})).toBeTruthy();
+ await userEvent.click(screen.getByRole('button',{name:'Bibliothek'}));
+ await userEvent.click((await screen.findByText('Second authored song')).closest('article')!.querySelector('button')!);
+ await waitFor(()=>expect(document.querySelector('audio')!.src).toContain('/second-song/audio'));
+ const next=document.querySelector('audio')!;
+ expect(next).not.toBe(old);expect(old.isConnected).toBe(false);expect(old.hasAttribute('src')).toBe(false);expect(next.volume).toBe(.35);
+ await act(async()=>rejectOld(new DOMException('Old request interrupted','AbortError')));
+ expect(screen.queryByRole('alert')).toBeNull();
+ await userEvent.click(screen.getByRole('button',{name:'Abspielen'}));
+ expect(paused.get(next)).toBe(false);
+ await userEvent.click(screen.getByRole('button',{name:'Pause'}));
+ expect(paused.get(next)).toBe(true);expect(screen.getByRole('button',{name:'Abspielen'})).toBeTruthy();
+});
+
+it('recovers play control when the displayed state and native paused flag disagree',async()=>{
+ let paused=true,rejectFirst!:(error:Error)=>void;
+ vi.spyOn(HTMLMediaElement.prototype,'paused','get').mockImplementation(()=>paused);
+ const play=vi.spyOn(HTMLMediaElement.prototype,'play').mockImplementation(function(this:HTMLMediaElement){
+  if(play.mock.calls.length===1)return new Promise<void>((_,reject)=>{rejectFirst=reject});
+  paused=false;fireEvent.play(this);return Promise.resolve();
+ });
+ render(<App/>);
+ await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+ await screen.findByText(/keine erneute KI-Inferenz/);
+ await userEvent.click(screen.getByRole('button',{name:'Abspielen'}));
+ await userEvent.click(screen.getByRole('button',{name:'Pause'}));
+ expect(play).toHaveBeenCalledTimes(2);expect(paused).toBe(false);
+ await act(async()=>rejectFirst(new DOMException('Earlier play aborted','AbortError')));
+ expect(screen.getByRole('button',{name:'Pause'})).toBeTruthy();expect(screen.queryByRole('alert')).toBeNull();
 });
