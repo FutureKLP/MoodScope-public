@@ -1,6 +1,9 @@
 # Vergleichskonzept fuer musikalischen Ausdruck
 
 Status: Diagnose und Architekturvorschlag, keine neue produktive Analysemethode.
+Die anschließend freigegebene erste Integrationsstufe und die externe menschliche
+Referenz sind in [HUMAN-REFERENCE.md](HUMAN-REFERENCE.md) dokumentiert. Die
+Audio-Emotionspipeline bleibt unverändert; der optionale Musikvergleich ist neu.
 Die bestehende Sechs-Kategorien-Pipeline, Nutzerdaten, Einstellungen und Caches
 werden durch das Diagnosewerkzeug nicht veraendert. Modellantworten, Musik,
 Bewertungen und private Manifeste werden nicht versioniert.
@@ -261,8 +264,9 @@ Vergleich, Quellentrennung und Design benoetigen keinen grundsaetzlichen Umbau.
   bleiben erforderlich; reine Zitatpruefung reicht nicht aus.
 - Momentan fehlen unabhaengige menschliche Bewertungen und eine grosse
   Referenzbasis. Das Diagnosewerkzeug ersetzt deren Erhebung nicht.
-- Kalibrierung, trainierte Vorhersageschichten, neue Produktdatenfelder und
-  UI-Aenderungen sind noch nicht implementiert und nicht freigegeben.
+- Kalibrierung und trainierte Vorhersageschichten sind noch nicht implementiert.
+  Die freigegebene erste Integration additiver Belegfelder und der optionalen
+  Musikvergleichs-Oberflaeche steht in HUMAN-REFERENCE.md.
 - Bereits behobene Wiedergabe-, Bibliotheks-, Quellen- und Cacheprobleme bleiben
   durch unveraenderten Produktcode erhalten; spaetere Integration benoetigt
   passende Regressionen und isolierte schreibende Tests.

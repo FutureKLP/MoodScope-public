@@ -165,7 +165,7 @@ def health(purpose:Literal['audio','lyrics','whisper','interpretation','separati
     from scripts.runtime import environment_id
     device=engines.device() if purpose=='audio' else engines.device(purpose)
     name=next((d['name'] for d in runtime_devices.available() if d['id']==('cuda:0' if device=='cuda' else device)),device)
-    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':10,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
+    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':11,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -651,6 +651,7 @@ class InterpretationRequest(BaseModel):
     force: bool = False
     provider_id: str | None = Field(default=None,max_length=64)
     language: Literal['de','en'] = 'de'
+    include_music: bool = False
 
 
 def run_interpretation(job_id,identity,request):
@@ -670,12 +671,15 @@ def run_interpretation(job_id,identity,request):
         research_facts=json.loads(research_row[0]) if research_row else None
         research_basis=hashlib.sha256(json.dumps(research_facts,sort_keys=True).encode()).hexdigest()
         prompt_basis=prompt_presets.fingerprint(DATA,[('whole_' if request.time is None else 'line_')+request.language])
-        key='interpretation:'+hashlib.sha256(('whole-song-v10-prompt'+prompt_basis+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent'}),sort_keys=True)+selected).encode()).hexdigest()
+        interpretation_version='music-text-v11' if request.include_music else 'whole-song-v11-source'
+        key='interpretation:'+hashlib.sha256((interpretation_version+prompt_basis+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent','include_music'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
         else:
             with job_lock:jobs[job_id].update(message='Interpretiere Belege und Textkontext; erster Start kann Modell laden',progress=20)
-            result=insights.interpretation(DATA,engines,analysis,metadata,request.time,request.mode,request.provider_id,request.language)
+            args=(DATA,engines,analysis,metadata,request.time,request.mode,request.provider_id,request.language)
+            result=insights.interpretation(*args,include_music=True) if request.include_music else insights.interpretation(*args)
+            result['interpretation_kind']='music_text_v1' if request.include_music else 'lyrics'
             result['cached']=False
             result['text_evidence']=[{'start':r['start'],'end':r['end'],'text':r.get('text','')} for r in analysis.get('lyrics',[]) if request.time is None or r['start']<=request.time<r['end']]
             result['online_evidence']={k:v for k,v in research_facts.items() if k in {'source','url','title','musical_facts'}} if research_facts else None
@@ -691,6 +695,7 @@ def run_interpretation(job_id,identity,request):
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
                 own(conn,key,identity)
         latest_key=f'interpretation-latest:{cache_identity}:{request.mode}:{request.provider_id or "default"}:{request.language}'
+        if request.include_music:latest_key+=':music-v1'
         scoped_key=latest_key+(':whole' if request.time is None else ':position')
         with db() as conn:
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(latest_key,json.dumps(result)))
@@ -718,15 +723,16 @@ def interpret(identity: str,request: InterpretationRequest):
 
 
 @app.get('/api/tracks/{identity}/interpretation')
-def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',provider_id:str | None=None,language:Literal['de','en']='de',scope:Literal['whole','position']='whole'):
+def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',provider_id:str | None=None,language:Literal['de','en']='de',scope:Literal['whole','position']='whole',include_music:bool=False):
     identity=canonical(identity)
     key=f'interpretation-latest:{identity}:{mode}:{provider_id or "default"}:{language}'
+    if include_music:key+=':music-v1'
     with db() as conn:
         row=conn.execute('SELECT result FROM cache WHERE key=?',(key+':'+scope,)).fetchone()
         if not row:
             legacy=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
             if legacy and ((json.loads(legacy[0]).get('time') is None)==(scope=='whole')):row=legacy
-    if not row and language=='de':
+    if not row and language=='de' and not include_music:
         with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(key.rsplit(':',1)[0],)).fetchone()
     if not row:raise HTTPException(404,'Noch keine gespeicherte Deutung für dieses Modellprofil.')
     value=json.loads(row[0])

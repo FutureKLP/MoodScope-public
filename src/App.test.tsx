@@ -124,6 +124,19 @@ describe('workspace flows',()=>{
     expect(requests.some(r=>r.path==='/providers'&&r.body)).toBe(false);
   });
 
+  it('selects musical comparison explicitly and loads its separate saved reading',async()=>{
+    render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    await userEvent.click(screen.getByRole('button',{name:'Interpretation'}));
+    const checkbox=await screen.findByRole('checkbox',{name:'Musikbelege einbeziehen'});
+    expect((checkbox as HTMLInputElement).checked).toBe(false);
+    await userEvent.click(checkbox);
+    await waitFor(()=>expect(requests.some(r=>r.path.includes('interpretation?')&&r.path.includes('include_music=true'))).toBe(true));
+    await userEvent.click(screen.getByRole('button',{name:'Gesamten Song interpretieren'}));
+    await waitFor(()=>expect(requests.some(r=>r.path.endsWith('/interpret')&&r.body.include_music===true)).toBe(true));
+  });
+
   it('restores saved AI interpretation and explicitly requests regeneration',async()=>{
     savedInterpretation={text:'Stored complete song reading.',model:'test model',time:null,cached:true,audio_evidence:'Measured audio evidence.'};
     render(<App/>);

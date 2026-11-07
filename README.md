@@ -59,6 +59,20 @@ Instrumenthinweise sind keine gesicherte Instrumentenliste. Eine tatsächliche B
 
 Eine lokale Sprach-KI kann den Songtext oder eine ausgewählte Textzeile in ihrem Kontext deuten: mögliche Bedeutung, Verlust, Hoffnung, Widersprüche und alternative Lesarten. Dazu gibt es getrennte Audiohinweise aus vorhandenen Mess- und Modellwerten. Ein Sprachmodell darf nicht behaupten, selbst Audio gehört zu haben, wenn es nur Text erhalten hat.
 
+Die zunächst ausgeschaltete Option **Musikbelege einbeziehen** ergänzt einen
+experimentellen Vergleich von Text und Musikbeobachtungen. Das Modell erhält
+zeitlich zugeordnete Energie-, Tempo- und Harmoniekandidaten mit Belegreferenzen.
+Die genauen Messwerte erscheinen separat; hohe Energie wird keinem bestimmten
+Gefühl gleichgesetzt. Textdeutung und Musikvergleich werden getrennt gespeichert.
+Kleine lokale Modelle können dabei weiterhin scheitern oder unplausibel deuten;
+unbelegte Antworten werden verworfen. Es erfolgt kein automatischer Anbieterwechsel.
+
+Der [externe Vergleich mit menschlichen Musikbewertungen](docs/HUMAN-REFERENCE.md)
+beschreibt die verwendeten Referenzen und ihre Grenzen. Die bisherige Audio-
+Emotionskurve wurde damit noch nicht durch einen vermeintlich genaueren Ersatz
+ausgetauscht. Insbesondere sind ausgelöste Gefühle und wahrgenommener Ausdruck
+unterschiedliche Bewertungsziele.
+
 Die KI-Deutung und **Meine eigene Interpretation** sind getrennte Bereiche. Eigene Notizen werden lokal gespeichert und nicht zur Online-KI gesendet. Interpretationen können trotz dieser Begrenzung falsch sein; sie sind keine gesicherten Aussagen über die Absicht eines Künstlers.
 
 ### Modelle & API

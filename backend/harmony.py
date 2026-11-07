@@ -95,12 +95,20 @@ def analyse(audio,sr):
 
 def evidence(features,position=None,language='de'):
     h=features.get('harmony',{});key=h.get('key');en=language=='en';parts=[]
+    local=False
+    if position is not None:
+        region=next((r for r in h.get('key_regions',[]) if r['start']<=position<r['end']),None)
+        key=region.get('key') if region else None
+        local=region is not None
     if key:
         name=key['tonic']+' '+({'major':'major','minor':'minor'} if en else {'major':'Dur','minor':'Moll'})[key['mode']]
-        parts.append((f'Local key estimate: {name}; profile similarity {key["similarity"]:.2f}, runner-up margin {key["margin"]:.2f}. ' if en else f'Lokale Tonartschätzung: {name}; Profilähnlichkeit {key["similarity"]:.2f}, Abstand zum zweiten Profil {key["margin"]:.2f}. '))
+        scope=('Local' if local else 'Overall') if en else ('Lokale' if local else 'Globale')
+        parts.append((f'{scope} key estimate: {name}; profile similarity {key["similarity"]:.2f}, runner-up margin {key["margin"]:.2f}. ' if en else f'{scope} Tonartschätzung: {name}; Profilähnlichkeit {key["similarity"]:.2f}, Abstand zum zweiten Profil {key["margin"]:.2f}. '))
     chords=[c for c in h.get('chords',[]) if c.get('label') and (position is None or c['start']<=position<c['end'])]
     if chords:
-        parts.append(('Estimated chords: ' if en else 'Geschätzte Akkorde: ')+', '.join(f'{c["start"]:.0f}–{c["end"]:.0f}s {c["label"]}' for c in chords[:12])+'. ')
+        chosen=[chords[round(i*(len(chords)-1)/11)] for i in range(12)] if len(chords)>12 else chords
+        parts.append(('Estimated chords: ' if en else 'Geschätzte Akkorde: ')+', '.join(f'{c["start"]:.1f}–{c["end"]:.1f}s {c["label"]}' for c in chosen)+'. ')
+        if len(chords)>12:parts.append('Examples across the selection, not the full progression. ' if en else 'Beispiele über die Auswahl verteilt, nicht die vollständige Akkordfolge. ')
     if h:parts.append('Template matches are uncertain and do not establish an emotional cause. ' if en else 'Die Vorlagenvergleiche sind unsicher und belegen keine emotionale Ursache. ')
     if features.get('crest_factor_db') is not None:
         parts.append((f'Peak-to-RMS crest factor: {features["crest_factor_db"]:.1f} dB. ' if en else f'Spitzenpegel-RMS-Abstand (Crest-Faktor): {features["crest_factor_db"]:.1f} dB. '))
