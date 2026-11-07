@@ -190,6 +190,15 @@ npm run build
 
 Echte Modelltests können Gewichte laden und GPU-Zeit benötigen. Normale Unit-/API-/DOM-Tests verwenden für gezielte Fehler- und UI-Fälle Mocks; solche Testwerte erscheinen nicht in der produktiven App. Die laufend aktualisierten Nachweise und Grenzen stehen in [docs/STATUS.md](docs/STATUS.md) und [docs/RELEASE-0.2.md](docs/RELEASE-0.2.md).
 
+Für die kontrollierte Untersuchung der musikalischen Emotionsanalyse gibt es ein
+[Vergleichs- und Bewertungskonzept](docs/AUDIO-EVALUATION.md) und das separate
+Werkzeug `python -m scripts.audio_evaluation --help`. Es vergleicht Prompts,
+Pegelkontrollen und unabhängige Ausdrucksabfragen ausschließlich mit einem
+vorhandenen lokalen CLAP-Snapshot. Private Ergebnisse und Hörausschnitte bleiben
+in ignorierten Testordnern; App, Bibliothek und produktive Analysemethode werden
+nicht verändert. Ohne unabhängige menschliche Bewertungen wird keine verbesserte
+Emotionserkennung behauptet.
+
 Für die Oberfläche `npm run dev` und für das Backend separat `.venv-modern\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8765` starten. `VITE_API_URL` kann für eine getrennte Testumgebung gesetzt werden. `MOODSCOPE_DATA` wählt einen separaten Datenordner. Der Dienst ist nur für lokale Nutzung vorgesehen.
 
 ## Datenschutz und Veröffentlichung
