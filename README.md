@@ -39,6 +39,23 @@ Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTun
 - Anzeige von Modelltrennschärfe und Formulierungssensitivität; diese sind keine kalibrierte Genauigkeit.
 - Lokale Emotionskurve v7: konstanter Analysepegel je Kontext, keine festen Emotionszuschläge durch musikalische Merkmale und keine zusätzliche Dreipunktglättung. Original-RMS und Wiedergabe bleiben erhalten. Bestehende Analysen verwenden weiterhin ihre gespeicherte Methode; Neu analysieren verwendet v7.
 
+### Optionaler zweiter Emotionsverlauf
+
+Unter **Methode & Werte** kann **Music2Emo vergleichen** einen getrennten,
+experimentellen Zweitverlauf berechnen. Er zeigt gelernte Valenz und Aktivierung
+sowie unabhaengige Mood-Tags. Die Anzeige verwendet 5-Sekunden-Schritte mit bis
+zu 30 Sekunden Kontext; die menschliche Validierung schneller Uebergaenge steht
+noch aus. Die bisherige Kurve, Playerfarben und aktive Modellwahl bleiben erhalten.
+Vergleiche werden beim Song gespeichert und mit **Analyse-Cache loeschen** entfernt.
+Abbruch beendet den separaten Modellprozess.
+
+Diese optionale Erweiterung wird nicht automatisch heruntergeladen. Sie benoetigt
+die geprueften Music2Emo-/MERT-Gewichte, einen lokalen Quellstand sowie isolierte
+Zusatzpakete; Einrichtung und Lizenzgrenzen stehen in
+[docs/EMOTION-MODELS.md](docs/EMOTION-MODELS.md). Der Vergleichsprozess verwendet
+die Basisumgebung `.venv`, auch wenn der Dienst die neuere Transkriptionsumgebung
+nutzt. Ohne Erweiterung bleibt die vorhandene Analyse verfuegbar.
+
 ### Bibliothek
 
 Importierte Songs, Analysen und eigene Notizen werden lokal in SQLite gespeichert. Identische Dateien werden auch bei geändertem Dateinamen erkannt. Bei unterschiedlichen Dateien mit gleichen Interpret-/Titel-Tags werden zusätzlich Laufzeit und zeitlich ausgerichtete akustische Signaturen verglichen. Metadaten alleine reichen nicht aus: Ein Remix, anderes Mastering oder eine andere Aufnahme soll keine unpassenden Zeitkurven erhalten.

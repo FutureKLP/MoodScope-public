@@ -82,4 +82,49 @@ Ein echter Lauf mit 16 diagnostischen Kontexten wurde abgeschlossen. Ein separat
 Vergleich mit 32 bereits vorhandenen Emotify-Beispielen pruefte auch die beiden
 Upstream-Randfaelle. Verbesserte Rangfolgen auf diesem diagnostisch mehrfach
 verwendeten Set sind kein Holdout-Nachweis. Ein neuer, vor der Inferenz festgelegter
-DEAM-Testsatz untersucht als naechstes passende Valenz-/Aktivierungsurteile.
+DEAM-Testsatz pruefte anschliessend passende Valenz-/Aktivierungsurteile; siehe unten.
+
+
+## Produktintegration und Nachweisgrenze
+
+Die optionale Vergleichsfunktion unter **Methode & Werte** fuehrt die korrigierte
+Music2Emo-Inferenz in einem eigenen Prozess aus. Beide Regressionsausgaenge und
+die unabhaengigen Tags bleiben getrennt; sie werden nicht in sechs CLAP-Kategorien
+umgerechnet. Anzeigeintervall: fuenf Sekunden; Kontext: bis zu 30 Sekunden,
+am Rand innerhalb der Aufnahme verschoben. Die Hauptanalyse wird nicht ersetzt.
+
+Ein Vergleich auf 32 vorab ausgewaehlten IDs des veroeffentlichten DEAM-Testsplits
+zeigte bessere Songmittelwerte fuer Valenz und Aktivierung als die CLAP-v7-
+Projektion. Parameter wurden nach Sichtung dieses Sets nicht angepasst. Dies
+ist ein kleiner datensatznaher Vergleich, keine unabhaengige Pruefung der gesamten
+Trainingshistorie und kein Nachweis zeitgenauer Uebergaenge oder allgemeiner
+Genre-Robustheit. Die erzeugten Kurven wurden gegen statische Songurteile gemittelt;
+sie wurden nicht gegen dynamische DEAM-Annotationen bewertet. Ergebnisse bleiben
+privat. Die App kennzeichnet den Zweitverlauf weiterhin als experimentell.
+
+Fuer die vorhandene Entwicklungsinstallation wurden isoliert folgende Pakete
+ergaenzt: mir_eval 0.8.2, pretty_midi 0.2.10, music21 9.3.0, mido 1.3.3,
+more-itertools 10.5.0, jsonpickle 3.4.2 und webcolors 24.11.1. Die normale
+App-Umgebung wurde dabei nicht per pip veraendert. Der Adapter wurde mit Python
+3.10, Torch 2.8.0 und Transformers 4.57.6 tatsaechlich ausgefuehrt. Die neuere
+Transkriptionsumgebung ist nicht die Modelllaufzeit dieses Adapters.
+
+Bereits heruntergeladene, gepruefte Quellen und Pakete lassen sich so registrieren:
+
+```powershell
+python -m scripts.install_music2emo_local --source .tools/music2emo-source --weights models/music2emo --dependencies .tools/music2emo-packages
+```
+
+Dieses Kommando laedt nichts nach. Es erhaelt die Upstream-Lizenz und schreibt
+Pruefsummen fuer den lokalen Quellstand. `installation.json` und
+`provenance.json` sind lokale Installationsdateien. Die App prueft Quellen und
+Gewichte im Worker vor Inferenz; fehlende oder veraenderte Dateien fuehren zum
+Abbruch, nicht zu Ersatzwerten. Gespeicherte Vergleiche erhalten einen eigenen
+Cache-Schluessel und werden beim Loeschen des Analyse-Caches mit entfernt.
+
+Die [MERT-Modellkarte](https://huggingface.co/m-a-p/MERT-v1-95M) nennt
+**CC BY-NC 4.0**. Die MIT-Lizenz des Music2Emo-Codes hebt diese Modellbedingung
+nicht auf. Modellgewichte und Drittanbieterquellen sind kein Bestandteil der
+GitHub-Veroeffentlichung. Fuer eine kommerzielle Weitergabe ist die nichtkommerzielle
+MERT-Bedingung vorab zu klaeren; dieser Zwischenstand behauptet keine kommerzielle
+Lizenzfreigabe.

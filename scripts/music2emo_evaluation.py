@@ -57,6 +57,8 @@ def prepare_runtime(source,destination,correct_key_mode=False):
     for line in ('from omegaconf import DictConfig','import hydra','from hydra.utils import to_absolute_path','import gradio as gr'):
         code=replace_once(code,line,'# Unused training/web import omitted for isolated inference.')
     code=replace_once(code,'weights_only=False','weights_only=True')
+    code=replace_once(code,'self.device = torch.device("cuda" if use_cuda else "cpu")',
+                      "self.device = torch.device(os.environ['MOODSCOPE_EXPRESSION_DEVICE'])")
     code=replace_once(code,'checkpoint = torch.load(model_file, map_location=self.device)',
                       'checkpoint = torch.load(model_file, map_location=self.device, weights_only=True)')
     code=replace_once(code,"model_file = './inference/data/btc_model_large_voca.pt'",
@@ -75,6 +77,39 @@ def prepare_runtime(source,destination,correct_key_mode=False):
                     'torch.stack(model_outputs.hidden_states).squeeze(1)[1:, :, :]'),encoding='utf8')
 
 
+
+def load_local_model(weights,runtime,destination,device,dependency_directory=None):
+    os.environ.update(HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',USE_TF='0',
+                      HF_MODULES_CACHE=str(destination/'module-cache'),
+                      MOODSCOPE_EXPRESSION_DEVICE=device,
+                      MOODSCOPE_BTC_WEIGHTS=str(weights/'btc_model_large_voca.pt'))
+    sys.path.insert(0,str(runtime))
+    if dependency_directory:sys.path.insert(0,str(Path(dependency_directory).resolve()))
+    import numpy as np
+    import torch
+    import soundfile as sf
+    from transformers import AutoModel,Wav2Vec2FeatureExtractor
+    import music2emo
+    from utils.mert import FeatureExtractorMERT
+    torch.set_num_threads(4)
+    torch.serialization.add_safe_globals([(np._core.multiarray.scalar,'numpy.core.multiarray.scalar'),
+                                           np.dtype,type(np.dtype(np.float32)),type(np.dtype(np.float64))])
+    target_device=device
+    def local_init(self,model_name=None,device=None,sr=24000):
+        self.device=target_device
+        self.model=AutoModel.from_pretrained(weights/'mert',trust_remote_code=True,
+                    local_files_only=True,attn_implementation='eager').to(self.device).eval()
+        self.processor=Wav2Vec2FeatureExtractor.from_pretrained(weights/'mert',local_files_only=True)
+    FeatureExtractorMERT.__init__=local_init
+    def load_audio(path):
+        audio,sr=sf.read(path,dtype='float32',always_2d=True)
+        return torch.from_numpy(audio.T.copy()),sr
+    music2emo.torchaudio.load=load_audio
+    music2emo.split_audio=lambda waveform,sr:[waveform[start:end] for start,end in segment_ranges(len(waveform),sr)]
+    model=music2emo.Music2emo(model_weights=str(weights/'J_all.ckpt'))
+    model.device=device;model.music2emo_model.to(device)
+    return model
+
 def run(args):
     source=Path(args.source_directory).resolve();weights=Path(args.weights_directory).resolve()
     cases=load_manifest(args.manifest)
@@ -87,35 +122,11 @@ def run(args):
             raise ValueError('Model provenance check failed')
     destination=output_directory(args.output);runtime=destination/'runtime';runtime.mkdir()
     prepare_runtime(source,runtime,args.correct_key_mode)
-    os.environ.update(HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',USE_TF='0',
-                      HF_MODULES_CACHE=str(destination/'module-cache'),
-                      MOODSCOPE_BTC_WEIGHTS=str(weights/'btc_model_large_voca.pt'))
-    sys.path.insert(0,str(runtime))
-    if args.dependency_directory:sys.path.insert(0,str(Path(args.dependency_directory).resolve()))
-    import numpy as np
     import torch
     import soundfile as sf
-    from transformers import AutoModel,Wav2Vec2FeatureExtractor
-    import music2emo
-    from utils.mert import FeatureExtractorMERT
-    torch.set_num_threads(4)
-    torch.serialization.add_safe_globals([(np._core.multiarray.scalar,'numpy.core.multiarray.scalar'),
-                                           np.dtype,type(np.dtype(np.float32)),type(np.dtype(np.float64))])
-    def local_init(self,model_name=None,device=None,sr=24000):
-        self.device=args.device
-        self.model=AutoModel.from_pretrained(weights/'mert',trust_remote_code=True,
-                    local_files_only=True,attn_implementation='eager').to(self.device).eval()
-        self.processor=Wav2Vec2FeatureExtractor.from_pretrained(weights/'mert',local_files_only=True)
-    FeatureExtractorMERT.__init__=local_init
-    def load_audio(path):
-        audio,sr=sf.read(path,dtype='float32',always_2d=True)
-        return torch.from_numpy(audio.T.copy()),sr
-    music2emo.torchaudio.load=load_audio
-    music2emo.split_audio=lambda waveform,sr:[waveform[start:end] for start,end in segment_ranges(len(waveform),sr)]
+    model=load_local_model(weights,runtime,destination,args.device,args.dependency_directory)
     previous=Path.cwd();os.chdir(runtime)
     try:
-        model=music2emo.Music2emo(model_weights=str(weights/'J_all.ckpt'))
-        model.device=args.device;model.music2emo_model.to(args.device)
         rows=[]
         for case in cases:
             info=sf.info(case['source'])

@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field, SecretStr
 from .core import parse_lrc, biggest_split,text_coverage
 from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
 from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method,cancellation,prompt_presets,runtime_devices
+from . import expression_compare
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
@@ -165,7 +166,7 @@ def health(purpose:Literal['audio','lyrics','whisper','interpretation','separati
     from scripts.runtime import environment_id
     device=engines.device() if purpose=='audio' else engines.device(purpose)
     name=next((d['name'] for d in runtime_devices.available() if d['id']==('cuda:0' if device=='cuda' else device)),device)
-    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':11,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
+    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':12,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -651,6 +652,49 @@ class InterpretationRequest(BaseModel):
     provider_id: str | None = Field(default=None,max_length=64)
     language: Literal['de','en'] = 'de'
     include_music: bool = False
+
+
+class ExpressionRequest(BaseModel):
+    force: bool = False
+
+
+@app.get('/api/tracks/{identity}/expression-comparison')
+def saved_expression_comparison(identity:str):
+    track(identity);identity=canonical(identity)
+    with db() as conn:
+        row=conn.execute('SELECT result FROM cache WHERE key=?',(f'expression-comparison:{identity}',)).fetchone()
+    result=json.loads(row[0]) if row else None
+    return {'ready':expression_compare.ready(),'result':result,
+            'stale':bool(result and result.get('model_basis')!=expression_compare.fingerprint())}
+
+
+def run_expression_comparison(job_id,identity,request):
+    identity=canonical(identity);basis=expression_compare.fingerprint()
+    key=f'expression-comparison:{identity}'
+    with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
+    result=json.loads(row[0]) if row else None
+    if not result or request.force or result.get('model_basis')!=basis:
+        def progress(message,value):
+            cancellation.check()
+            with job_lock:jobs[job_id].update(message=message,progress=value)
+        progress('Lade separates Music2Emo-Vergleichsmodell',5)
+        engines.data=DATA
+        catalog.unload_models(engines)
+        result=expression_compare.analyse(DATA/f'{identity}.wav',DATA,engines.device(),progress)
+        cancellation.check()
+        result={**result,'model_basis':basis,'cached':False}
+        with db() as conn:
+            conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
+            own(conn,key,identity)
+    else:result={**result,'cached':True}
+    with job_lock:jobs[job_id].update(status='done',progress=100,message='Musikvergleich fertig',result=result)
+
+
+@app.post('/api/tracks/{identity}/expression-comparison')
+def expression_comparison(identity:str,request:ExpressionRequest):
+    track(identity)
+    if not expression_compare.ready():raise HTTPException(409,'Music2Emo-Vergleich ist nicht lokal eingerichtet.')
+    return start_job('expression-comparison',run_expression_comparison,identity,request)
 
 
 def run_interpretation(job_id,identity,request):

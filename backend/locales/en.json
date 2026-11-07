@@ -812,5 +812,22 @@
   "Beide Beschreibungsvarianten bevorzugen dieselbe Kategorie.": "Both wording variants prefer the same category.",
   "Die Beschreibungsvarianten bevorzugen unterschiedliche Kategorien.": "The wording variants prefer different categories.",
   "Diese Spannweite ist kein Konfidenzintervall und keine Trefferwahrscheinlichkeit.": "This range is not a confidence interval or an accuracy probability.",
-  "Analyse-Pegelkorrektur": "Analysis gain adjustment"
+  "Analyse-Pegelkorrektur": "Analysis gain adjustment",
+  "Zweiter Emotionsverlauf: Music2Emo": "Second emotion curve: Music2Emo",
+  "Experimenteller Vergleich mit einem spezialisierten Musikmodell. Valenz und Aktivierung werden getrennt gelernt. Die bisherige Analyse und die Playerfarben bleiben bestehen.": "Experimental comparison with a specialized music model. Valence and arousal are learned separately. The existing analysis and player colors are preserved.",
+  "30 Sekunden Audiokontext, Anzeige alle 5 Sekunden. Das Modell ist auf Songbewertungen trainiert; schnelle Übergänge und einzelne Emotionen sind noch nicht zuverlässig validiert.": "30 seconds of audio context, displayed every 5 seconds. The model was trained on song ratings; rapid transitions and individual emotions are not yet reliably validated.",
+  "Vergleichsstatus konnte nicht geladen werden.": "Could not load comparison status.",
+  "Die optionale lokale Music2Emo-Erweiterung ist nicht eingerichtet. Einrichtung siehe Projektdokumentation.": "The optional local Music2Emo extension is not installed. See the project documentation for setup.",
+  "Dieser Vergleich stammt von einem älteren Modellstand.": "This comparison uses an older model version.",
+  "Vergleich neu berechnen": "Recalculate comparison",
+  "Music2Emo vergleichen": "Compare Music2Emo",
+  "Bisherige Audiovalenz": "Existing audio valence",
+  "Vergleich der Audiovalenz": "Audio valence comparison",
+  "Vergleichsabschnitt": "Comparison interval",
+  "Rohvorhersage außerhalb der Trainingsskala; nur die Darstellung ist begrenzt.": "Raw prediction outside the training scale; only its display is bounded.",
+  "Stärkste Modell-Tags, unabhängig voneinander; keine gesicherten Gefühle": "Strongest model tags, independent of each other; not confirmed emotions",
+  "Lade separates Music2Emo-Vergleichsmodell": "Loading separate Music2Emo comparison model",
+  "Vergleiche musikalischen Ausdruck mit Music2Emo": "Comparing musical expression with Music2Emo",
+  "Musikvergleich fertig": "Music comparison complete",
+  "Music2Emo-Vergleich ist nicht lokal eingerichtet.": "Music2Emo comparison is not installed locally."
 }
