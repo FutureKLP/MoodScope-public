@@ -166,7 +166,7 @@ def health(purpose:Literal['audio','lyrics','whisper','interpretation','separati
     from scripts.runtime import environment_id
     device=engines.device() if purpose=='audio' else engines.device(purpose)
     name=next((d['name'] for d in runtime_devices.available() if d['id']==('cuda:0' if device=='cuda' else device)),device)
-    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':12,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
+    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':13,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -652,6 +652,7 @@ class InterpretationRequest(BaseModel):
     provider_id: str | None = Field(default=None,max_length=64)
     language: Literal['de','en'] = 'de'
     include_music: bool = False
+    music_source: Literal['analysis','music2emo'] = 'analysis'
 
 
 class ExpressionRequest(BaseModel):
@@ -697,6 +698,28 @@ def expression_comparison(identity:str,request:ExpressionRequest):
     return start_job('expression-comparison',run_expression_comparison,identity,request)
 
 
+def with_music_source(identity,analysis,source):
+    if source!='music2emo':return analysis
+    with db() as conn:
+        row=conn.execute('SELECT result FROM cache WHERE key=?',(f'expression-comparison:{canonical(identity)}',)).fetchone()
+    result=json.loads(row[0]) if row else None
+    basis=expression_compare.fingerprint()
+    if not result or not basis or result.get('model_basis')!=basis:
+        raise HTTPException(409,'Zuerst einen aktuellen Music2Emo-Verlauf berechnen.')
+    return expression_compare.project_analysis(analysis,result)
+
+
+@app.get('/api/tracks/{identity}/combined-evidence')
+def combined_evidence(identity:str,mode:Literal['local','cloud']='local',music_source:Literal['analysis','music2emo']='analysis'):
+    track(identity);identity=canonical(identity)
+    with db() as conn:
+        row=conn.execute('SELECT result FROM cache WHERE key=?',(f'latest:{identity}:{mode}',)).fetchone()
+    if not row:raise HTTPException(404,'Zuerst den Song analysieren.')
+    analysis=with_music_source(identity,json.loads(row[0]),music_source)
+    from .joint_evidence import timeline
+    return timeline(analysis)
+
+
 def run_interpretation(job_id,identity,request):
     try:
         engines.data=DATA
@@ -704,6 +727,8 @@ def run_interpretation(job_id,identity,request):
         with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(f'latest:{cache_identity}:{request.mode}',)).fetchone()
         if not row:raise RuntimeError('Zuerst den Song im ausgewählten Modus analysieren.')
         analysis=json.loads(row[0]);metadata=track(identity)
+        if request.include_music:
+            analysis=with_music_source(identity,analysis,request.music_source)
         if request.time is not None and request.time>=metadata['duration']:raise RuntimeError('Zeitpunkt liegt außerhalb des Songs.')
         selected=json.dumps(providers.profile(DATA,request.provider_id),sort_keys=True) if request.provider_id else catalog.configuration(DATA)['active']['interpretation']
         # Add measured instrument hints when available, keeping them out of the text-only LLM prompt.
@@ -714,7 +739,7 @@ def run_interpretation(job_id,identity,request):
         research_facts=json.loads(research_row[0]) if research_row else None
         research_basis=hashlib.sha256(json.dumps(research_facts,sort_keys=True).encode()).hexdigest()
         prompt_basis=prompt_presets.fingerprint(DATA,[('whole_' if request.time is None else 'line_')+request.language])
-        interpretation_version='music-text-v11' if request.include_music else 'whole-song-v11-source'
+        interpretation_version='music-text-v12-joint' if request.include_music else 'whole-song-v11-source'
         key='interpretation:'+hashlib.sha256((interpretation_version+prompt_basis+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent','include_music'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
@@ -723,6 +748,7 @@ def run_interpretation(job_id,identity,request):
             args=(DATA,engines,analysis,metadata,request.time,request.mode,request.provider_id,request.language)
             result=insights.interpretation(*args,include_music=True) if request.include_music else insights.interpretation(*args)
             result['interpretation_kind']='music_text_v1' if request.include_music else 'lyrics'
+            result['music_source']=request.music_source if request.include_music else 'analysis'
             result['cached']=False
             result['text_evidence']=[{'start':r['start'],'end':r['end'],'text':r.get('text','')} for r in analysis.get('lyrics',[]) if request.time is None or r['start']<=request.time<r['end']]
             result['online_evidence']={k:v for k,v in research_facts.items() if k in {'source','url','title','musical_facts'}} if research_facts else None
@@ -738,7 +764,7 @@ def run_interpretation(job_id,identity,request):
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
                 own(conn,key,identity)
         latest_key=f'interpretation-latest:{cache_identity}:{request.mode}:{request.provider_id or "default"}:{request.language}'
-        if request.include_music:latest_key+=':music-v1'
+        if request.include_music:latest_key+=':music-v2:'+request.music_source
         scoped_key=latest_key+(':whole' if request.time is None else ':position')
         with db() as conn:
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(latest_key,json.dumps(result)))
@@ -766,10 +792,10 @@ def interpret(identity: str,request: InterpretationRequest):
 
 
 @app.get('/api/tracks/{identity}/interpretation')
-def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',provider_id:str | None=None,language:Literal['de','en']='de',scope:Literal['whole','position']='whole',include_music:bool=False):
+def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',provider_id:str | None=None,language:Literal['de','en']='de',scope:Literal['whole','position']='whole',include_music:bool=False,music_source:Literal['analysis','music2emo']='analysis'):
     identity=canonical(identity)
     key=f'interpretation-latest:{identity}:{mode}:{provider_id or "default"}:{language}'
-    if include_music:key+=':music-v1'
+    if include_music:key+=':music-v2:'+music_source
     with db() as conn:
         row=conn.execute('SELECT result FROM cache WHERE key=?',(key+':'+scope,)).fetchone()
         if not row:
@@ -781,7 +807,11 @@ def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',prov
     value=json.loads(row[0])
     with db() as conn:analysis=conn.execute('SELECT result FROM cache WHERE key=?',(f'latest:{identity}:{mode}',)).fetchone()
     stale=value.get('prompt_basis') not in {None,prompt_presets.fingerprint(DATA,[('whole_' if value.get('time') is None else 'line_')+language])}
-    stale=stale or not analysis or value.get('analysis_basis')!=insights.analysis_basis(json.loads(analysis[0]))
+    selected_analysis=json.loads(analysis[0]) if analysis else None
+    if selected_analysis and include_music:
+        try:selected_analysis=with_music_source(identity,selected_analysis,music_source)
+        except HTTPException:selected_analysis=None
+    stale=stale or not selected_analysis or value.get('analysis_basis')!=insights.analysis_basis(selected_analysis)
     with db() as conn:research_row=conn.execute('SELECT result FROM cache WHERE key=?',(f'research-selected:{identity}',)).fetchone()
     current_research=json.loads(research_row[0]) if research_row else None
     research_basis=hashlib.sha256(json.dumps(current_research,sort_keys=True).encode()).hexdigest()

@@ -176,6 +176,8 @@ def interpretation(data,engine,analysis,metadata,time_position=None,mode='local'
 
 
 def audio_evidence(analysis,time_position=None,language='de'):
+    if analysis.get('expression_source')=='Music2Emo':
+        return direct_audio_evidence(analysis,time_position,language)
     if language=='en':return audio_evidence_english(analysis,time_position)
     rows=analysis.get('audio',[])
     if time_position is not None:rows=[a for a in rows if a['start']<=time_position<a['end']]
@@ -262,6 +264,16 @@ def checked_local_generation(generate,source,language='de',music_references=None
             if language=='en':repair='The previous answer was rejected for unsupported claims. Write a NEW interpretation in English based only on the original text above. Use NO quotation marks or quotations, including translated or invented examples. No audio or biographical claims. Carefully paraphrase the supported meaning. Invent no moral.'
             if music_references:
                 repair+=(' Compare only the supplied music observations using actual M references; do not repeat acoustic facts.' if language=='en' else ' Vergleiche nur die gelieferten Musikbeobachtungen mit vorhandenen M-Referenzen; wiederhole keine Klangdetails.')
+
+
+def direct_audio_evidence(analysis,time_position=None,language='de'):
+    rows=[row for row in analysis.get('audio',[]) if time_position is None or row['start']<=time_position<row['end']]
+    total=sum(row['end']-row['start'] for row in rows)
+    if not total:return 'No audio estimate for this position.' if language=='en' else 'Keine Audioschätzung für diese Stelle.'
+    valence=sum(row['valence']*(row['end']-row['start']) for row in rows)/total
+    context=analysis.get('expression_context_seconds',30)
+    return (f'Music2Emo direct learned valence: {valence:+.2f}, weighted by section duration; up to {context} seconds of context. These are model estimates, not six-category CLAP similarities or measured listener feelings.' if language=='en' else
+            f'Music2Emo: direkt gelernte Valenz {valence:+.2f}, nach Abschnittsdauer gewichtet; bis zu {context} Sekunden Kontext. Dies sind Modellschätzungen, keine sechs CLAP-Beschreibungsanteile oder gemessenen Hörergefühle.')
 
 
 def audio_evidence_english(analysis,time_position=None):

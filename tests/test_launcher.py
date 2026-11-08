@@ -12,13 +12,13 @@ def test_running_old_backend_requires_restart(monkeypatch,version):
 
 
 def test_current_backend_can_be_reused(monkeypatch):
-    monkeypatch.setattr(launch,'urlopen',lambda *a,**k:io.BytesIO(__import__('json').dumps({'status':'ok','version':'0.3.0','api_revision':12,'runtime_id':launch.environment_id()}).encode()))
+    monkeypatch.setattr(launch,'urlopen',lambda *a,**k:io.BytesIO(__import__('json').dumps({'status':'ok','version':'0.3.0','api_revision':13,'runtime_id':launch.environment_id()}).encode()))
     assert launch.ready()
 
 
 def test_backend_from_other_environment_is_not_silently_reused(monkeypatch):
     import json
-    monkeypatch.setattr(launch,'urlopen',lambda *a,**k:io.BytesIO(json.dumps({'status':'ok','version':'0.3.0','api_revision':12,'runtime_id':'other'}).encode()))
+    monkeypatch.setattr(launch,'urlopen',lambda *a,**k:io.BytesIO(json.dumps({'status':'ok','version':'0.3.0','api_revision':13,'runtime_id':'other'}).encode()))
     with pytest.raises(RuntimeError,match='anderen Python-Umgebung'):launch.ready()
 
 

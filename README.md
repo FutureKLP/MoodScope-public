@@ -47,6 +47,7 @@ Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTun
 - Import synchronisierter LRC-Dateien oder Einfügen eigener zeitmarkierter Lyrics.
 - Lokale Whisper-Transkription als zuschaltbarer Fallback.
 - Anzeige von Modelltrennschärfe und Formulierungssensitivität; diese sind keine kalibrierte Genauigkeit.
+- Gemeinsame Einordnung von Musik und Text direkt an der bestehenden Kurve: zeitliche Übereinstimmung, Kontrast und unzureichende oder unsichere Belege. Die kombinierte Interpretation verwendet dieselbe ausgewählte Musikquelle. [Methode und Nachweisgrenzen](docs/COMBINED-ANALYSIS.md).
 - Die vorhandenen Emotionsbalken folgen fließend der Wiedergabe; der Rechenweg darunter zeigt die gespeicherten Abschnittswerte. Musikalische Hinweise und persönliche Gefühlsreaktionen werden erläutert. [Forschungsgrundlage](docs/MUSIC-PSYCHOLOGY.md).
 - Im Atmosphärenmodus prägt die führende Audio-Kategorie die Grundfarbe; kleinere Farbanteile mischen sich dezent darunter. Textfarben bleiben im Hintergrund zurückhaltend. Die Farbmischung verändert keine Analysewerte.
 - Lokale Emotionskurve v7: konstanter Analysepegel je Kontext, keine festen Emotionszuschläge durch musikalische Merkmale und keine zusätzliche Dreipunktglättung. Original-RMS und Wiedergabe bleiben erhalten. Bestehende Analysen verwenden weiterhin ihre gespeicherte Methode; Neu analysieren verwendet v7.

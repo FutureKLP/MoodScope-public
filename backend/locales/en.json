@@ -849,5 +849,21 @@
   "Die Balken folgen fließend der Wiedergabe. Relative Beschreibungsähnlichkeiten, keine Emotionswahrscheinlichkeiten. Die Rechnung darunter zeigt die gespeicherten Abschnittswerte.": "Bars follow playback smoothly. These are relative description similarities, not emotion probabilities. The calculation below uses stored section values.",
   "Die Hauptkurve verwendet Music2Emo. Die folgenden sechs Beschreibungsanteile und ihre Rechnung stammen separat von CLAP.": "The main curve uses Music2Emo. The six description shares and their calculation below come separately from CLAP.",
   "Music2Emo schätzt Valenz und Aktivierung direkt. Auf unseren Referenzen trifft es das allgemeine Niveau besser; schnelle Übergänge bleiben unzureichend belegt. 30 Sekunden Kontext, 5 Sekunden Raster.": "Music2Emo estimates valence and arousal directly. It better matches the overall level on our references; fast transitions remain insufficiently validated. 30-second context, 5-second grid.",
-  "Die Auswahl gilt für die vorhandene Audio-/Lyrics-Kurve und Biggest Split. Die sechs Gefühlsbalken und Atmosphärenfarben stammen weiterhin von CLAP; Music2Emo liefert keine gleichwertigen sechs Kategorien.": "This selection applies to the existing audio/lyrics curve and Biggest Split. The six emotion bars and atmosphere colors still come from CLAP; Music2Emo does not provide six equivalent categories."
+  "Die Auswahl gilt für die vorhandene Audio-/Lyrics-Kurve und Biggest Split. Die sechs Gefühlsbalken und Atmosphärenfarben stammen weiterhin von CLAP; Music2Emo liefert keine gleichwertigen sechs Kategorien.": "This selection applies to the existing audio/lyrics curve and Biggest Split. The six emotion bars and atmosphere colors still come from CLAP; Music2Emo does not provide six equivalent categories.",
+  "Musik und Text gemeinsam": "Music and lyrics together",
+  "Belege der gemeinsamen Einordnung": "Evidence for the joint reading",
+  "Audioquelle": "Audio source",
+  "Zeitliche Textabdeckung": "Time-aligned lyric coverage",
+  "Ohne als unsicher markierte Wörter": "Excluding words flagged as uncertain",
+  "Textbelege": "Lyric references",
+  "Musikmerkmale aus dem gemessenen Zeitfenster": "Music features from the measured time window",
+  "Musik und Text zeigen eine ähnliche Valenztendenz.": "Music and lyrics show a similar valence tendency.",
+  "Musik und Text zeigen gegensätzliche Valenztendenzen.": "Music and lyrics show opposing valence tendencies.",
+  "Die Modelltendenzen ergeben keine eindeutige gemeinsame Richtung.": "The model tendencies do not establish a clear joint direction.",
+  "Für eine gemeinsame Einordnung fehlt ausreichend synchronisierter Text.": "There are insufficient time-aligned lyrics for a joint reading.",
+  "Die Texterkennung ist für eine belastbare gemeinsame Einordnung zu unsicher.": "Transcription is too uncertain for a reliable joint reading.",
+  "Die Audioschätzung ist für eine eindeutige gemeinsame Richtung zu instabil.": "The audio estimate is too unstable for a clear joint direction.",
+  "Tempo, Energie und Harmoniekandidaten ergänzen die Deutung; sie legen kein Gefühl fest.": "Tempo, energy and harmonic candidates inform the interpretation; they do not determine a feeling.",
+  "Diese gemeinsame Einordnung vergleicht Modellschätzungen. Sie ist keine gemessene Gefühlsreaktion. Gegensätze werden nicht zu einem scheinbar neutralen Gesamtscore gemittelt.": "This joint reading compares model estimates. It is not a measured emotional response. Opposing tendencies are not averaged into a seemingly neutral overall score.",
+  "Direkt gelernte Regression, keine sechs Beschreibungsanteile.": "Direct learned regression, not six description shares."
 }

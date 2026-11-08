@@ -1,3 +1,4 @@
+import {RELATION_TEXT} from './CombinedReading';
 import {t,useLanguage} from './i18n';
 import {clock} from './types';
 
@@ -11,7 +12,9 @@ export function MusicEvidence({packet}:{packet?:MusicPacket|null}){
   <p>{t('Messwerte, Modellschätzungen und Deutung bleiben getrennt. Hohe Energie kann verschiedene Gefühle verstärken und beweist keinen Ärger.')}</p>
   {packet.observations.map(row=>{const value=row.value;return <article key={row.id}>
    <small>{row.id} · {stamp(row.start)}–{stamp(row.end)} · {t(row.kind==='measurement'?'Messwert':row.kind==='candidate'?'Kandidat':'Modellschätzung')}</small>
-   {value.relative_descriptions&&<p>{t('Geschätzte Valenz')}: {Number(value.valence).toFixed(2)}. {t('Ähnlichste Beschreibungen')}: {Object.entries(value.relative_descriptions as Record<string,number>).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([name])=>t(labels[name]||name)).join(' · ')}. {t('Relative Ähnlichkeit, keine bestätigte Emotion.')}</p>}
+   {value.direct_regression&&<p>Music2Emo · {t('Geschätzte Valenz')}: {Number(value.valence).toFixed(2)}. {t('Direkt gelernte Regression, keine sechs Beschreibungsanteile.')}</p>}
+   {value.relation&&<p>{t(RELATION_TEXT[String(value.relation)]??RELATION_TEXT.mixed)} {value.text_references?.join(', ')}</p>}
+   {!value.direct_regression&&value.relative_descriptions&&<p>{t('Geschätzte Valenz')}: {Number(value.valence).toFixed(2)}. {t('Ähnlichste Beschreibungen')}: {Object.entries(value.relative_descriptions as Record<string,number>).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([name])=>t(labels[name]||name)).join(' · ')}. {t('Relative Ähnlichkeit, keine bestätigte Emotion.')}</p>}
    {'rms_mean' in value&&<p>{t('Energie gegenüber dem Songmittel')}: {value.relative_to_song_db==null?'—':`${Number(value.relative_to_song_db).toFixed(1)} dB`}. {t('RMS-Vergleich, keine wahrgenommene Lautheit.')}</p>}
    {'energy_range_db' in value&&<p>{t('Energieentwicklung')}: {t('Kräftigster gemessener Abschnitt')} {clock(value.peak_start)}–{clock(value.peak_end)}. {t('RMS-Vergleich, keine wahrgenommene Lautheit.')}</p>}
    {'bpm' in value&&<p>{t('Tempo-Schätzung')}: {Number(value.bpm).toFixed(1)} BPM. {t('Halbes oder doppeltes Tempo ist möglich.')}</p>}

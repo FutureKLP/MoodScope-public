@@ -1,7 +1,7 @@
 """Bounded, time-aligned observations for interpretation; never emotion ground truth."""
 import math
 
-VERSION='music-observations-v1'
+VERSION='music-observations-v2-joint'
 
 
 def prompt_rows(value,language='de'):
@@ -9,7 +9,13 @@ def prompt_rows(value,language='de'):
     en=language=='en';result=[]
     for row in value['observations']:
         data=row['value']
-        if 'relative_descriptions' in data:
+        if 'relation' in data:
+            text=(f'Time-aligned audio/text relationship: {data["relation"]}; text references {", ".join(data["text_references"]) or "none"}. This compares model tendencies, not listener feelings. Preserve contradictions and uncertain transcription.' if en else
+                  f'Zeitlich zugeordnete Beziehung zwischen Musik und Text: {data["relation"]}; Textbelege {", ".join(data["text_references"]) or "keine"}. Verglichen werden Modelltendenzen, keine Hoerergefuehle. Widersprueche und unsichere Texterkennung erhalten.')
+        elif data.get('direct_regression'):
+            text=('Direct learned audio-valence estimate from Music2Emo; no six-category projection. Song-level training does not establish precise transitions.' if en else
+                  'Direkt gelernte Audio-Valenzschaetzung von Music2Emo; keine Projektion aus sechs Kategorien. Songbewertungen im Training belegen keine praezisen Uebergaenge.')
+        elif 'relative_descriptions' in data:
             text=(f'Uncalibrated audio-valence candidate {data["valence"]:+.2f}. The category ranking has not been validated as an interpretation cue and must not determine the lyric reading.' if en else
                   f'Unkalibrierter Audio-Valenzkandidat {data["valence"]:+.2f}. Die Kategorienrangfolge ist als Deutungsbeleg nicht validiert und darf die Textlesart nicht bestimmen.')
         elif 'energy_range_db' in data:
@@ -50,8 +56,9 @@ def packet(analysis,position=None):
     rows=[(row,overlap(row,start,end)) for row in audio if overlap(row,start,end)>0]
     covered=sum(weight for _,weight in rows)
     if covered:
-        add('model_estimate','CLAP',{
+        add('model_estimate',analysis.get('expression_source','CLAP'),{
             'valence':sum(row['valence']*weight for row,weight in rows)/covered,
+            'direct_regression':analysis.get('expression_source')=='Music2Emo',
             'relative_descriptions':{label:sum(row.get('scores',{}).get(label,0)*weight for row,weight in rows)/covered
                 for label in sorted({label for row,_ in rows for label in row.get('scores',{})})}},
             'Relative description similarities are uncalibrated. Anger may be confused with force or timbre. These scores must not dictate the lyric reading.')
@@ -97,6 +104,11 @@ def packet(analysis,position=None):
                 'label':chords[i][0]['label'],'margin':chords[i][0].get('margin'),
                 'degree':chords[i][0].get('degree'),'resolution_candidate':bool(chords[i][0].get('resolution'))} for i in indices]},
             'Estimated partial chord coverage; examples are sampled, not the complete progression. Major/minor and resolution candidates do not determine emotion.')
+    from .joint_evidence import observations as joint_observations
+    for row in joint_observations(analysis,position):
+        add('cross_modal_relation','audio_lyrics_alignment',row,
+            'Temporal comparison of model estimates, not a validated fused prediction or personal feeling.',
+            (row['start'],row['end']))
     return {'version':VERSION,'scope':'whole_song' if position is None else 'selected_position',
             'start':start,'end':end,'observations':observations,
             'unmeasured':['independent emotional tension','validated timbral harshness','confirmed instrumentation'],

@@ -22,7 +22,7 @@ if ($Desktop) {
             }
             if (!$health) { throw 'Backend konnte nicht gestartet werden.' }
         }
-        if ($health.status -ne 'ok' -or $health.version -ne '0.3.0' -or $health.api_revision -ne 12) {
+        if ($health.status -ne 'ok' -or $health.version -ne '0.3.0' -or $health.api_revision -ne 13) {
             throw 'Unpassendes Backend auf Port 8765. Bisherigen MoodScope-Dienst beenden und erneut starten.'
         }
         $nativePath = & $projectPython -c "from scripts.launch import latest_binary; print(latest_binary())"

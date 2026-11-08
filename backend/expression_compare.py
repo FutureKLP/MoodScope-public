@@ -14,6 +14,13 @@ WEIGHTS=ROOT/'models/music2emo'
 METHOD='music2emo-curve-v1'
 
 
+def project_analysis(analysis,result):
+    """Use the selected direct regressions without inventing six-way categories."""
+    return {**analysis,'audio':[{**row,'scores':{}} for row in result['rows']],
+            'expression_source':'Music2Emo','expression_model_basis':result.get('model_basis'),
+            'expression_context_seconds':result.get('context_seconds',30)}
+
+
 def ready():
     return all((WEIGHTS/name).is_file() for name in (
         'installation.json','provenance.json','J_all.ckpt','btc_model_large_voca.pt',

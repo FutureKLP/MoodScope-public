@@ -39,7 +39,7 @@ def test_position_uses_actual_local_key_and_correct_time_scope():
 def test_chord_examples_span_selection_and_expose_missing_coverage():
     data=analysis();data['features']['duration']=30
     data['features']['harmony']['chords']=[{'start':i,'end':i+.5,'label':f'candidate_{i}','margin':.03} for i in range(30)]
-    value=packet(data);chords=value['observations'][-1]['value']
+    value=packet(data);chords=next(row['value'] for row in value['observations'] if 'sequence_examples' in row['value'])
     assert chords['coverage']==.5
     assert len(chords['sequence_examples'])<=8
     assert chords['sequence_examples'][-1]['label']=='candidate_29'
@@ -73,7 +73,7 @@ def test_grounded_prompt_reaches_provider_without_weakening_text_guards(tmp_path
     prompts=[]
     monkeypatch.setattr(providers,'generate',lambda *args:(prompts.append(args[-1]) or {'text':'The words may suggest uncertainty. The estimate M1 can support a contrasting reading, without deciding the meaning.'}))
     result=interpretation(tmp_path,None,analysis(),{},provider_id='fixture',language='en',include_music=True)
-    assert result['music_evidence']['version']=='music-observations-v1'
+    assert result['music_evidence']['version']=='music-observations-v2-joint'
     assert 'Measured energy development' in prompts[0] and 'high energy never establishes anger' in prompts[0]
     assert result['music_evidence']['observations'][0]['id']=='M1'
 
