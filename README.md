@@ -47,28 +47,31 @@ Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTun
 - Import synchronisierter LRC-Dateien oder Einfügen eigener zeitmarkierter Lyrics.
 - Lokale Whisper-Transkription als zuschaltbarer Fallback.
 - Anzeige von Modelltrennschärfe und Formulierungssensitivität; diese sind keine kalibrierte Genauigkeit.
-- Unter **Methode & Werte** zeigt eine zweidimensionale Ansicht Valenz und Aktivierung getrennt. Musikalische Hinweise und persönliche Gefühlsreaktionen werden erläutert, ohne ungeprüfte Zuschläge auf Modellwerte. [Forschungsgrundlage](docs/MUSIC-PSYCHOLOGY.md).
+- Die vorhandenen Emotionsbalken folgen fließend der Wiedergabe; der Rechenweg darunter zeigt die gespeicherten Abschnittswerte. Musikalische Hinweise und persönliche Gefühlsreaktionen werden erläutert. [Forschungsgrundlage](docs/MUSIC-PSYCHOLOGY.md).
 - Im Atmosphärenmodus prägt die führende Audio-Kategorie die Grundfarbe; kleinere Farbanteile mischen sich dezent darunter. Textfarben bleiben im Hintergrund zurückhaltend. Die Farbmischung verändert keine Analysewerte.
 - Lokale Emotionskurve v7: konstanter Analysepegel je Kontext, keine festen Emotionszuschläge durch musikalische Merkmale und keine zusätzliche Dreipunktglättung. Original-RMS und Wiedergabe bleiben erhalten. Bestehende Analysen verwenden weiterhin ihre gespeicherte Methode; Neu analysieren verwendet v7.
 
-### Optionaler zweiter Emotionsverlauf
+### Bewertungsmodell der Audio-/Lyrics-Kurve
 
-Unter **Methode & Werte** kann **Music2Emo vergleichen** einen getrennten,
-experimentellen Zweitverlauf berechnen. Er zeigt gelernte Valenz und Aktivierung
-sowie unabhaengige Mood-Tags. Die Anzeige verwendet 5-Sekunden-Schritte mit bis
-zu 30 Sekunden Kontext; die menschliche Validierung schneller Uebergaenge steht
-noch aus. Die bisherige Kurve, Playerfarben und aktive Modellwahl bleiben erhalten.
-Vergleiche werden beim Song gespeichert und mit **Analyse-Cache loeschen** entfernt.
-Abbruch beendet den separaten Modellprozess.
-Identische Audiokontexte am Songrand werden innerhalb eines Laufs nur einmal
-berechnet; sämtliche Anzeigeabschnitte bleiben erhalten.
+Direkt unter der vorhandenen Kurve lässt sich **Audio-Bewertungsmodell** öffnen.
+**Music2Emo verwenden** setzt einen aktuellen gespeicherten Vergleich in dieselbe
+Audio-/Lyrics-Kurve ein. **Music2Emo berechnen und verwenden** startet die lokale
+Berechnung. Die Audio-Kennzahl und **Biggest Split** folgen der Auswahl; Lyrics
+bleiben ihre eigenen Textschätzungen. **CLAP verwenden** stellt die bisherige
+Audio-Bewertung wieder her. Die Wahl wird lokal gemerkt; beim nächsten Song wird
+Music2Emo nur mit einem passenden aktuellen Cache wieder angezeigt.
 
-Diese optionale Erweiterung wird nicht automatisch heruntergeladen. Sie benoetigt
-die geprueften Music2Emo-/MERT-Gewichte, einen lokalen Quellstand sowie isolierte
-Zusatzpakete; Einrichtung und Lizenzgrenzen stehen in
-[docs/EMOTION-MODELS.md](docs/EMOTION-MODELS.md). Der Vergleichsprozess verwendet
-die Basisumgebung `.venv`, auch wenn der Dienst die neuere Transkriptionsumgebung
-nutzt. Ohne Erweiterung bleibt die vorhandene Analyse verfuegbar.
+Music2Emo verwendet bis zu 30 Sekunden Kontext und 5-Sekunden-Schritte. Es trifft
+auf dem bisherigen Referenzsatz das allgemeine Niveau besser, schnelle Übergänge
+sind weiter unzureichend validiert. Die sechs Gefühlsbalken und Atmosphärenfarben
+bleiben CLAP-Beschreibungsanteile; sie werden nicht aus Music2Emo-Tags erfunden.
+Unter **Methode & Werte** sind diese Herkunft und die gespeicherte CLAP-Rechnung
+sichtbar. Zusätzliche Vergleichsdiagramme werden nicht eingeblendet.
+
+Die Erweiterung wird nicht automatisch heruntergeladen. Lokale Einrichtung,
+getrennte Basisumgebung und Lizenzbedingungen stehen in
+[docs/EMOTION-MODELS.md](docs/EMOTION-MODELS.md). Abbruch beendet den separaten
+Modellprozess. Vergleichsdaten werden mit dem Analyse-Cache entfernt.
 
 ### Bibliothek
 

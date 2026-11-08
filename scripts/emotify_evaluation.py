@@ -30,6 +30,19 @@ GEMS={
     'sadness':['sad and sorrowful','depressed and mournful'],
 }
 
+# A separately evaluated descriptor candidate; never activated in the product.
+GEMS_REVISED={
+    'amazement':['awe, wonder and fascination','amazed and emotionally moved'],
+    'solemnity':['solemn, reverent and contemplative','transcendent and spiritually moved'],
+    'tenderness':['tender, affectionate and warm','gentle, loving and compassionate'],
+    'nostalgia':['nostalgic, wistful and longing','sentimental and yearning for the past'],
+    'calmness':['peaceful, calm and relaxed','serene and soothed'],
+    'power':['empowered, determined and confident','triumphant, courageous and strong'],
+    'joyful_activation':['joyful, happy and uplifting','cheerful, delighted and celebratory'],
+    'tension':['tense, anxious and uneasy','restless, nervous and apprehensive'],
+    'sadness':['sad, melancholic and sorrowful','grieving and mournful'],
+}
+
 
 def reference(path):
     grouped=defaultdict(list);genres={};excluded=defaultdict(int)
@@ -78,7 +91,8 @@ def metrics(rows):
     return result
 
 
-def run(annotations,selection,audio_directory,model_directory,output,device='cpu'):
+def run(annotations,selection,audio_directory,model_directory,output,device='cpu',descriptor_profile='original'):
+    descriptors={'original':GEMS,'revised':GEMS_REVISED}[descriptor_profile]
     import numpy as np
     import soundfile as sf
     import librosa
@@ -97,7 +111,7 @@ def run(annotations,selection,audio_directory,model_directory,output,device='cpu
     destination=output_directory(output)
     processor=ClapProcessor.from_pretrained(model_directory,local_files_only=True)
     model=ClapModel.from_pretrained(model_directory,local_files_only=True).to(device).eval()
-    names=list(GEMS);texts=PROMPTS+[f'The music evokes feelings that are {word}.' for words in GEMS.values() for word in words]
+    names=list(descriptors);texts=PROMPTS+[f'The music evokes feelings that are {word}.' for words in descriptors.values() for word in words]
     rows=[];started=time.perf_counter()
     for number,track in enumerate(selected):
         path=Path(audio_directory)/f'{track["track_id"]}.mp3'
@@ -128,7 +142,7 @@ def run(annotations,selection,audio_directory,model_directory,output,device='cpu
                 'gems_cosine':dict(zip(names,average('gems_cosine',len(names))))})
         if digest(path)!=track['sha256']:raise RuntimeError('Source changed')
         print(f'External tracks completed: {number+1}/{len(selected)}',flush=True)
-    report={'version':'emotify-induced-check-v1','source':SOURCE,'annotations_sha256':digest(annotations),
+    report={'version':'emotify-induced-check-v1','descriptor_profile':descriptor_profile,'source':SOURCE,'annotations_sha256':digest(annotations),
         'selection_sha256':digest(selection),'model_snapshot':model_directory.name,'device':device,
         'prompts':texts,'seconds':time.perf_counter()-started,'rows':rows,
         'metrics':{p:metrics([row for row in rows if row['processing']==p]) for p in ['original','level_matched']}}
@@ -140,5 +154,6 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for arg in ['annotations','selection','audio-directory','model-directory','output']:parser.add_argument('--'+arg,required=True)
     parser.add_argument('--device',choices=['cpu','cuda'],default='cpu')
+    parser.add_argument('--descriptor-profile',choices=['original','revised'],default='original')
     args=parser.parse_args()
-    run(args.annotations,args.selection,args.audio_directory,args.model_directory,args.output,args.device)
+    run(args.annotations,args.selection,args.audio_directory,args.model_directory,args.output,args.device,args.descriptor_profile)

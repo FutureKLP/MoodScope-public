@@ -57,6 +57,24 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it('uses learned valence in the existing curve and restores CLAP without a new chart',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      if(String(input).includes('/expression-comparison'))return new Response(JSON.stringify({ready:true,stale:false,result:{rows:[{start:0,end:12,valence:.7,arousal:.6}]}}));
+      return original(input,init);
+    }));
+    const view=render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    const initial=view.container.querySelector('.audio-path')!.getAttribute('d');
+    await userEvent.click(screen.getByText(/Audio-Bewertungsmodell/));
+    await userEvent.click(screen.getByRole('button',{name:'Music2Emo verwenden'}));
+    expect(view.container.querySelector('.audio-path')!.getAttribute('d')).not.toBe(initial);
+    expect(view.container.querySelectorAll('.audio-path')).toHaveLength(1);
+    expect(screen.getByText('0.70')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button',{name:'CLAP verwenden'}));
+    expect(view.container.querySelector('.audio-path')!.getAttribute('d')).toBe(initial);
+  });
   it('does not restore a deleted playback source when only the subsequent library refresh fails',async()=>{
     vi.spyOn(HTMLMediaElement.prototype,'load').mockImplementation(()=>{});
     const original=vi.mocked(fetch).getMockImplementation()!;let deleted=false;

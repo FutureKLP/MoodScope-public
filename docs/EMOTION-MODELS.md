@@ -167,11 +167,13 @@ DEAM-Testsatz pruefte anschliessend passende Valenz-/Aktivierungsurteile; siehe 
 
 ## Produktintegration und Nachweisgrenze
 
-Die optionale Vergleichsfunktion unter **Methode & Werte** fuehrt die korrigierte
+Die optionale Modellauswahl unter der bestehenden Audio-/Lyrics-Kurve fuehrt die korrigierte
 Music2Emo-Inferenz in einem eigenen Prozess aus. Beide Regressionsausgaenge und
 die unabhaengigen Tags bleiben getrennt; sie werden nicht in sechs CLAP-Kategorien
 umgerechnet. Anzeigeintervall: fuenf Sekunden; Kontext: bis zu 30 Sekunden,
-am Rand innerhalb der Aufnahme verschoben. Die Hauptanalyse wird nicht ersetzt.
+am Rand innerhalb der Aufnahme verschoben. Die gespeicherte Hauptanalyse bleibt erhalten; die Anzeige kann ihre Audio-Valenz
+durch den separat gespeicherten Verlauf ersetzen. Biggest Split wird dazu passend
+aus den ueberlappenden Lyrics neu berechnet.
 
 Ein Vergleich auf 32 vorab ausgewaehlten IDs des veroeffentlichten DEAM-Testsplits
 zeigte bessere Songmittelwerte fuer Valenz und Aktivierung als die CLAP-v7-

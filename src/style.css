@@ -116,3 +116,5 @@ html{scrollbar-gutter:stable}.ambient-dialog{transition:--mood-hue 1.6s ease,--l
 .ambient-undertones span:nth-child(even){inset:-30% -10% 30%}
 .emotion-reading{margin-top:24px;padding-top:20px;border-top:1px solid #30434b}.emotion-reading p{line-height:1.7;color:#b5c7cc}.emotion-plane{display:block;width:min(100%,480px);margin:14px auto;color:#c8d8df}.emotion-plane text{fill:currentColor;font-size:12px}.emotion-reading a{text-decoration:underline}.emotion-reading details{margin-top:14px}
 @media(prefers-reduced-motion:reduce){.ambient-undertones span{transition:none}}
+
+.curve-model-control{margin:14px 0;padding:12px 14px;border:1px solid #30434b;border-radius:10px;font-size:12px}.curve-model-control p{color:#b5c7cc;line-height:1.7;margin:10px 0}.curve-model-control .tool-row{flex-wrap:wrap}
