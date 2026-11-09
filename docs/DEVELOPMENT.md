@@ -377,3 +377,13 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 - Abschlussvalidierung: Gesamtlauf mit 245 Backend- und 86 Frontend-Tests erfolgreich. Nach der letzten Validierungs-/Zustimmungsabsicherung bestanden 55 betroffene Backend- und 23 betroffene Frontend-Tests sowie der Produktionsbuild erneut. Nativer Windows-Releasebuild erfolgreich fuer den naechsten regulären Start bereitgestellt. Anbieterziel, Modell und Key werden atomar je Anfrage erfasst; Profil-/Key-Aenderungen sind waehrend laufender Jobs gesperrt. Keine neuen Live-Anbieteraufrufe oder native Abnahme eines echten API-Durchlaufs. Fuer API-Revision 14 Dienst und App neu starten; Sitzungs-Keys anschliessend erneut eingeben.
 
 - Abschliessend wird auch bei Textanfragen und Audioprofil-Aktivierung das Profil zusammen mit seinem Sitzungs-Key unter derselben Sperre erfasst. 66 betroffene Anbieter-/Audio-/App-Tests danach erneut bestanden.
+
+
+## Heimserver-Verbindung und Modellliste
+
+- Ollama, LM Studio und kompatible Heimserver koennen per privater IP-Adresse oder aufloesbarem Heimnetz-Namen konfiguriert werden. HTTP-Namen sind nur bei ausschliesslich lokalen/privaten Zieladressen erlaubt; IPv4-in-IPv6-Adressen werden vor der Pruefung normalisiert. Oeffentliche HTTP-Ziele und linklokale Adressen bleiben ausgeschlossen.
+- Expliziter Verbindungstest liest nur die kompatible Modellliste und erlaubt anschliessend die Modellauswahl. Keine automatische Modellinstallation, kein Modellstart und keine Uebertragung von Songtext oder Audio bei diesem Test. Der aktuell eingegebene Key wird nur fuer diese Anfrage verwendet und nicht durch den Test gespeichert.
+- Lokaler echter HTTP-Testserver prueft Modellliste und ausdrueckliche Textanfrage ohne Key. Dies prueft das Protokoll, nicht einen konkreten Nutzer-Ollama-Server. Audio bleibt an tatsaechliche input_audio-Unterstuetzung und ein passendes Audiomodell gebunden.
+- API-Revision 15 in Backend, UI und Startern abgestimmt. 87 Frontend-Tests und Produktionsbuild bestanden; nativer Windows-Releasebuild fuer den naechsten regulaeren Start bereitgestellt. Kein neuer nativer Bedienlauf an einem echten Heimserver und keine Aenderung von Serverfreigaben oder Firewall.
+
+- Abschliessender kompletter Backend-Lauf: 251 Tests bestanden. Frontend, Produktionsbuild und nativer Build entsprechen dem oben dokumentierten erfolgreichen Stand.

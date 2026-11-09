@@ -498,3 +498,12 @@ def test_compatible_audio_profile_drives_curve_lyrics_and_details_without_local_
     module.jobs['api-details']={'status':'running'};module.run_details('api-details',identity,'cloud')
     assert module.jobs['api-details']['result']['instruments']==[{'instrument':'guitar','source':'api','uncertain':True}]
     with module.db() as conn:assert all('fixture-key' not in raw for (raw,) in conn.execute('SELECT result FROM cache'))
+
+
+def test_provider_model_probe_does_not_persist_keys_or_create_profiles(client,monkeypatch):
+    module=importlib.import_module('backend.app');seen=[]
+    monkeypatch.setattr(module.providers,'discover_models',lambda base,key:seen.append((base,key)) or {'models':['home-fixture'],'generated':False})
+    result=client.post('/api/providers/models',json={'base_url':'http://127.0.0.1:11434/v1','api_key':'fixture-key'})
+    assert result.status_code==200 and result.json()=={'models':['home-fixture'],'generated':False}
+    assert seen==[('http://127.0.0.1:11434/v1','fixture-key')]
+    assert 'fixture-key' not in result.text and not (module.DATA/'providers.json').exists()

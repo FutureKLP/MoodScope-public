@@ -918,5 +918,14 @@
   "API-Gesangserkennung abgeschlossen. Text und Zeitstempel sind unsicher; bitte vor einer gemeinsamen Deutung prüfen.": "API singing transcription completed. Words and timestamps are uncertain; review them before a joint interpretation.",
   "Im API-Modus übernimmt das Audioprofil die Gesangserkennung. Modell, Sprache und Quellenwahl oben gelten nur für lokales Whisper. API-Zeitstempel sind keine geprüfte Wortausrichtung.": "In API mode, the audio profile transcribes singing. The model, language and source controls above apply only to local Whisper. API timestamps are not verified word alignment.",
   "API-Instrumenthinweise sind unsichere Hypothesen, keine bestätigte Besetzung.": "API instrument hints are uncertain hypotheses, not confirmed instrumentation.",
-  "API-Gesangserkennung und Zeitstempel sind unsicher. Text und Zeitangaben vor einer gemeinsamen Deutung prüfen.": "API singing transcription and timestamps are uncertain. Review the words and timings before a joint interpretation."
+  "API-Gesangserkennung und Zeitstempel sind unsicher. Text und Zeitangaben vor einer gemeinsamen Deutung prüfen.": "API singing transcription and timestamps are uncertain. Review the words and timings before a joint interpretation.",
+  "Eigener Heimserver: Ollama, LM Studio oder ein kompatibler Server im LAN. Basis-URL mit /v1 eingeben. Ohne Server-Authentifizierung darf der Key leer bleiben. Der Test liest nur Modellnamen und startet keine KI-Berechnung.": "Home server: Ollama, LM Studio or a compatible LAN server. Enter a base URL ending in /v1. Without server authentication, the key may be empty. The test reads model names only and does not run AI inference.",
+  "Verbindung prüfen und Modelle laden": "Check connection and load model list",
+  "Modell vom Server": "Model from server",
+  "Modell auswählen": "Select a model",
+  "Modellliste geladen. Gewünschtes Modell auswählen.": "Model list loaded. Select a model.",
+  "Server erreichbar, aber keine Modelle gemeldet.": "Server reachable, but no models were reported.",
+  "Heimserver-Name nicht auflösbar. Netzwerkverbindung oder lokale IP-Adresse prüfen.": "Home-server name could not be resolved. Check the network connection or local IP address.",
+  "Modellserver nicht erreichbar. Adresse, Port, Serverfreigabe und Firewall prüfen.": "Model server unreachable. Check the address, port, server network access and firewall.",
+  "Server lieferte keine gültige kompatible Modellliste.": "Server did not return a valid compatible model list."
 }

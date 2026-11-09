@@ -369,3 +369,9 @@ Mistral/Voxtral- und eigene kompatible Audiomodelle. Sie koennen Emotionskurve,
 Textbewertung, optionale Gesangserkennung und separat angeforderte
 Instrumenthinweise uebernehmen. Reine Textanbieter bleiben fuer Deutungen nutzbar.
 Einrichtung, Datenuebertragung und Grenzen stehen in [API-PROFILES.md](docs/API-PROFILES.md).
+
+Eigene Heimserver (Ollama, LM Studio und kompatible APIs) lassen sich mit
+LAN-Adresse oder aufloesbarem privaten Heimnetz-Namen eintragen, auch ohne Key.
+**Verbindung pruefen und Modelle laden** liest die Modellliste; danach kann die
+Modell-ID ausgewaehlt werden. Dabei werden keine Songdaten gesendet und keine
+Modelle heruntergeladen. Einrichtung siehe [API-PROFILES.md](docs/API-PROFILES.md).

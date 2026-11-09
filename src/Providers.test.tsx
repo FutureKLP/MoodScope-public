@@ -22,3 +22,18 @@ it('saves explicit audio capabilities and activates only the selected profile',a
  await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Für Audio-API verwenden'})));
  expect(changed).toHaveBeenCalledWith({provider:'Authored audio',model:'audio-fixture'});
 });
+
+it('discovers a home-server model without saving a profile or submitting audio or text',async()=>{
+ setLanguage('de');const bodies:any[]=[];
+ vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+  if(String(input).endsWith('/providers/models')){bodies.push(JSON.parse(String(init?.body)));return new Response(JSON.stringify({models:['authored-home-model'],generated:false}))}
+  return new Response(JSON.stringify({profiles:[]}));
+ }));
+ render(<ProviderSettings perform={fn=>fn()} busy={false}/>);await act(async()=>{});
+ fireEvent.click(screen.getByRole('button',{name:'Ollama'}));
+ fireEvent.change(screen.getByLabelText('KI-Server Basis-URL'),{target:{value:'http://192.168.1.20:11434/v1'}});
+ await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Verbindung prüfen und Modelle laden'})));
+ fireEvent.change(screen.getByLabelText('Modell vom Server'),{target:{value:'authored-home-model'}});
+ expect((screen.getByLabelText('KI-Server Modell-ID') as HTMLInputElement).value).toBe('authored-home-model');
+ expect(bodies).toEqual([{base_url:'http://192.168.1.20:11434/v1',api_key:''}]);
+});

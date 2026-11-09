@@ -5,6 +5,7 @@ from pathlib import Path
 import threading
 from urllib.parse import urlsplit
 import uuid
+import socket
 import httpx
 
 _keys={}
@@ -17,12 +18,36 @@ def endpoint(value):
     p=urlsplit(value)
     if p.scheme not in {'http','https'} or not p.hostname or p.username or p.password or p.query or p.fragment:
         raise ValueError('Basis-URL ohne Zugangsdaten, Query oder Fragment eingeben.')
-    try:address=ipaddress.ip_address(p.hostname)
+    try:
+        address=ipaddress.ip_address(p.hostname)
+        address=getattr(address,'ipv4_mapped',None) or address
     except ValueError:address=None
     if address and (address.is_link_local or address.is_unspecified or address.is_multicast):raise ValueError('Diese Serveradresse ist nicht unterstützt.')
     if p.scheme=='http' and p.hostname!='localhost' and not (address and (address.is_private or address.is_loopback)):
-        raise ValueError('Entfernte Internetserver benötigen HTTPS; HTTP ist für lokale/LAN-Server erlaubt.')
+        if address:raise ValueError('Entfernte Internetserver benötigen HTTPS; HTTP ist für lokale/LAN-Server erlaubt.')
+        try:
+            resolved={ipaddress.ip_address(row[4][0]) for row in socket.getaddrinfo(p.hostname,p.port or 80,type=socket.SOCK_STREAM)}
+            resolved={getattr(a,'ipv4_mapped',None) or a for a in resolved}
+        except (OSError,ValueError):raise ValueError('Heimserver-Name nicht auflösbar. Netzwerkverbindung oder lokale IP-Adresse prüfen.') from None
+        if not resolved or any(not (a.is_private or a.is_loopback) or a.is_link_local or a.is_unspecified or a.is_multicast for a in resolved):
+            raise ValueError('Entfernte Internetserver benötigen HTTPS; HTTP ist für lokale/LAN-Server erlaubt.')
     return value
+
+
+def discover_models(base_url,key=''):
+    """Read metadata only: never load models or submit text/audio."""
+    base=endpoint(base_url)
+    try:response=httpx.get(base+'/models',headers={'Authorization':'Bearer '+key} if key else {},timeout=httpx.Timeout(15,connect=5),follow_redirects=False)
+    except httpx.HTTPError:raise ValueError('Modellserver nicht erreichbar. Adresse, Port, Serverfreigabe und Firewall prüfen.') from None
+    if response.status_code!=200:raise ValueError(f'Modellliste meldet HTTP {response.status_code}. Basis-URL mit /v1 und gegebenenfalls Sitzungs-Key prüfen.')
+    try:
+        if len(response.content)>2_000_000:raise ValueError()
+        rows=response.json()['data']
+        if not isinstance(rows,list) or len(rows)>1000:raise ValueError()
+        ids=[row['id'] for row in rows]
+        if any(not isinstance(value,str) or not value.strip() or len(value)>120 for value in ids):raise ValueError()
+        return {'models':sorted(set(ids)),'generated':False}
+    except (ValueError,KeyError,TypeError):raise ValueError('Server lieferte keine gültige kompatible Modellliste.') from None
 
 
 def profiles(data):

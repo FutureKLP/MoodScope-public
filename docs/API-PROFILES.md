@@ -53,3 +53,35 @@ Cache-Schluesseln noch in gespeicherten Profilen.
 Die Anbindung wird mit simulierten Antworten der dokumentierten Protokolle
 getestet. Ein echter kostenpflichtiger Durchlauf und eine wissenschaftliche
 Genauigkeitspruefung dieser Anbieter sind damit nicht nachgewiesen.
+
+
+## Eigene Heimserver mit Ollama oder LM Studio
+
+In Modelle & API die Vorlage Ollama oder LM Studio waehlen. Die Basis-URL kann
+auf denselben Rechner oder einen Heimserver zeigen. Beispiele fuer denselben
+Rechner sind http://127.0.0.1:11434/v1 und http://127.0.0.1:1234/v1. Auf einem
+anderen Rechner die dortige LAN-Adresse oder dessen Heimnetz-Namen einsetzen;
+localhost bezeichnet immer den Rechner, auf dem der MoodScope-Dienst laeuft.
+HTTP-Hostnamen werden nur akzeptiert, wenn alle aufgeloesten Adressen lokal/privat
+sind. Linklokale, nicht angegebene und Multicast-Adressen bleiben ausgeschlossen.
+Fuer entfernte oeffentliche Server ist HTTPS erforderlich.
+
+Verbindung pruefen und Modelle laden liest ausschliesslich GET /models am
+angegebenen kompatiblen Endpoint. Es werden weder Songdaten uebertragen noch
+Modelle heruntergeladen oder gestartet. Ein Modell aus der Antwort auswaehlen
+oder die genaue Modell-ID direkt eingeben, dann Profil speichern. Ein Key ist
+nur noetig, wenn der eigene Server oder sein vorgeschalteter Proxy Authentifizierung
+verlangt. Der Verbindungstest verwendet den aktuell eingegebenen Key.
+
+Das Textprofil anschliessend unter Interpretation waehlen und der Uebertragung
+an diesen Server zustimmen. Der Server muss aus dem MoodScope-Netz erreichbar sein;
+die App aendert keine Serverfreigaben oder Firewall-Einstellungen. Die
+[Ollama-Kompatibilitaetsdokumentation](https://docs.ollama.com/api/openai-compatibility),
+[Ollama-FAQ](https://docs.ollama.com/faq) und
+[LM-Studio-Modellliste](https://lmstudio.ai/docs/developer/openai-compat/models)
+beschreiben die serverseitigen Voraussetzungen.
+
+Ein uebliches Ollama-Textmodell kann nicht allein durch Aktivieren der
+Audio-Checkbox Musik hoeren. Fuer Audio muss der eigene Server tatsaechlich
+input_audio und ein passendes Audiomodell bereitstellen. Ein Heimserver kann
+seinerseits Cloud-Modelle aufrufen; seine Konfiguration bestimmt, wo die KI rechnet.

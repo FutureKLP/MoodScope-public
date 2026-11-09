@@ -166,7 +166,7 @@ def health(purpose:Literal['audio','lyrics','whisper','interpretation','separati
     from scripts.runtime import environment_id
     device=engines.device() if purpose=='audio' else engines.device(purpose)
     name=next((d['name'] for d in runtime_devices.available() if d['id']==('cuda:0' if device=='cuda' else device)),device)
-    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':14,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
+    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':15,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -1188,6 +1188,17 @@ class ProviderSettings(BaseModel):
     free_project_confirmed:bool=False
     audio_input:bool=False
     audio_usage_confirmed:bool=False
+
+
+class ProviderProbe(BaseModel):
+    base_url:str=Field(min_length=8,max_length=500)
+    api_key:SecretStr=Field(default=SecretStr(''),max_length=500)
+
+
+@app.post('/api/providers/models')
+def provider_models(request:ProviderProbe):
+    try:return providers.discover_models(request.base_url,request.api_key.get_secret_value())
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
 
 
 @app.get('/api/providers')

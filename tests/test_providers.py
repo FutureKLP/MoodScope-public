@@ -4,8 +4,9 @@ import pytest
 from backend import providers
 
 
-@pytest.mark.parametrize('value',['https://example.com/v1?token=value','http://example.com/v1','http://169.254.169.254/v1','file:///tmp/model','https://'+':'.join(['user','password'])+chr(64)+'example.com'])
-def test_invalid_model_server_endpoints(value):
+@pytest.mark.parametrize('value',['https://example.com/v1?token=value','http://example.com/v1','http://169.254.169.254/v1','http://[::ffff:169.254.169.254]/v1','file:///tmp/model','https://'+':'.join(['user','password'])+chr(64)+'example.com'])
+def test_invalid_model_server_endpoints(value,monkeypatch):
+    monkeypatch.setattr(providers.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',('8.8.8.8',80))])
     with pytest.raises(ValueError):providers.endpoint(value)
 
 
@@ -72,3 +73,36 @@ def test_audio_profile_requires_explicit_capability_and_terms_and_edit_deactivat
     providers.save(tmp_path,{**request,'id':p['id'],'model':'changed-model','audio_input':True,'audio_usage_confirmed':True})
     with pytest.raises(cloud.CloudError):cloud.credential()
     providers.remove(tmp_path,p['id'])
+
+
+@pytest.mark.parametrize('addresses,accepted',[(['192.168.1.20'],True),(['192.168.1.20','8.8.8.8'],False),(['169.254.169.254'],False)])
+def test_http_home_server_names_require_private_resolved_addresses(monkeypatch,addresses,accepted):
+    monkeypatch.setattr(providers.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',(ip,11434)) for ip in addresses])
+    if accepted:assert providers.endpoint('http://authored-server.local:11434/v1')=='http://authored-server.local:11434/v1'
+    else:
+        with pytest.raises(ValueError):providers.endpoint('http://authored-server.local:11434/v1')
+
+
+def test_home_server_connection_model_discovery_and_generation_without_key(tmp_path):
+    from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
+    import threading
+    calls=[]
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self,*a):pass
+        def send(self,value):
+            raw=json.dumps(value).encode();self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
+        def do_GET(self):
+            calls.append(('GET',self.path));assert not self.headers.get('Authorization')
+            self.send({'data':[{'id':'authored-home-model'}]})
+        def do_POST(self):
+            calls.append(('POST',self.path));assert not self.headers.get('Authorization')
+            body=json.loads(self.rfile.read(int(self.headers['Content-Length'])));assert body['model']=='authored-home-model'
+            self.send({'choices':[{'finish_reason':'stop','message':{'content':'A cautious reading of the authored text.'}}]})
+    server=ThreadingHTTPServer(('127.0.0.1',0),Handler);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+    try:
+        base=f'http://127.0.0.1:{server.server_port}/v1'
+        result=providers.discover_models(base);assert result=={'models':['authored-home-model'],'generated':False}
+        profile=providers.save(tmp_path,{'name':'Home fixture','protocol':'openai','base_url':base,'model':result['models'][0]})
+        assert providers.generate(tmp_path,profile['id'],'Authored text')['text']
+        assert calls==[('GET','/v1/models'),('POST','/v1/chat/completions')]
+    finally:server.shutdown();server.server_close();thread.join(timeout=3)
