@@ -351,3 +351,15 @@ Der Live-Mix verwendet einen lokal erzeugten stummen Wiedergabetakt und bis zu s
 **Gespeicherte Spuren laden** liest vorhandene Ergebnisse direkt ein und zeigt eine Bereitschaftsmeldung. Dafür wird kein neuer Trennauftrag gestartet. Fehlende Spuren werden weiterhin durch einen echten lokalen Trennauftrag erzeugt.
 
 Bei einem anhand Metadaten und Audio erkannten Wiederimport findet das Hörstudio auch die vorhandenen Trennspuren der bestätigten Aufnahme. Bereits separat erzeugte Spuren einer älteren Importvariante bleiben verfügbar. Das gilt auch für Quellenmix, Export und manuellen Hörfokus. Monospuren werden für den Hörfokus auf beide Wiedergabekanäle gelegt.
+
+Der Atmosphaerenmodus faerbt den Hintergrund sichtbar nach den aktuellen
+Balkenfarben: die staerkste Kategorie praegt die Flaeche, kleinere Anteile
+mischen sich dezent darunter. Balken und Hintergrund verwenden dieselbe Palette.
+Die Farben orientieren sich an verbreiteten psychologischen Assoziationen;
+die konkrete Gestaltung ist keine weitere Emotionsmessung.
+
+KI-Anbieterprofile und API-Key-Felder stehen unter **Modelle & API** sowohl
+im lokalen als auch im API-Modus bereit. Die obere Auswahl bezeichnet den
+API-Modus allgemein; die App zeigt die tatsaechliche Unterstuetzung getrennt:
+Gemini fuer Audiokurven, eingetragene Textprofile fuer Deutungen. Der Moduswechsel
+startet keine Anbieteranfrage. API-Keys bleiben nur im Backend-Arbeitsspeicher.

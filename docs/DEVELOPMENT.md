@@ -353,3 +353,13 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 
 - Abschlussvalidierung: 233 Backend-Tests und 82 Frontend-Tests sowie Produktions- und nativer Windows-Releasebuild bestanden. Zwei Hoerstudio-Tests scheiterten zuerst mit ueberlangem temporaerem Windows-Pfad; beide einzeln und danach die gesamte Suite mit kurzem Testpfad erfolgreich.
 - Native Bedienpruefung: App gestartet, vorhandene Analyse geoeffnet, laufende direkte Musikbewertung waehrend des Wechsels zu Methode & Werte erfolgreich uebernommen. Detailbalken, getrennte Klangcharakter-Gruppe, realer 30-Sekunden-Kontext und Abschnittssteuerung sichtbar geprueft. Kein Nachweis vollstaendiger Genre- oder zeitlicher Emotionsgenauigkeit; kein frischer Linux-Lauf.
+
+
+## Balkenfarben im Hintergrund und zugaengliche API-Profile
+
+- Gemeinsame Farbquelle fuer Balken und Atmosphaerenhintergrund; haeufige psychologische Assoziationen und Gestaltungsentscheidungen in MUSIC-PSYCHOLOGY.md getrennt dokumentiert. Staerkerer, kontinuierlicher Dominanzakzent anhand des rohen Balkenabstands statt eines durch neun unabhaengige Tags verduennten Abstands. Farbigerer grossflaechiger Hintergrund, dunklere Inhaltsflaechen und unveraenderte Modellwerte.
+- Anbieter-/Key-Verwaltung in beiden Modi sichtbar, vor lokalen Einstellungen. Allgemeinere API-Modusbezeichnung mit konkreter Faehigkeitserklaerung: Gemini-Audio und separate Textanbieter. Kein automatischer API-Aufruf durch Moduswechsel.
+- Moduswechsel stellt die vorhandene Analyse sofort wieder her und ignoriert ueberholte Antworten nach Modus-/Songwechsel. Atmosphaerenstatus bleibt bestehen. Integrationstest prueft lokale Musik-Tags, API-Modus ohne Cache und identische Hintergrundfarbe nach der Rueckkehr.
+- Zwischenvalidierung: 85 Frontend-Tests und Produktionsbuild bestanden; 23 gezielte Backend-Tests fuer Anbieter, Sprache und Publikationsschutz bestanden. Native und visuelle Pruefung stehen fuer diesen Stand noch aus.
+
+- Abschlusspruefung: 85 Frontend-Tests und Produktionsbuild nach der abschliessenden Anordnung erneut erfolgreich. Nativer Windows-Releasebuild erfolgreich bereitgestellt. In der gestarteten App Anbieter-/Key-Verwaltung im lokalen Modus, allgemeine API-Auswahl und sichtbarer songabhaengiger Hintergrund geprueft. API-Modus ohne Analyse und Rueckkehr zu lokal stellten den Music2Emo-Hintergrund wieder her. Es wurden dabei keine Zugangsdaten eingegeben oder Anbieteranfragen gestartet. Der letzte komplette Backend-Lauf bleibt 233 bestanden; fuer diesen Oberflaechenstand bestanden die 23 gezielten Backend-Checks.

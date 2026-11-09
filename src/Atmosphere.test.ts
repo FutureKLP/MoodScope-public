@@ -16,7 +16,7 @@ it('keeps motion timing unchanged while exposing continuous palette shares',()=>
 it('uses the leading audio category while keeping subordinate shares proportional',()=>{
  const mix=emotionMix(point({anger:.8,joy:.15,calm:.05}));
  expect(mix.dominant).toBe('anger');expect(mix.dominance).toBeCloseTo(.65);
- expect(mix.leadColor).toMatch(/^color-mix\(in oklab, #ce897f /);
+ expect(mix.leadColor).toMatch(/^color-mix\(in oklab, #e36b62 /);
  expect(mix.weights.joy).toBeCloseTo(.15);expect(mix.weights.calm).toBeCloseTo(.05);
  const style=atmosphereStyle(point({anger:1}),point({joy:1})) as Record<string,string>;
  expect(style['--lyric-color']).toContain('88%');
@@ -33,5 +33,15 @@ it('removes dominant accent at a tie and uses neutral colors for missing evidenc
 it('follows learned music tags without mapping power to anger',()=>{
  const mix=emotionMix({...point({powerful:.9,energetic:.5,happy:.2}),score_source:'music2emo_tags'});
  expect(mix.dominant).toBe('powerful');expect(mix.weights.anger).toBeUndefined();
- expect(mix.leadColor).toMatch(/^color-mix\(in oklab, #c9a879 /);
+ expect(mix.leadColor).toMatch(/^color-mix\(in oklab, #d5a351 /);
+});
+
+it('keeps the largest independent bar visible in the background without changing measured shares',()=>{
+ const scores={happy:.55,calm:.1,sad:.3,melancholic:.2,hopeful:.4,romantic:.2,powerful:.71,energetic:.84,relaxing:.1};
+ const mix=emotionMix({...point(scores),score_source:'music2emo_tags'});
+ expect(mix.dominant).toBe('energetic');expect(mix.accent).toBeGreaterThan(.45);
+ expect(mix.leadColor).toMatch(/^color-mix\(in oklab, #eb9c52 /);
+ expect(mix.weights.powerful/mix.weights.energetic).toBeCloseTo(.71/.84);
+ const tied=emotionMix({...point({...scores,powerful:.84}),score_source:'music2emo_tags'});
+ expect(tied.accent).toBe(0);
 });

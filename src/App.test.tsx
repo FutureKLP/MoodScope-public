@@ -57,6 +57,37 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it('exposes provider key setup in both analysis modes without sending a provider request',async()=>{
+    render(<App/>);await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
+    await screen.findByRole('heading',{name:'KI-Anbieter und eigene Modellserver'});
+    await userEvent.click(screen.getByRole('button',{name:'OpenAI / ChatGPT'}));
+    expect(screen.getByLabelText('KI-Server API-Key').getAttribute('type')).toBe('password');
+    expect((screen.getByLabelText('KI-Server Basis-URL') as HTMLInputElement).value).toBe('https://api.openai.com/v1');
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
+    expect(screen.getByRole('heading',{name:'KI-Anbieter und eigene Modellserver'})).toBeTruthy();
+    expect(screen.getByRole('option',{name:'Eingetragene API-Profile verwenden'})).toBeTruthy();
+    expect(requests.some(r=>r.path.endsWith('/analyze')||r.path.endsWith('/interpret'))).toBe(false);
+  });
+  it('restores the same bar-driven background after an API mode with no cached analysis',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      const url=String(input);
+      if(url.includes('/expression-comparison'))return new Response(JSON.stringify({ready:true,stale:false,result:{rows:[{start:0,end:12,valence:.5,arousal:.8,tags:{energetic:.9,powerful:.6,happy:.4}}]}}));
+      if(url.includes('/analysis?mode=cloud'))return new Response(JSON.stringify({detail:'No API cache'}),{status:404});
+      return original(input,init);
+    }));
+    const {container}=render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText('0.50');await userEvent.click(screen.getByRole('button',{name:'Atmosphäre'}));
+    const background=()=> (container.querySelector('.app') as HTMLElement).style.getPropertyValue('--mood-color');
+    const before=background();expect(before).toContain('#eb9c52');
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
+    await screen.findByText('Für diesen Modus ist noch keine Analyse gespeichert.');
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'local');
+    await screen.findByText('0.50');expect(background()).toBe(before);
+    expect(container.querySelector('.app.ambient-enabled .ambient-field')).toBeTruthy();
+    expect(requests.some(r=>r.path.endsWith('/analyze')||r.path.endsWith('/interpret'))).toBe(false);
+  });
   it('finishes loading the preferred music source in the detail view without restarting it',async()=>{
     const original=vi.mocked(fetch).getMockImplementation()!;
     let finish!:(value:Response)=>void;

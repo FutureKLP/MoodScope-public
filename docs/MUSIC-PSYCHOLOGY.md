@@ -100,3 +100,23 @@ als neue produktive Balkenbewertung aktiviert. Der Lauf ist mit
 `scripts.emotify_evaluation --descriptor-profile revised` reproduzierbar.
 Wiederholt betrachtete Daten bleiben diagnostisch; ausgeloeste Gefuehle sind
 keine zeitgenaue Referenz fuer wahrgenommenen Ausdruck.
+
+
+## Farben im Atmosphaerenhintergrund
+
+Die Farbgestaltung orientiert sich an haeufigen Assoziationen, nicht an einer
+universellen biologischen Zuordnung. [Palmer et al. (2013)](https://pmc.ncbi.nlm.nih.gov/articles/PMC3670360/)
+untersuchten emotionale Musik-Farb-Zusammenhaenge. [Jonauskaite et al. (2020)](https://doi.org/10.1177/0956797620948810)
+fanden breite gemeinsame Muster, aber auch sprachliche und geografische Unterschiede.
+Freude erhaelt Gelb, Trauer ein gedaempftes Blau, Aerger Rot und Zaertlichkeit/Romantik
+Rosa. Ruhe und Entspannung verwenden Blaugruen. Angst wird mit gedaempftem Violett
+dargestellt; das vermeidet einen im dunklen Hintergrund unsichtbaren Schwarzton.
+Zuversicht in Gruen, Kraft in Bernstein und Energie in Orange sind unterscheidbare
+Gestaltungsentscheidungen. Die genauen Hex-Werte sind nicht wissenschaftlich kalibriert.
+
+Balken und Hintergrund teilen dieselbe Palette. Die hoechste Balkenstaerke
+praegt den grossflaechigen Hintergrund. Ihr Darstellungsakzent folgt dem Abstand
+zum zweitstaerksten Balken: 0,78 * Abstand / (Abstand + 0,08). Der Akzent geht
+bei Gleichstand stetig auf null; kleinere Farbanteile bleiben darunter proportional
+sichtbar. Dies betrifft ausschliesslich die Farbgestaltung, weder Modellwerte
+noch Balkenlaengen oder Valenz. Dunklere Inhaltsflaechen erhalten die Lesbarkeit.
