@@ -166,7 +166,7 @@ def health(purpose:Literal['audio','lyrics','whisper','interpretation','separati
     from scripts.runtime import environment_id
     device=engines.device() if purpose=='audio' else engines.device(purpose)
     name=next((d['name'] for d in runtime_devices.available() if d['id']==('cuda:0' if device=='cuda' else device)),device)
-    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':13,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
+    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':14,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -199,6 +199,8 @@ def system_action(request:SystemAction):
 
 @app.post('/api/settings/cloud')
 def set_cloud_settings(request: CloudSettings):
+    with job_lock:
+        if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
     key=request.api_key.get_secret_value().strip()
     if key and (len(key)<15 or any(c.isspace() for c in key)):
         raise HTTPException(422,'Ungültiges Key-Format; der Wert wird nicht gespeichert oder protokolliert.')
@@ -414,7 +416,7 @@ def run_job(job_id, identity, request):
         metadata = track(identity)
         cache_identity=canonical(identity)
         active=catalog.configuration(DATA)['active']
-        version=local_version(active) if request.mode=='local' else cloud.VERSION+cloud.MODEL
+        version=local_version(active) if request.mode=='local' else cloud.version()
         key = hashlib.sha256((cache_identity + version + json.dumps(request.model_dump(exclude={'force','force_transcription','upload_consent'}),sort_keys=True)).encode()).hexdigest()
         with db() as conn:
             cached = conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
@@ -437,9 +439,13 @@ def run_job(job_id, identity, request):
                 else:lines=engines.transcribe(input_file,progress,request.transcription_quality,request.transcription_language)
                 lyric_source='whisper' if lines else 'none'
                 warnings.append('Whisper-Zeitstempel und Gesangserkennung können ungenau sein.')
-            if request.mode=='cloud' and request.whisper:
-                warnings.append('Im API-Modus wird kein lokales Whisper gestartet. Für Textkurve synchronisierte LRC-Lyrics verwenden.')
-            audio_version=PIPELINE_VERSION+prompt_presets.fingerprint(DATA,['audio'])+':audio-model:'+active['audio'] if request.mode=='local' else cloud.VERSION+cloud.MODEL
+            if request.mode=='cloud' and request.whisper and not lines:
+                samples,sample_rate=sf.read(DATA/f'{identity}.wav',dtype='float32')
+                if samples.ndim==2:samples=samples.mean(axis=1)
+                lines=cloud.transcribe(samples,sample_rate,progress)
+                lyric_source='api-transcript' if lines else 'none'
+                warnings.append('API-Gesangserkennung und Zeitstempel sind unsicher. Text und Zeitangaben vor einer gemeinsamen Deutung prüfen.')
+            audio_version=PIPELINE_VERSION+prompt_presets.fingerprint(DATA,['audio'])+':audio-model:'+active['audio'] if request.mode=='local' else cloud.version()
             audio_key = f'audio:{cache_identity}:{audio_version}:resolution{request.audio_resolution}'
             with db() as conn:
                 audio_cached = conn.execute('SELECT result FROM cache WHERE key=?',(audio_key,)).fetchone()
@@ -469,7 +475,7 @@ def run_job(job_id, identity, request):
                       'text_coverage':text_coverage(l,metadata['duration']),
                       'models':{'audio':catalog.entries(DATA)[active['audio']]['repo'] if request.mode=='local' else cloud.MODEL,
                                 'lyrics':catalog.entries(DATA)[active['lyrics']]['repo'] if request.mode=='local' else cloud.MODEL},
-                      'method':'CLAP Prompt-Ensemble und XLM-EMO mit Textkontext' if request.mode=='local' else 'Gemini: getrennte Audio- und Textanalyse; subjektive unkalibrierte Valenz.'}
+                      'method':'CLAP Prompt-Ensemble und XLM-EMO mit Textkontext' if request.mode=='local' else 'API-Profil: getrennte Audio- und Textanalyse; subjektive unkalibrierte Valenz.'}
             if request.mode=='local':result['audio_method']=audio_method.describe_current(result['models']['audio'],request.audio_resolution,DATA)
             else:result=audio_method.with_method(result)
             result['warnings'].append('Modellwerte und Unsicherheit sind nicht wissenschaftlich kalibriert.')
@@ -492,7 +498,7 @@ def run_job(job_id, identity, request):
 def analyze(identity: str, request: AnalyzeRequest):
     track(identity)
     if request.mode=='cloud':
-        if not request.upload_consent: raise HTTPException(422,'API-Modus benötigt deine Zustimmung zum Upload von Audio und Lyrics an Google.')
+        if not request.upload_consent: raise HTTPException(422,'API-Modus benötigt deine Zustimmung zum Upload von Audio und Lyrics an das ausgewählte Anbieterprofil.')
         try: cloud.credential()
         except cloud.CloudError as exc: raise HTTPException(422,str(exc)) from None
     return start_job('analysis',run_job,identity,request)
@@ -730,7 +736,7 @@ def run_interpretation(job_id,identity,request):
         if request.include_music:
             analysis=with_music_source(identity,analysis,request.music_source)
         if request.time is not None and request.time>=metadata['duration']:raise RuntimeError('Zeitpunkt liegt außerhalb des Songs.')
-        selected=json.dumps(providers.profile(DATA,request.provider_id),sort_keys=True) if request.provider_id else catalog.configuration(DATA)['active']['interpretation']
+        selected=json.dumps(providers.profile(DATA,request.provider_id),sort_keys=True) if request.provider_id else cloud.version() if request.mode=='cloud' else catalog.configuration(DATA)['active']['interpretation']
         # Add measured instrument hints when available, keeping them out of the text-only LLM prompt.
         with db() as conn:
             detail=conn.execute('SELECT result FROM cache WHERE key=?',(f'details:{identity}:{catalog.configuration(DATA)["active"]["audio"]}:v4-harmony-prompts:{prompt_presets.fingerprint(DATA,["instruments"])}',)).fetchone()
@@ -817,19 +823,19 @@ def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',prov
     research_basis=hashlib.sha256(json.dumps(current_research,sort_keys=True).encode()).hexdigest()
     stale=stale or (value.get('research_basis') is not None and value['research_basis']!=research_basis)
     try:
-        selected=json.dumps(providers.profile(DATA,provider_id),sort_keys=True) if provider_id else catalog.configuration(DATA)['active']['interpretation']
+        selected=json.dumps(providers.profile(DATA,provider_id),sort_keys=True) if provider_id else cloud.version() if mode=='cloud' else catalog.configuration(DATA)['active']['interpretation']
         stale=stale or (value.get('model_basis') is not None and value['model_basis']!=selected)
     except ValueError:stale=True
     return {**value,'cached':True,'stale':stale}
 
 
-def run_details(job_id,identity):
+def run_details(job_id,identity,mode='local'):
     def progress(message,value):
         cancellation.check()
         with job_lock:jobs[job_id].update(message=message,progress=value)
     try:
         engines.data=DATA
-        version=catalog.configuration(DATA)['active']['audio']
+        version=catalog.configuration(DATA)['active']['audio'] if mode=='local' else cloud.version()
         key=f'details:{identity}:{version}:v4-harmony-prompts:{prompt_presets.fingerprint(DATA,["instruments"])}'
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached:result={**json.loads(cached[0]),'cached':True}
@@ -839,9 +845,9 @@ def run_details(job_id,identity):
             if y.ndim==2:y=y.mean(axis=1)
             features=insights.acoustic_features(y,sr)
             progress('Vergleiche mögliche Instrumente in drei Audioausschnitten',30)
-            instruments=engines.instruments(y,sr,progress)
+            instruments=engines.instruments(y,sr,progress) if mode=='local' else cloud.instrument_hints(y,sr,progress)
             result={'features':features,'instruments':instruments,'cached':False,
-                    'note':'Instrumente sind relative CLAP-Ähnlichkeiten, keine gesicherte Besetzung und keine kalibrierten Wahrscheinlichkeiten.'}
+                    'source':mode,'model':version,'note':'Instrumente sind relative CLAP-Ähnlichkeiten, keine gesicherte Besetzung und keine kalibrierten Wahrscheinlichkeiten.' if mode=='local' else 'API-Instrumenthinweise sind unsichere Hypothesen, keine bestätigte Besetzung.'}
             with db() as conn:
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
                 own(conn,key,identity)
@@ -850,10 +856,20 @@ def run_details(job_id,identity):
         with job_lock:jobs[job_id].update(status='error',message=diagnostics.user_error(DATA,'details',exc,'Songdetails konnten nicht analysiert werden. Lokales Audiomodell und Modelldownload prüfen.'))
 
 
+class DetailsRequest(BaseModel):
+    mode:Literal['local','cloud']='local'
+    upload_consent:bool=False
+
+
 @app.post('/api/tracks/{identity}/details')
-def details(identity: str):
+def details(identity: str,request:DetailsRequest | None=None):
     track(identity)
-    return start_job('details',run_details,identity)
+    options=request or DetailsRequest();mode=options.mode
+    if mode=='cloud':
+        if not options.upload_consent:raise HTTPException(422,'Für API-Instrumenthinweise der Audioübertragung zustimmen.')
+        try:cloud.credential()
+        except cloud.CloudError as exc:raise HTTPException(422,str(exc)) from None
+    return start_job('details',run_details,identity,mode)
 
 
 @app.get('/api/tracks/{identity}/analysis')
@@ -870,7 +886,7 @@ def stored_analysis(identity: str,mode: Literal['local','cloud']='local'):
             except ValueError:continue
             if isinstance(value,dict) and {k:v for k,v in value.items() if k!='cached'}==comparable:own(conn,key,identity)
     active=catalog.configuration(DATA)['active']
-    version=local_version(active) if mode=='local' else cloud.VERSION+cloud.MODEL
+    version=local_version(active) if mode=='local' else cloud.version()
     return {**audio_method.with_method(result),'cached':True,'stale':result.get('pipeline_version')!=version}
 
 
@@ -1170,6 +1186,8 @@ class ProviderSettings(BaseModel):
     model:str=Field(min_length=1,max_length=120)
     api_key:SecretStr=Field(default=SecretStr(''),max_length=500)
     free_project_confirmed:bool=False
+    audio_input:bool=False
+    audio_usage_confirmed:bool=False
 
 
 @app.get('/api/providers')
@@ -1178,12 +1196,16 @@ def provider_status():return providers.status(DATA)
 
 @app.post('/api/providers')
 def provider_save(request:ProviderSettings):
+    with job_lock:
+        if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
     try:return providers.save(DATA,{**request.model_dump(exclude={'api_key'}),'api_key':request.api_key.get_secret_value()})
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
 
 
 @app.post('/api/providers/{identity}/remove')
 def provider_remove(identity:str):
+    with job_lock:
+        if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
     providers.remove(DATA,identity)
     return providers.status(DATA)
 

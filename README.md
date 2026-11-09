@@ -210,11 +210,11 @@ Die Interpretation entlädt vorher die Emotionsmodelle, um GPU-Speicher freizuge
 
 ## Optionale Anbieterprofile
 
-Unter **Modelle & API** stehen Gemini, OpenAI/ChatGPT, Anthropic Claude, DeepSeek, Ollama und LM Studio in einer gemeinsamen Profilverwaltung. Basis-URL, Protokoll und genaue Modell-ID können angepasst werden. Die Modell-ID muss beim gewählten Anbieter verfügbar sein; die App wählt keine unbekannten Ersatzmodelle. Gemini nutzt GenerateContent, Claude Messages und die anderen Vorlagen Chat Completions. [DeepSeek-Dokumentation](https://api-docs.deepseek.com/).
+Unter **Modelle & API** stehen Gemini, OpenAI/ChatGPT, Mistral/Voxtral, Anthropic Claude, DeepSeek, Ollama und LM Studio in einer gemeinsamen Profilverwaltung. Basis-URL, Protokoll und genaue Modell-ID können angepasst werden. Die Modell-ID muss beim gewählten Anbieter verfügbar sein; die App wählt keine unbekannten Ersatzmodelle. Gemini nutzt GenerateContent, Claude Messages und die anderen Vorlagen Chat Completions. [DeepSeek-Dokumentation](https://api-docs.deepseek.com/).
 
 1. Anbieter vorbereiten, genaue Modell-ID und gegebenenfalls eigenen API-Key direkt in der App eingeben. Kein Key gehört in Quellcode, Issues oder Chatnachrichten.
 2. Für Textdeutungen das Profil im Reiter **Interpretation** wählen und den Versand des Songtexts ausdrücklich erlauben. Die Audioanalyse kann dabei lokal bleiben.
-3. Nur ein entsprechend eingerichtetes Gemini-Profil kann derzeit zusätzlich für **Audio-API verwenden** aktiviert werden. Danach den Audio-API-Modus ausdrücklich auswählen und Audio-/Lyrics-Versand erlauben. Textadapter für Claude, OpenAI, DeepSeek oder kompatible Server werden nicht als Audiomodelle ausgegeben.
+3. Ein entsprechend eingerichtetes Gemini-Profil oder ein ausdrücklich audiotaugliches OpenAI-kompatibles Profil kann für **Audio-API verwenden** aktiviert werden. Dazu gehören geeignete OpenAI-, Mistral/Voxtral- und eigene Audiomodelle. Danach den API-Modus ausdrücklich auswählen und der Übertragung zustimmen. Reine Textprofile werden nicht als Audiomodelle ausgegeben.
 
 OpenAI, Claude und DeepSeek können kostenpflichtig sein. Ein Chat-Abonnement ersetzt keinen API-Zugang. Es gibt keine Zusage kostenloser oder unbegrenzter API-Nutzung. Für die vorbereitete Gemini-Audiofunktion verlangt die App ein bestätigtes Projekt ohne aktivierte Abrechnung, kann den Abrechnungsstatus aber nicht selbst feststellen. Gratislimits und Datenverwendung können sich ändern. [Gemini-Preise](https://ai.google.dev/gemini-api/docs/pricing), [Audio-Dokumentation](https://ai.google.dev/gemini-api/docs/audio).
 
@@ -361,5 +361,11 @@ die konkrete Gestaltung ist keine weitere Emotionsmessung.
 KI-Anbieterprofile und API-Key-Felder stehen unter **Modelle & API** sowohl
 im lokalen als auch im API-Modus bereit. Die obere Auswahl bezeichnet den
 API-Modus allgemein; die App zeigt die tatsaechliche Unterstuetzung getrennt:
-Gemini fuer Audiokurven, eingetragene Textprofile fuer Deutungen. Der Moduswechsel
+aktivierte Audioprofile fuer Audiokurven, Gesangserkennung und Instrumenthinweise; eingetragene Textprofile fuer Deutungen. Der Moduswechsel
 startet keine Anbieteranfrage. API-Keys bleiben nur im Backend-Arbeitsspeicher.
+
+Audio-API-Profile unterstuetzen jetzt zusaetzlich zu Gemini geeignete OpenAI-,
+Mistral/Voxtral- und eigene kompatible Audiomodelle. Sie koennen Emotionskurve,
+Textbewertung, optionale Gesangserkennung und separat angeforderte
+Instrumenthinweise uebernehmen. Reine Textanbieter bleiben fuer Deutungen nutzbar.
+Einrichtung, Datenuebertragung und Grenzen stehen in [API-PROFILES.md](docs/API-PROFILES.md).

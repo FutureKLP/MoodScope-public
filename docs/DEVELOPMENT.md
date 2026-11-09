@@ -363,3 +363,17 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 - Zwischenvalidierung: 85 Frontend-Tests und Produktionsbuild bestanden; 23 gezielte Backend-Tests fuer Anbieter, Sprache und Publikationsschutz bestanden. Native und visuelle Pruefung stehen fuer diesen Stand noch aus.
 
 - Abschlusspruefung: 85 Frontend-Tests und Produktionsbuild nach der abschliessenden Anordnung erneut erfolgreich. Nativer Windows-Releasebuild erfolgreich bereitgestellt. In der gestarteten App Anbieter-/Key-Verwaltung im lokalen Modus, allgemeine API-Auswahl und sichtbarer songabhaengiger Hintergrund geprueft. API-Modus ohne Analyse und Rueckkehr zu lokal stellten den Music2Emo-Hintergrund wieder her. Es wurden dabei keine Zugangsdaten eingegeben oder Anbieteranfragen gestartet. Der letzte komplette Backend-Lauf bleibt 233 bestanden; fuer diesen Oberflaechenstand bestanden die 23 gezielten Backend-Checks.
+
+
+## Mehrere API-Anbieter fuer Audio und weitere KI-Funktionen
+
+- Explizite Audiofaehigkeit und Nutzungs-/Kostenbestaetigung fuer OpenAI-kompatible Profile, Mistral/Voxtral-Preset sowie Aktivierung eines konkreten Audioprofils. Gemini behaelt seine bestehende Gratisprojekt-Bestaetigung. Claude-Messages und das DeepSeek-Textprofil werden nicht als Audioadapter ausgegeben. Profilbearbeitung deaktiviert eine zuvor vorbereitete Audiokonfiguration.
+- Nativer Gemini-Pfad und neuer Chat-Completions-input_audio-Pfad mit WAV; OpenAI nur Textausgabe und store=false. Keine automatische Wiederholung oder Anbieterausweichung. API-Keys bleiben nur im Speicher.
+- API-Audio- und Textbewertung getrennt, unabhaengige Emotionsscores fuer bestehende Balken und Atmosphaere; Kraft/Energie getrennt von Aerger. Direkte Valenz bleibt unabhaengig von Balkengewichten. Vollstaendige Scores/IDs und endliche Werte erforderlich.
+- Optionales API-Transkript ohne LRC, mit validierten Zeitbereichen und Unsicherheitsmarkierung. Separat angeforderte API-Instrumenthinweise bleiben Hypothesen. Akustische Messungen und Spurentrennung bleiben lokal.
+- Cache-Version unterscheidet Profil, Zieladresse, Protokoll und Modell. Auch API-Textdeutungen werden bei Profilwechsel als veraltet erkannt. API-Revision 14 in Backend, UI, Startern und Launchertests synchronisiert.
+- Zwischenvalidierung: 244 Backend-Tests vor dem zusaetzlichen App-Durchlauftest bestanden; danach 66 betroffene Backend-Tests einschliesslich des simulierten OpenAI-Durchlaufs bestanden. 85 Frontend-Tests/Produktionsbuild sowie danach 26 betroffene Frontend-Tests bestanden. Erneute Gesamtsuiten und nativer Build fuer den Abschluss folgen. Kein echter kostenpflichtiger Anbieteraufruf oder Nachweis besserer Emotionsgenauigkeit.
+
+- Abschlussvalidierung: Gesamtlauf mit 245 Backend- und 86 Frontend-Tests erfolgreich. Nach der letzten Validierungs-/Zustimmungsabsicherung bestanden 55 betroffene Backend- und 23 betroffene Frontend-Tests sowie der Produktionsbuild erneut. Nativer Windows-Releasebuild erfolgreich fuer den naechsten regulären Start bereitgestellt. Anbieterziel, Modell und Key werden atomar je Anfrage erfasst; Profil-/Key-Aenderungen sind waehrend laufender Jobs gesperrt. Keine neuen Live-Anbieteraufrufe oder native Abnahme eines echten API-Durchlaufs. Fuer API-Revision 14 Dienst und App neu starten; Sitzungs-Keys anschliessend erneut eingeben.
+
+- Abschliessend wird auch bei Textanfragen und Audioprofil-Aktivierung das Profil zusammen mit seinem Sitzungs-Key unter derselben Sperre erfasst. 66 betroffene Anbieter-/Audio-/App-Tests danach erneut bestanden.

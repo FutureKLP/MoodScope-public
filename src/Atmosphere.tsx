@@ -14,9 +14,10 @@ export const MUSIC_TAG_PALETTE=[
  {id:'melancholic',color:'#7c83ad'},{id:'hopeful',color:'#9bc77a'},{id:'romantic',color:'#e5a0be'},
  {id:'powerful',color:'#d5a351'},{id:'energetic',color:'#eb9c52'},{id:'relaxing',color:'#7fc5bd'}
 ] as const;
+const PROVIDER_PALETTE=[...EMOTION_PALETTE,...MUSIC_TAG_PALETTE.filter(item=>item.id==='powerful'||item.id==='energetic')];
 export function emotionColor(id:string){return [...EMOTION_PALETTE,...MUSIC_TAG_PALETTE].find(item=>item.id===id)?.color??'#8cb8b8'}
 export function emotionMix(point?:Point){
- const palette=point?.score_source==='music2emo_tags'?MUSIC_TAG_PALETTE:EMOTION_PALETTE;
+ const palette=point?.score_source==='music2emo_tags'?MUSIC_TAG_PALETTE:point?.score_source==='provider_emotions'?PROVIDER_PALETTE:EMOTION_PALETTE;
  const raw=palette.map(({id})=>{const value=point?.scores?.[id];return Number.isFinite(value)?Math.max(0,Math.min(1,value!)):0});
  const sum=raw.reduce((a,b)=>a+b,0),weights=Object.fromEntries(palette.map((item,i)=>[item.id,sum?raw[i]/sum:0]));
  let color='',total=0;

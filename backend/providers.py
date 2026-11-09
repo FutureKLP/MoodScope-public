@@ -1,4 +1,4 @@
-"""User-configured text model servers. Only non-secret profile settings are persisted."""
+"""User-configured model servers. Only non-secret profile settings are persisted."""
 import json
 import ipaddress
 from pathlib import Path
@@ -8,7 +8,7 @@ import uuid
 import httpx
 
 _keys={}
-_lock=threading.Lock()
+_lock=threading.RLock()
 _audio_profile=None
 
 
@@ -31,17 +31,25 @@ def profiles(data):
 
 
 def status(data):
-    with _lock:return {'profiles':[{**p,'configured':p['id'] in _keys,'key_storage':'Nur Arbeitsspeicher; nach Backend-Neustart erneut eingeben'} for p in profiles(data)]}
+    from . import cloud
+    with _lock:return {'profiles':[{**p,'configured':p['id'] in _keys,'key_storage':'Nur Arbeitsspeicher; nach Backend-Neustart erneut eingeben'} for p in profiles(data)],'audio':cloud.settings()}
 
 
 def save(data,request):
     p={'id':request.get('id') or uuid.uuid4().hex,'name':request['name'].strip(),
         'protocol':request['protocol'],'base_url':endpoint(request['base_url']),'model':request['model'].strip(),
-        'free_project_confirmed':bool(request.get('free_project_confirmed',False))}
+        'free_project_confirmed':bool(request.get('free_project_confirmed',False)),
+        'audio_input':bool(request.get('audio_input',False)),
+        'audio_usage_confirmed':bool(request.get('audio_usage_confirmed',False))}
+    if p['audio_input'] and (p['protocol']=='anthropic' or urlsplit(p['base_url']).hostname=='api.deepseek.com'):
+        raise ValueError('Dieses Profil unterstützt hier nur Textdeutungen. Ein kompatibles Audiomodell verwenden.')
     if p['protocol']=='gemini' and (p['base_url']!='https://generativelanguage.googleapis.com/v1beta' or not __import__('re').fullmatch(r'[A-Za-z0-9_.-]+',p['model'])):
         raise ValueError('Gemini benötigt die offizielle v1beta-Basis-URL und eine gültige Modell-ID.')
     if not p['name'] or not p['model']:raise ValueError('Name und Modell-ID fehlen.')
     with _lock:
+        if _audio_profile==(str(Path(data).resolve()),p['id']):
+            from . import cloud
+            cloud.configure('',False)
         values=[v for v in profiles(data) if v['id']!=p['id']]+[p]
         if len(values)>20:raise ValueError('Maximal 20 Serverprofile.')
         path=Path(data)/'providers.json';path.parent.mkdir(parents=True,exist_ok=True)
@@ -69,10 +77,10 @@ def profile(data,identity):
 
 
 def generate(data,identity,prompt):
-    p=profile(data,identity)
-    with _lock:key=_keys.get(identity,'')
+    with _lock:
+        p=profile(data,identity);key=_keys.get(identity,'')
     base=endpoint(p['base_url'])
-    if not key and (p['protocol'] in {'gemini','anthropic'} or urlsplit(base).hostname in {'api.openai.com','api.deepseek.com'}):
+    if not key and (p['protocol'] in {'gemini','anthropic'} or urlsplit(base).hostname in {'api.openai.com','api.deepseek.com','api.mistral.ai'}):
         raise RuntimeError('API-Key für dieses Anbieterprofil fehlt. In Modelle & API den Sitzungs-Key setzen oder ein lokales Modell wählen.')
     if p['protocol']=='gemini':
         url=base+'/models/'+p['model']+':generateContent'
@@ -109,14 +117,19 @@ def generate(data,identity,prompt):
 
 
 def activate_audio(data,identity):
+    with _lock:return _activate_audio(data,identity)
+
+
+def _activate_audio(data,identity):
     global _audio_profile
     from . import cloud
     p=profile(data,identity)
-    if p['protocol']!='gemini':raise ValueError('Dieses Profil unterstützt hier nur Textdeutung, keine Audioanalyse.')
-    if not p.get('free_project_confirmed'):raise ValueError('Für die optionale Gemini-Audioanalyse ein Projekt ohne Abrechnung bestätigen.')
+    if p['protocol']!='gemini' and not (p['protocol']=='openai' and p.get('audio_input')):
+        raise ValueError('Für dieses Profil zuerst ein Modell mit kompatibler Audioeingabe konfigurieren.')
+    if p['protocol']=='gemini' and not p.get('free_project_confirmed'):raise ValueError('Für die optionale Gemini-Audioanalyse ein Projekt ohne Abrechnung bestätigen.')
+    if p['protocol']=='openai' and not p.get('audio_usage_confirmed'):raise ValueError('Nutzungsbedingungen und mögliche API-Kosten für dieses Audioprofil bestätigen.')
     with _lock:key=_keys.get(identity,'')
-    if not key:raise ValueError('API-Key für dieses Profil fehlt in der aktuellen Sitzung.')
-    cloud.configure(key,True)
-    cloud.MODEL=p['model']
+    if not key and (p['protocol']=='gemini' or urlsplit(p['base_url']).hostname in {'api.openai.com','api.mistral.ai'}):raise ValueError('API-Key für dieses Profil fehlt in der aktuellen Sitzung.')
+    cloud.configure_profile(p,key)
     _audio_profile=(str(Path(data).resolve()),identity)
     return {'configured':True,'provider':p['name'],'model':p['model']}

@@ -294,10 +294,13 @@ def test_cloud_job_never_calls_local_models(client,monkeypatch):
     monkeypatch.setattr(module.engines,'device',forbidden)
     monkeypatch.setattr(module.cloud,'audio_mood',lambda *a:[{'start':0,'end':1,'valence':.2,'scores':{}}])
     monkeypatch.setattr(module.cloud,'lyric_mood',lambda *a:[])
+    api_transcripts=[]
+    monkeypatch.setattr(module.cloud,'transcribe',lambda *a:api_transcripts.append(True) or [])
     module.jobs['cloud']={'status':'running'}
     module.run_job('cloud',identity,module.AnalyzeRequest(mode='cloud',upload_consent=True,whisper=True))
     assert module.jobs['cloud']['status']=='done',module.jobs['cloud']
     assert module.jobs['cloud']['result']['device']=='API'
+    assert api_transcripts==[True]
 
 
 def test_model_catalog_rejects_arbitrary_models(client):
@@ -465,3 +468,33 @@ def test_verified_reimport_reuses_studio_sources_and_focus_without_new_inference
     key=result['result']['focus_id']
     assert client.get(result['result']['url']).status_code==200
     assert client.get(f'/api/tracks/{alias}/focus/{key}').status_code==200
+
+
+def test_compatible_audio_profile_drives_curve_lyrics_and_details_without_local_models(client,monkeypatch):
+    import httpx
+    module=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('authored.wav',wav_bytes())}).json()['id']
+    p=client.post('/api/providers',json={'name':'Audio fixture','protocol':'openai','base_url':'https://api.openai.com/v1','model':'audio-fixture','api_key':'fixture-key','audio_input':True,'audio_usage_confirmed':True}).json()
+    assert client.post(f"/api/providers/{p['id']}/audio",json={}).status_code==200
+    calls=[]
+    strengths=dict.fromkeys(['joy','calm','sadness','anger','fear','tenderness','powerful','energetic'],.2)
+    strengths.update(powerful=.9,energetic=.8)
+    def post(url,**kw):
+        body=kw['json'];calls.append(body)
+        assert body['model']=='audio-fixture' and body['store'] is False
+        prompt=body['messages'][0]['content'][0]['text']
+        value={'instruments':['guitar']} if 'List only plausible audible instrument' in prompt else {'estimates':[{'id':0,'valence':.6,'arousal':.8,'confidence':.4,'scores':strengths}]}
+        return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':json.dumps(value)}}]})
+    monkeypatch.setattr(module.cloud.httpx,'post',post)
+    def forbidden(*a,**kw):raise AssertionError('Local model called')
+    for name in ['audio','lyrics','instruments','transcribe']:monkeypatch.setattr(module.engines,name,forbidden)
+    module.jobs['api-profile']={'status':'running'}
+    module.run_job('api-profile',identity,module.AnalyzeRequest(mode='cloud',upload_consent=True,lyrics='[00:00.00]Authored words'))
+    result=module.jobs['api-profile'];assert result['status']=='done',result
+    point=result['result']['audio'][0];assert point['score_source']=='provider_emotions' and point['scores']['powerful']==.9
+    assert result['result']['models']['audio']=='audio-fixture'
+    assert len(calls)==2 and len(calls[0]['messages'][0]['content'])==2 and len(calls[1]['messages'][0]['content'])==1
+    assert client.post(f'/api/tracks/{identity}/details',json={'mode':'cloud'}).status_code==422
+    module.jobs['api-details']={'status':'running'};module.run_details('api-details',identity,'cloud')
+    assert module.jobs['api-details']['result']['instruments']==[{'instrument':'guitar','source':'api','uncertain':True}]
+    with module.db() as conn:assert all('fixture-key' not in raw for (raw,) in conn.execute('SELECT result FROM cache'))

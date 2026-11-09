@@ -52,3 +52,23 @@ def test_gemini_profile_uses_native_api_and_removal_clears_audio_key(tmp_path,mo
     assert cloud.settings()['configured']
     providers.remove(tmp_path,p['id'])
     assert not cloud.settings()['configured']
+
+
+@pytest.mark.parametrize('protocol,url',[('anthropic','https://api.anthropic.com/v1'),('openai','https://api.deepseek.com')])
+def test_text_only_profiles_cannot_be_activated_as_audio(tmp_path,protocol,url):
+    with pytest.raises(ValueError):providers.save(tmp_path,{'name':'Fixture','protocol':protocol,'base_url':url,'model':'text-fixture','audio_input':True})
+
+
+def test_audio_profile_requires_explicit_capability_and_terms_and_edit_deactivates(tmp_path):
+    from backend import cloud
+    request={'name':'Local audio fixture','protocol':'openai','base_url':'http://127.0.0.1:11434/v1','model':'audio-fixture','api_key':''}
+    p=providers.save(tmp_path,request)
+    with pytest.raises(ValueError):providers.activate_audio(tmp_path,p['id'])
+    p=providers.save(tmp_path,{**request,'id':p['id'],'audio_input':True})
+    with pytest.raises(ValueError):providers.activate_audio(tmp_path,p['id'])
+    p=providers.save(tmp_path,{**request,'id':p['id'],'audio_input':True,'audio_usage_confirmed':True})
+    providers.activate_audio(tmp_path,p['id']);assert cloud.credential()==''
+    assert cloud.settings()['profile_id']==p['id']
+    providers.save(tmp_path,{**request,'id':p['id'],'model':'changed-model','audio_input':True,'audio_usage_confirmed':True})
+    with pytest.raises(cloud.CloudError):cloud.credential()
+    providers.remove(tmp_path,p['id'])

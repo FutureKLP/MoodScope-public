@@ -83,7 +83,7 @@ def describe_musical(model,grid_seconds,data=None):
 
 def with_method(result):
     if result.get('audio_method'):return result
-    if result.get('mode')=='cloud':return {**result,'audio_method':{'id':'provider-audio','recording':'provider','model':result.get('models',{}).get('audio')}}
+    if result.get('mode')=='cloud':return {**result,'audio_method':{'id':'provider-audio','recording':'provider','model':result.get('models',{}).get('audio'),'grid_seconds':result.get('audio_resolution'),'context_seconds':result.get('features',{}).get('duration')}}
     # Only this documented, unchanged pipeline can be reconstructed for old caches.
     if str(result.get('pipeline_version','')).startswith('clap-ensemble-context-v4-features-grid5-coverage50:'):
         return {**result,'audio_method':describe(result.get('models',{}).get('audio'),result.get('audio_resolution',5),'reconstructed')}

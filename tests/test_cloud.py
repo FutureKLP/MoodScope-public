@@ -58,7 +58,7 @@ def test_audio_and_lyric_requests_are_independent(monkeypatch):
     calls=[]
     def request(prompt,schema,audio=None):
         calls.append((prompt,audio))
-        return {'estimates':[{'id':0,'valence':.1,'arousal':.2,'confidence':.3}]}
+        return {'estimates':[{'id':0,'valence':.1,'arousal':.2,'confidence':.3,'scores':dict.fromkeys(['joy','calm','sadness','anger','fear','tenderness','powerful','energetic'],.5)}]}
     monkeypatch.setattr(cloud,'request_json',request)
     monkeypatch.setattr(cloud,'encode_audio',lambda y,sr:b'FLAC')
     cloud.audio_mood(np.zeros(48000),48000,lambda *a:None)
@@ -71,3 +71,43 @@ def test_audio_and_lyric_requests_are_independent(monkeypatch):
 
 def test_oversized_audio_is_rejected_before_network():
     with pytest.raises(cloud.CloudError,match='10 Minuten'):cloud.encode_audio(np.zeros(601),1)
+
+
+@pytest.mark.parametrize('base',['https://api.openai.com/v1','https://api.mistral.ai/v1','http://127.0.0.1:11434/v1'])
+def test_compatible_audio_uses_wav_and_rejects_truncation(monkeypatch,base):
+    import base64
+    cloud.configure_profile({'id':'fixture','name':'Fixture audio','protocol':'openai','base_url':base,'model':'audio-fixture','audio_input':True,'audio_usage_confirmed':True},fake_key())
+    payloads=[]
+    def post(url,**kwargs):
+        assert url==base+'/chat/completions' and fake_key() not in url
+        body=kwargs['json'];payloads.append(body)
+        part=body['messages'][0]['content'][1]['input_audio']
+        assert part['format']=='wav' and base64.b64decode(part['data']).startswith(b'RIFF')
+        assert body['model']=='audio-fixture'
+        if 'api.openai.com' in base:assert body['store'] is False and body['modalities']==['text']
+        return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':'{"answer":1}'}}]})
+    monkeypatch.setattr(cloud.httpx,'post',post)
+    assert cloud.request_json('Authored question',{'type':'object'},cloud.encode_audio(np.zeros(16000),16000))=={'answer':1}
+    assert len(payloads)==1
+    monkeypatch.setattr(cloud.httpx,'post',lambda *a,**k:httpx.Response(200,json={'choices':[{'finish_reason':'length','message':{'content':'{"answer":1}'}}]}))
+    with pytest.raises(cloud.CloudError):cloud.request_json('test',{'type':'object'})
+
+
+def test_provider_identity_changes_cache_basis_without_exposing_key():
+    p={'id':'fixture','name':'Fixture','protocol':'openai','base_url':'https://api.openai.com/v1','model':'audio-fixture','audio_input':True,'audio_usage_confirmed':True}
+    cloud.configure_profile(p,fake_key());first=cloud.version()
+    cloud.configure_profile({**p,'base_url':'https://api.mistral.ai/v1'},fake_key());assert cloud.version()!=first
+    assert fake_key() not in json.dumps(cloud.settings())+cloud.version()
+
+
+@pytest.mark.parametrize('lines',[[{'start':0,'end':2,'text':'Authored'}],[{'start':.7,'end':.2,'text':'Authored'}],[{'start':0,'end':.8,'text':'Authored'},{'start':.2,'end':float('nan'),'text':'Authored'}]])
+def test_invalid_api_transcript_rejected_before_lyric_scoring(monkeypatch,lines):
+    monkeypatch.setattr(cloud,'request_json',lambda *a:{'lines':lines})
+    with pytest.raises(cloud.CloudError):cloud.transcribe(np.zeros(16000),16000,lambda *a:None)
+
+
+def test_api_transcript_preserves_uncertainty_and_independent_instrument_hints(monkeypatch):
+    monkeypatch.setattr(cloud,'request_json',lambda *a:{'lines':[{'start':0,'end':.8,'text':'Authored words'}]})
+    rows=cloud.transcribe(np.zeros(16000),16000,lambda *a:None);assert rows[0]['uncertain'] is True
+    monkeypatch.setattr(cloud,'request_json',lambda *a:{'instruments':['guitar','guitar']})
+    assert cloud.instrument_hints(np.zeros(16000),16000,lambda *a:None)==[{'instrument':'guitar','source':'api','uncertain':True}]
