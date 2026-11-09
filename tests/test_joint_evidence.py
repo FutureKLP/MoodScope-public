@@ -52,6 +52,17 @@ def test_direct_regression_keeps_lyrics_features_and_source_identity():
     assert source['audio'][0]['valence']==.8
 
 
+def test_joint_text_is_rendered_from_actual_references_without_causal_energy_claims():
+    from backend.music_evidence import packet
+    from backend.joint_evidence import reading
+    source=data();source['features']={'rms_mean':.1,'sections':[{'start':0,'end':10,'rms':.8,'bpm':160}]}
+    evidence=packet(source)
+    text=reading(evidence,'en')
+    assert 'opposing valence directions' in text and 'does not establish irony' in text
+    assert 'L1' in text and 'do not determine a feeling' in text
+    assert '+18' not in text and 'positive energy' not in text
+
+
 def test_api_and_interpretation_use_the_same_current_music_source(client,monkeypatch):
     from backend import expression_compare
     app=importlib.import_module('backend.app')

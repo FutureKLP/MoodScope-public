@@ -3,7 +3,7 @@ import {api} from './api';
 import {Analysis,clock} from './types';
 import {t,useLanguage} from './i18n';
 
-type Row={start:number;end:number;relation:string;text_coverage:number;usable_text_coverage:number;text_references:string[];feature_window:{start:number;end:number}|null};
+type Row={start:number;end:number;relation:string;text_coverage:number;usable_text_coverage:number;text_references:string[];audio_context?:{start:number;end:number};feature_window:{start:number;end:number}|null};
 type Packet={audio_source:string;rows:Row[]};
 export const RELATION_TEXT:Record<string,string>={
  aligned:'Musik und Text zeigen eine ähnliche Valenztendenz.',
@@ -21,6 +21,7 @@ export function CombinedReading({trackId,analysis,musicSource,time}:{trackId:str
  return <div className="combined-reading"><p><strong>{t('Musik und Text gemeinsam')}: </strong>{t(RELATION_TEXT[row.relation]??RELATION_TEXT.mixed)}</p>
   <details><summary>{t('Belege der gemeinsamen Einordnung')}</summary>
    <p>{clock(row.start)}–{clock(row.end)} · {t('Audioquelle')}: {packet?.audio_source==='Music2Emo'?'Music2Emo':analysis?.models.audio}</p>
+   {row.audio_context&&<p>{t('Tatsächlicher Audiokontext')}: {clock(row.audio_context.start)}–{clock(row.audio_context.end)}. {t('Ein feines Anzeigeraster bedeutet keine ebenso kurze Modellbeobachtung.')}</p>}
    <p>{t('Zeitliche Textabdeckung')}: {(row.text_coverage*100).toFixed(0)} % · {t('Ohne als unsicher markierte Wörter')}: {(row.usable_text_coverage*100).toFixed(0)} %</p>
    {!!row.text_references.length&&<p>{t('Textbelege')}: {row.text_references.join(', ')}</p>}
    {row.feature_window&&<p>{t('Musikmerkmale aus dem gemessenen Zeitfenster')}: {clock(row.feature_window.start)}–{clock(row.feature_window.end)}. {t('Tempo, Energie und Harmoniekandidaten ergänzen die Deutung; sie legen kein Gefühl fest.')}</p>}

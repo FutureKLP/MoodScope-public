@@ -42,6 +42,7 @@ def timeline(analysis):
         sections=analysis.get('features',{}).get('sections',[])
         section=next((row for row in sections if row['start']<end and row['end']>start),None)
         rows.append({'start':start,'end':end,'audio_valence':audio['valence'],'lyric_valence':value,
+                     'audio_context':{'start':audio.get('context_start',start),'end':audio.get('context_end',end)},
                      'text_coverage':covered/(end-start),'usable_text_coverage':usable/(end-start),
                      'text_references':[f'L{i+1}' for i,_,_ in overlaps],
                      'relation':relation,'audio_direction':direction(audio['valence']),
@@ -64,3 +65,27 @@ def observations(analysis,position=None,limit=8):
             if len(indices)<limit:indices.add(round(i*(len(rows)-1)/(limit-1)))
         rows=[row for i,row in enumerate(rows) if i in indices]
     return rows
+
+
+def reading(packet,language='de'):
+    """Render checked model relationships; no generative causal acoustic claims."""
+    en=language=='en'
+    phrases={
+        'aligned':('The audio and lyric estimates tend in the same valence direction.','Audio- und Textschaetzung weisen in eine aehnliche Valenzrichtung.'),
+        'contrasting':('The audio and lyric estimates point in opposing valence directions. This can support a contrasting reading, but does not establish irony.','Audio- und Textschaetzung weisen in gegensaetzliche Valenzrichtungen. Das kann eine kontrastierende Lesart stuetzen, belegt aber keine Ironie.'),
+        'mixed':('The estimates do not establish a clear shared direction.','Die Schaetzungen ergeben keine eindeutige gemeinsame Richtung.'),
+        'music_only':('There are insufficient aligned lyrics for a joint reading.','Fuer eine gemeinsame Einordnung fehlt ausreichend zeitlich zugeordneter Text.'),
+        'uncertain_text':('Uncertain transcription limits the joint reading.','Unsichere Texterkennung begrenzt die gemeinsame Einordnung.'),
+        'uncertain_audio':('The audio estimate is too unstable for a clear joint direction.','Die Audioschaetzung ist fuer eine eindeutige gemeinsame Richtung zu instabil.')}
+    lines=[]
+    for observation in packet['observations']:
+        value=observation['value']
+        if 'relation' not in value:continue
+        phrase=phrases[value['relation']][0 if en else 1]
+        references=', '.join([observation['id'],*value['text_references']])
+        lines.append(f'{observation["start"]:.1f}–{observation["end"]:.1f} s: {phrase} [{references}]')
+    if not lines:return ''
+    heading='Joint reading of music and lyrics' if en else 'Gemeinsame Einordnung von Musik und Text'
+    limits=('These relationships compare model estimates, not measured listener feelings. Tempo, energy and harmonic candidates inform the evidence; they do not determine a feeling.' if en else
+            'Diese Beziehungen vergleichen Modellschaetzungen, keine gemessenen Hoerergefuehle. Tempo, Energie und Harmoniekandidaten ergaenzen die Belege; sie legen kein Gefuehl fest.')
+    return heading+'\n'+'\n'.join(lines)+'\n'+limits

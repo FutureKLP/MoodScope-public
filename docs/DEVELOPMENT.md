@@ -326,3 +326,30 @@ Korrigierter Windows-Releasebuild erfolgreich. Vier gezielte Starter-/Systemtest
 - Kombinierte Interpretation verwendet nun die ausgewaehlte Music2Emo- oder bisherige Analysequelle. Getrennte Cachezuordnung und Stale-Pruefung verhindern unbemerkten Quellenwechsel. Neue Belegpakete enthalten konkrete zeitliche Beziehungen mit Textreferenzen und erhalten kurze Gegenbeispiele in Gesamtdeutungen. API-Revision 13 mit Oberflaeche und Startern synchronisiert.
 - Validierung: 229 Backend-Tests und 76 Frontend-Tests sowie Produktionsbuild bestanden. Ein weiterer Test zum Erhalt kurzer Gegenbeispiele wurde anschliessend ergaenzt und wird vor Veroeffentlichung separat geprueft. Kein neuer nativer Bediennachweis.
 - Qwen-3B-Download wurde ausdruecklich freigegeben; alternative bereits installierte Downloadlaufzeit wird wegen stagnierender erster Abrufe verwendet. Noch kein erfolgreicher Download oder Vergleich behauptet. MERGE und weitere multimodale Forschungsdaten auf Eignung und notwendige Nachweisgrenzen geprueft; noch keine gelernte Fusion auf diesen Daten ausgefuehrt.
+
+
+## Gepruefte oeffentliche Ablage und private Zwischenstaende
+
+- Oeffentliche Ablage aus der geprueften aktuellen Branchhistorie bereitgestellt. Aeltere CI-Inhalte der bisherigen privaten Ablage wurden nicht uebernommen. Lokale Arbeitsdateien und heruntergeladene Modelle sind weiterhin ausgeschlossen.
+- Nach ausdruecklicher Workflowvorgabe werden Zwischenstaende zuerst privat gesichert. Oeffentliche Uebernahmen verwenden einen getrennten Commitverlauf aus dem geprueften Quellbaum, ohne private Zwischenstaende als Vorfahren. Git-Standardeinstellungen bleiben lokal; der Push-Hook prueft tatsaechlich gepushte Referenzen und blockiert private Zwischenstaende in der oeffentlichen Vorgeschichte. Sieben gezielte Publikations-/Workflowtests bestanden.
+
+## Gelernte Musik-Tags fuer die vorhandenen Emotionsbalken
+
+- Kurve und Balken verwenden bei Music2Emo dieselbe Quelle. Neun echte gelernte Musik-Tags ersetzen dann die unpassende Umrechnung in sechs CLAP-Richtungen. Rohscores bleiben unabhaengig; keine Darstellung als gemessene Gefuehlsprozente. Kraft und Energie erhalten eigene Hinweise und Gestaltungsfarben. Visuelle Interpolation bleibt bestehen.
+- Eingerichtetes Music2Emo wird ohne ausdrueckliche CLAP-Wahl bevorzugt; fehlende aktuelle Vergleiche werden einmalig lokal berechnet. Kein automatischer Gewichtsdownload.
+- 80 Frontend-Tests und Produktionsbuild bestanden. Vollstaendiger Backendlauf vor diesen UI-Anpassungen: 233 Tests bestanden. Sprachmodell erzeugt jetzt nur die Textlesart; Musikbeziehungen werden kontrolliert aus Belegen hinzugefuegt. Freier Musikvergleich mit dem kleinen Modell zeigte trotz bestandener formaler Guards unplausible kausale Aussagen. Der abgesicherte kleine Diagnoselauf bestand sieben statt zuvor fuenf von acht formalen Faellen; keine Genauigkeitsmessung menschlicher Gefuehle.
+- Freigegebene Qwen-3B-Gewichte vollstaendig geladen und gegen die offiziellen SHA256-Pruefsummen geprueft. Aktive Modellwahl unveraendert. Weitere Bewertung konzentriert sich auf die Text-Emotionskurve, nicht auf zusaetzliche Grafiken. Ein kleiner menschlich bewerteter Lyrics-Datensatz wird lokal auf Eignung geprueft; keine Referenztexte oder Bewertungen werden publiziert.
+
+
+## Gemeinsame Audioquelle und Abschnittsbalken
+
+- Die Modellauswahl lebt jetzt unabhaengig vom sichtbaren Songbereich. Ein Ansichtswechsel unterbricht weder das Laden eines aktuellen Music2Emo-Caches noch dessen Berechnung. Kurve und Detailbericht erhalten dieselbe Quelle. Ein Integrationstest bildet den zuvor fehlerhaften Wechsel waehrend eines ausstehenden Abrufs nach.
+- CLAP-Fallback und Wechsel zur direkten Musikbewertung stehen sichtbar an Kurve und Bericht. Eine ausdruecklich gespeicherte CLAP-Auswahl bleibt erhalten. Fehlender Zugriff auf den Browserspeicher verhindert die bevorzugte direkte Bewertung nicht mehr.
+- Vorhandene Detailbalken trennen gefuehlsbezogene Tags von Kraft/Energie als Klangcharakter. Interpolierte direkte Valenz und Aktivierung folgen derselben Wiedergabeposition wie die Balken; gespeicherte Abschnittswerte bleiben getrennt lesbar. Vor-/Zurueck-Tasten springen zu echten Abschnittsgrenzen. Ausserhalb der Trainingsskala liegende Schaetzungen werden markiert; nicht vorhandene Konfidenz-/RMS-Werte werden nicht als Messung vorgetaeuscht.
+- Die bestehende Hauptkurve erhaelt einen Positionspunkt auf der Audio-Valenz. Keine weitere Diagrammart.
+- Erneute Recherche zu Music2Emotion, Essentia und audioFX: direkte Valenz-/Aktivierungsregression und getrennte Musik-Tags statt Energie-zu-Aerger-Regeln; Klangveraenderungen als Robustheitsdiagnose pruefen. Kein fremder Programmcode uebernommen.
+- Vier vor Inferenz festgelegte oeffentliche Rock-Ausschnitte mit Original, -12 dB Pegel und RMS-angepasster Saettigung lokal geprueft. Der Music2Emo-Pegeldrift blieb in dieser kleinen Diagnose unter 0,004 Valenzpunkten; Saettigung veraenderte die Valenz staerker. Dies ist kein Nachweis korrekter Gefuehle oder allgemeiner Gitarrenrobustheit. Referenzmaterial und Ergebnisse bleiben lokal.
+- Zwischenvalidierung: 82 Frontend-Tests und Produktionsbuild bestanden. Erneuter kompletter Backend-Check und nativer Build fuer diesen Stand stehen noch aus.
+
+- Abschlussvalidierung: 233 Backend-Tests und 82 Frontend-Tests sowie Produktions- und nativer Windows-Releasebuild bestanden. Zwei Hoerstudio-Tests scheiterten zuerst mit ueberlangem temporaerem Windows-Pfad; beide einzeln und danach die gesamte Suite mit kurzem Testpfad erfolgreich.
+- Native Bedienpruefung: App gestartet, vorhandene Analyse geoeffnet, laufende direkte Musikbewertung waehrend des Wechsels zu Methode & Werte erfolgreich uebernommen. Detailbalken, getrennte Klangcharakter-Gruppe, realer 30-Sekunden-Kontext und Abschnittssteuerung sichtbar geprueft. Kein Nachweis vollstaendiger Genre- oder zeitlicher Emotionsgenauigkeit; kein frischer Linux-Lauf.

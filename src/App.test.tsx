@@ -57,6 +57,25 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it('finishes loading the preferred music source in the detail view without restarting it',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    let finish!:(value:Response)=>void;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      if(String(input).includes('/expression-comparison'))return new Promise<Response>(resolve=>{finish=resolve});
+      return original(input,init);
+    }));
+    render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    await userEvent.click(screen.getByRole('button',{name:'Methode & Werte'}));
+    await act(async()=>finish(new Response(JSON.stringify({ready:true,stale:false,result:{rows:[{start:0,end:12,valence:.7,arousal:.8,tags:{happy:.6,powerful:.9,energetic:.8},context_start:0,context_end:12}]}}))));
+    expect(await screen.findByRole('meter',{name:'Kraft'})).toBeTruthy();
+    expect(screen.queryByRole('meter',{name:'Ärger'})).toBeNull();
+    expect(screen.getByText('0.700')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button',{name:'Stimmungsverlauf'}));
+    expect(vi.mocked(fetch).mock.calls.filter(([input])=>String(input).includes('/expression-comparison'))).toHaveLength(1);
+    expect(screen.getByText('0.70')).toBeTruthy();
+  });
   it('uses learned valence in the existing curve and restores CLAP without a new chart',async()=>{
     const original=vi.mocked(fetch).getMockImplementation()!;
     vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
@@ -66,14 +85,14 @@ describe('workspace flows',()=>{
     const view=render(<App/>);
     await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
     await screen.findByText(/keine erneute KI-Inferenz/);
+    await screen.findByText('0.70');
     const initial=view.container.querySelector('.audio-path')!.getAttribute('d');
     await userEvent.click(screen.getByText(/Audio-Bewertungsmodell/));
-    await userEvent.click(screen.getByRole('button',{name:'Music2Emo verwenden'}));
-    expect(view.container.querySelector('.audio-path')!.getAttribute('d')).not.toBe(initial);
-    expect(view.container.querySelectorAll('.audio-path')).toHaveLength(1);
-    expect(screen.getByText('0.70')).toBeTruthy();
     await userEvent.click(screen.getByRole('button',{name:'CLAP verwenden'}));
+    expect(view.container.querySelector('.audio-path')!.getAttribute('d')).not.toBe(initial);
+    await userEvent.click(screen.getByRole('button',{name:'Music2Emo verwenden'}));
     expect(view.container.querySelector('.audio-path')!.getAttribute('d')).toBe(initial);
+    expect(view.container.querySelectorAll('.audio-path')).toHaveLength(1);
   });
   it('does not restore a deleted playback source when only the subsequent library refresh fails',async()=>{
     vi.spyOn(HTMLMediaElement.prototype,'load').mockImplementation(()=>{});
@@ -142,13 +161,15 @@ describe('workspace flows',()=>{
     expect(requests.some(r=>r.path==='/providers'&&r.body)).toBe(false);
   });
 
-  it('selects musical comparison explicitly and loads its separate saved reading',async()=>{
+  it('defaults to joint evidence and preserves the optional text-only reading',async()=>{
     render(<App/>);
     await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
     await screen.findByText(/keine erneute KI-Inferenz/);
     await userEvent.click(screen.getByRole('button',{name:'Interpretation'}));
     const checkbox=await screen.findByRole('checkbox',{name:'Musikbelege einbeziehen'});
-    expect((checkbox as HTMLInputElement).checked).toBe(false);
+    expect((checkbox as HTMLInputElement).checked).toBe(true);
+    await userEvent.click(checkbox);
+    await waitFor(()=>expect(requests.some(r=>r.path.includes('interpretation?')&&r.path.includes('include_music=false'))).toBe(true));
     await userEvent.click(checkbox);
     await waitFor(()=>expect(requests.some(r=>r.path.includes('interpretation?')&&r.path.includes('include_music=true'))).toBe(true));
     await userEvent.click(screen.getByRole('button',{name:'Gesamten Song interpretieren'}));

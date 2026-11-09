@@ -17,13 +17,17 @@ kein psychologischer Grenzwert und keine kalibrierte Sicherheit. Auch die
 50-Prozent-Mindestabdeckung ist eine Vergleichskonvention; sie beweist keine
 Wortgenauigkeit. Die Anzeige kann persoenliche Gefuehle nicht messen.
 
-Unter Interpretation verwendet **Musikbelege einbeziehen** dieselbe Musikquelle
+Unter Interpretation ist **Musikbelege einbeziehen** standardmäßig aktiv und
+lässt sich ausschalten; die Wahl wird lokal gemerkt. Die Auswertung verwendet dieselbe Musikquelle
 wie die Hauptkurve. Ein ausgewaehlter Music2Emo-Verlauf wird auf seinen aktuellen
 Modellstand geprueft; fehlende oder veraltete Ergebnisse werden nicht still durch
 CLAP ersetzt. Modellquelle, Analysebasis und gespeicherte Deutungen bleiben
 zugeordnet. Textdeutung ohne Musikbelege bleibt moeglich.
 
-Die Deutung erhaelt konkrete Textreferenzen und Musikbelege mit Zeitbereichen:
+Das Sprachmodell erhält ausschließlich Textbelege. Der Musikvergleich wird
+anschließend aus geprüften Referenzen berechnet und formuliert, damit das
+Sprachmodell keine kausalen Akustikbehauptungen erfinden muss. Die Deutung
+erhält konkrete Textreferenzen und Musikbelege mit Zeitbereichen:
 gelernte Valenz, relative Energieentwicklung, Tempo- und Harmoniekandidaten sowie
 die zeitliche Beziehung von Text und Musik. Bei Gesamtdeutungen bleiben auch
 kurze Gegenbeispiele und unsichere Passagen in der begrenzten Belegauswahl.
@@ -66,3 +70,19 @@ Ausgabesprache und Vermeidung erfundener musikalischer Ursachen.
 Die Qwen-Gewichte behalten ihre eigenen Bedingungen; die MIT-Lizenz des
 Anwendungscodes gilt nicht automatisch fuer sie. Referenzdateien, Gewichte und
 Modellausgaben sind kein Bestandteil der Veroeffentlichung.
+
+
+## Gemeinsame Quelle der beiden vorhandenen Grafiken
+
+Bei eingerichtetem Music2Emo verwenden Hauptkurve und Gefuehlsbalken dessen
+direkte Regressionen und echte gelernte Musik-Tags. Die Auswahl der sichtbaren
+Tags ist eine Gestaltungsauswahl; Werbe-/Filmthemen werden nicht als Gefuehle
+ausgegeben. Es gibt keine Umrechnung von Kraft in Aerger, keine erfundenen
+sechs Kategorien und keine Valenzsumme aus diesen Tag-Scores. Die vorhandenen
+CLAP-Ergebnisse bleiben als waehlbare Alternative erhalten.
+
+Ein Vergleich auf dem vorhandenen, mehrfach betrachteten Emotify-Diagnosesatz
+zeigte staerkere Rangzusammenhaenge fuer Ruhe und einen freudebezogenen
+Vergleich, waehrend die Verbesserung fuer Trauer klein war. Die Kategorien
+der Referenz und der Modell-Tags sind nicht durchgehend identisch. Damit wird
+weder eine Trefferquote noch eine zeitgenaue Gefuehlserkennung nachgewiesen.

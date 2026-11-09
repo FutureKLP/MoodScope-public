@@ -30,3 +30,8 @@ it('removes dominant accent at a tie and uses neutral colors for missing evidenc
  const style=atmosphereStyle({...point({}),valence:NaN,rms:NaN,arousal:NaN});
  expect(JSON.stringify(style)).not.toMatch(/NaN|null/);
 });
+it('follows learned music tags without mapping power to anger',()=>{
+ const mix=emotionMix({...point({powerful:.9,energetic:.5,happy:.2}),score_source:'music2emo_tags'});
+ expect(mix.dominant).toBe('powerful');expect(mix.weights.anger).toBeUndefined();
+ expect(mix.leadColor).toMatch(/^color-mix\(in oklab, #c9a879 /);
+});

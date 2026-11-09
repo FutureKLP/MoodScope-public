@@ -180,9 +180,9 @@ zeigte bessere Songmittelwerte fuer Valenz und Aktivierung als die CLAP-v7-
 Projektion. Parameter wurden nach Sichtung dieses Sets nicht angepasst. Dies
 ist ein kleiner datensatznaher Vergleich, keine unabhaengige Pruefung der gesamten
 Trainingshistorie und kein Nachweis zeitgenauer Uebergaenge oder allgemeiner
-Genre-Robustheit. Die erzeugten Kurven wurden gegen statische Songurteile gemittelt;
-sie wurden nicht gegen dynamische DEAM-Annotationen bewertet. Ergebnisse bleiben
-privat. Die App kennzeichnet den Zweitverlauf weiterhin als experimentell.
+Genre-Robustheit. Der erste Vergleich mittelte gegen statische Songurteile;
+die spaetere dynamische Pruefung steht am Anfang dieses Dokuments. Ergebnisse
+bleiben lokal. Zeitgenaue Uebergaenge sind weiterhin unzureichend validiert.
 
 Fuer die vorhandene Entwicklungsinstallation wurden isoliert folgende Pakete
 ergaenzt: mir_eval 0.8.2, pretty_midi 0.2.10, music21 9.3.0, mido 1.3.3,
@@ -210,3 +210,24 @@ nicht auf. Modellgewichte und Drittanbieterquellen sind kein Bestandteil der
 GitHub-Veroeffentlichung. Fuer eine kommerzielle Weitergabe ist die nichtkommerzielle
 MERT-Bedingung vorab zu klaeren; dieser Zwischenstand behauptet keine kommerzielle
 Lizenzfreigabe.
+
+
+## Erneut gepruefte Ansaetze fuer druckvolle Musik
+
+[Music2Emotion](https://github.com/AMAAI-Lab/Music2Emotion) lernt Valenz,
+Aktivierung und unabhaengige Tags gemeinsam. Die App verwendet seine echten
+Kraft-/Energie-Tags getrennt von gefuehlsbezogenen Tags; negative Valenz wird
+nicht automatisch in Aerger uebersetzt. Die Quelle bleibt auch beim Wechsel
+zum Abschnittsbericht aktiv.
+
+[Essentia Models](https://essentia.upf.edu/models.html) bietet ebenfalls direkte
+Valenz-/Aktivierungsregression, etwa mit MusiCNN und DEAM. Kleine offizielle
+ONNX-Dateien wurden fuer einen getrennten lokalen Vergleich abgerufen. Daraus
+folgt noch keine validierte Alternative: passende Vorverarbeitung, eigenstaendige
+Bewertung und Lizenzbedingungen muessen geprueft werden. Keine Aktivierung in der App.
+
+[audioFX](https://github.com/stelioskt/audioFX) untersucht Vorhersagedrift durch
+Audioeffekte einschliesslich Verzerrung. Uebernommen wurde die Idee eines
+kontrollierten Belastungstests, kein Programmcode. Eine kleine Rock-Diagnose
+zeigt wenig Pegeldrift bei Music2Emo, aber groessere Aenderungen durch Saettigung.
+Klanginvarianz allein waere auch keine menschliche Emotionsreferenz.

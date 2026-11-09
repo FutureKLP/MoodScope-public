@@ -28,6 +28,15 @@ it('restores the chosen model only with a current cached result',async()=>{
  const select=vi.fn();render(<ExpressionComparison {...props} preferred={true} onSelect={select} job={vi.fn()}/>);
  await act(async()=>{});expect(select).toHaveBeenCalledWith(result.rows);
 });
+it('calculates a missing preferred installed model once',async()=>{
+ setLanguage('de');vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({ready:true,result:null,stale:false}))));
+ const select=vi.fn(),job=vi.fn(async()=>result);
+ const view=render(<ExpressionComparison {...props} preferred={true} onSelect={select} job={job}/>);
+ await act(async()=>{});expect(job).toHaveBeenCalledTimes(1);expect(select).toHaveBeenCalledWith(result.rows);
+ view.rerender(<ExpressionComparison {...props} preferred={true} busy={true} onSelect={select} job={job}/>);
+ view.rerender(<ExpressionComparison {...props} preferred={true} busy={false} onSelect={select} job={job}/>);
+ expect(job).toHaveBeenCalledTimes(1);
+});
 it('ignores a calculation completed after changing tracks',async()=>{
  setLanguage('de');vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({ready:true,result:null,stale:false}))));
  let finish!:(value:unknown)=>void;const job=vi.fn(()=>new Promise(resolve=>{finish=resolve}));const select=vi.fn();

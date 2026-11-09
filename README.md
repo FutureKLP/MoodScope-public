@@ -55,19 +55,29 @@ Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTun
 ### Bewertungsmodell der Audio-/Lyrics-Kurve
 
 Direkt unter der vorhandenen Kurve lässt sich **Audio-Bewertungsmodell** öffnen.
+Die Audioquelle bleibt beim Wechsel zwischen Stimmungsverlauf und Methode & Werte aktiv.
+Eine sichtbare Modellauswahl steht in beiden Ansichten bereit. Im Abschnittsbericht
+stehen Kraft und Energie separat unter Klangcharakter; sie werden nicht in Aerger
+umgerechnet. Vor-/Zurueck-Tasten waehlen gemessene Abschnitte.
+
 **Music2Emo verwenden** setzt einen aktuellen gespeicherten Vergleich in dieselbe
 Audio-/Lyrics-Kurve ein. **Music2Emo berechnen und verwenden** startet die lokale
 Berechnung. Die Audio-Kennzahl und **Biggest Split** folgen der Auswahl; Lyrics
 bleiben ihre eigenen Textschätzungen. **CLAP verwenden** stellt die bisherige
-Audio-Bewertung wieder her. Die Wahl wird lokal gemerkt; beim nächsten Song wird
-Music2Emo nur mit einem passenden aktuellen Cache wieder angezeigt.
+Audio-Bewertung wieder her. Die Wahl wird lokal gemerkt. Ohne ausdrückliche CLAP-Wahl wird die eingerichtete
+lokale Music2Emo-Erweiterung bevorzugt: Ein aktueller Cache wird geladen, ein
+fehlender oder veralteter Verlauf einmalig lokal berechnet. Es gibt keinen
+automatischen Modelldownload.
 
 Music2Emo verwendet bis zu 30 Sekunden Kontext und 5-Sekunden-Schritte. Es trifft
 auf dem bisherigen Referenzsatz das allgemeine Niveau besser, schnelle Übergänge
-sind weiter unzureichend validiert. Die sechs Gefühlsbalken und Atmosphärenfarben
-bleiben CLAP-Beschreibungsanteile; sie werden nicht aus Music2Emo-Tags erfunden.
-Unter **Methode & Werte** sind diese Herkunft und die gespeicherte CLAP-Rechnung
-sichtbar. Zusätzliche Vergleichsdiagramme werden nicht eingeblendet.
+sind weiter unzureichend validiert. Bei Music2Emo verwenden die vorhandenen Gefühlsbalken echte gelernte Hinweise:
+Freude, Ruhe, Trauer, Melancholie, Zuversicht, Romantik, Kraft, Energie und
+Entspannung. Die unabhängigen Scores laufen von 0 bis 1 und addieren sich nicht
+zu 100 Prozent. Kurve, Balken und Atmosphärenfarben verwenden dieselbe Quelle;
+Kraft wird nicht automatisch als Ärger interpretiert. Bei CLAP bleiben seine
+sechs ursprünglichen Beschreibungsanteile und die gespeicherte Rechnung sichtbar.
+Zusätzliche Vergleichsdiagramme werden nicht eingeblendet.
 
 Die Erweiterung wird nicht automatisch heruntergeladen. Lokale Einrichtung,
 getrennte Basisumgebung und Lizenzbedingungen stehen in
@@ -258,7 +268,7 @@ Für die Oberfläche `npm run dev` und für das Backend separat `.venv-modern\Sc
 
 Audio, Lyrics, Analysen, persönliche Notizen, API-Keys, Modelle und Testmusik werden nicht in Git aufgenommen. Auch lokale Werkzeuge, virtuelle Umgebungen, Installer und Screenshots sind ausgeschlossen. Standardmäßig bleiben Audio und Inferenz lokal; LRCLIB erhält nur bei Lyrics-Suche Interpret, Titel und Dauer. Linkimport greift auf die gewählte Plattform zu. Der ausdrücklich gewählte API-Modus sendet die dafür genannten Daten an Google.
 
-Vor jedem Fortschritts-Commit und Upload prüft `scripts/check_publication.py` die ausgewählten Dateien. Mit `--ref HEAD` werden auch ältere erreichbare Dateiversionen und Commit-E-Mail-Adressen geprüft. Ein später gelöschtes Geheimnis bleibt ein Sperrgrund. Das ersetzt kein zusätzliches Lesen der Änderungen. Einzelheiten: [Veröffentlichungsablauf](docs/PUBLISHING.md).
+Vor jedem Fortschritts-Commit und Upload prüft `scripts/check_publication.py` die ausgewählten Dateien. Öffentliche Übernahmen verwenden einen eigenen Veröffentlichungscommit; mit `--ref codex/public-release` werden auch dessen erreichbare Dateiversionen und Commit-E-Mail-Adressen geprüft. Ein später gelöschtes Geheimnis bleibt ein Sperrgrund. Das ersetzt kein zusätzliches Lesen der Änderungen. Einzelheiten: [Veröffentlichungsablauf](docs/PUBLISHING.md).
 
 ## Noch offen
 

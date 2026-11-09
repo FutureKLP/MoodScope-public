@@ -1,10 +1,11 @@
 import {Analysis} from './types';
-export type ExpressionRow={start:number;end:number;valence:number;arousal:number};
+export const MUSIC_TAGS=['happy','calm','sad','melancholic','hopeful','romantic','powerful','energetic','relaxing'] as const;
+export type ExpressionRow={start:number;end:number;valence:number;arousal:number;tags?:Record<string,number>;context_start?:number;context_end?:number;outside_training_scale?:boolean};
 
 /** Replace only the displayed dimensional curve; never fabricate category scores. */
 export function expressionTimeline(analysis:Analysis|null,rows:ExpressionRow[]|null):Analysis|null{
  if(!analysis||!rows?.length)return analysis;
- const audio=rows.map(row=>({...row,scores:{}}));
+ const audio=rows.map(row=>({...row,score_source:'music2emo_tags' as const,scores:Object.fromEntries(MUSIC_TAGS.filter(tag=>Number.isFinite(row.tags?.[tag])&&row.tags![tag]>=0&&row.tags![tag]<=1).map(tag=>[tag,row.tags![tag]]))}));
  let split:Analysis['split']=null;
  for(const row of audio){
   let covered=0,weighted=0;

@@ -3,9 +3,9 @@ set -eu
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 if [ -x .venv/Scripts/python.exe ]; then
-  .venv/Scripts/python.exe scripts/check_publication.py --ref HEAD
+  .venv/Scripts/python.exe scripts/check_push.py "$@"
 elif [ -x .venv/bin/python ]; then
-  .venv/bin/python scripts/check_publication.py --ref HEAD
+  .venv/bin/python scripts/check_push.py "$@"
 else
-  python3 scripts/check_publication.py --ref HEAD
+  python3 scripts/check_push.py "$@"
 fi

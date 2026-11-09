@@ -739,7 +739,7 @@ def run_interpretation(job_id,identity,request):
         research_facts=json.loads(research_row[0]) if research_row else None
         research_basis=hashlib.sha256(json.dumps(research_facts,sort_keys=True).encode()).hexdigest()
         prompt_basis=prompt_presets.fingerprint(DATA,[('whole_' if request.time is None else 'line_')+request.language])
-        interpretation_version='music-text-v12-joint' if request.include_music else 'whole-song-v11-source'
+        interpretation_version='music-text-v13-grounded' if request.include_music else 'whole-song-v11-source'
         key='interpretation:'+hashlib.sha256((interpretation_version+prompt_basis+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent','include_music'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
@@ -750,7 +750,7 @@ def run_interpretation(job_id,identity,request):
             result['interpretation_kind']='music_text_v1' if request.include_music else 'lyrics'
             result['music_source']=request.music_source if request.include_music else 'analysis'
             result['cached']=False
-            result['text_evidence']=[{'start':r['start'],'end':r['end'],'text':r.get('text','')} for r in analysis.get('lyrics',[]) if request.time is None or r['start']<=request.time<r['end']]
+            result['text_evidence']=[{'reference':f'L{i+1}','start':r['start'],'end':r['end'],'text':r.get('text','')} for i,r in enumerate(analysis.get('lyrics',[])) if request.time is None or r['start']<=request.time<r['end']]
             result['online_evidence']={k:v for k,v in research_facts.items() if k in {'source','url','title','musical_facts'}} if research_facts else None
             result['research_basis']=research_basis
             result['language']=request.language
@@ -764,7 +764,7 @@ def run_interpretation(job_id,identity,request):
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
                 own(conn,key,identity)
         latest_key=f'interpretation-latest:{cache_identity}:{request.mode}:{request.provider_id or "default"}:{request.language}'
-        if request.include_music:latest_key+=':music-v2:'+request.music_source
+        if request.include_music:latest_key+=':music-v3:'+request.music_source
         scoped_key=latest_key+(':whole' if request.time is None else ':position')
         with db() as conn:
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(latest_key,json.dumps(result)))
@@ -795,7 +795,7 @@ def interpret(identity: str,request: InterpretationRequest):
 def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',provider_id:str | None=None,language:Literal['de','en']='de',scope:Literal['whole','position']='whole',include_music:bool=False,music_source:Literal['analysis','music2emo']='analysis'):
     identity=canonical(identity)
     key=f'interpretation-latest:{identity}:{mode}:{provider_id or "default"}:{language}'
-    if include_music:key+=':music-v2:'+music_source
+    if include_music:key+=':music-v3:'+music_source
     with db() as conn:
         row=conn.execute('SELECT result FROM cache WHERE key=?',(key+':'+scope,)).fetchone()
         if not row:
