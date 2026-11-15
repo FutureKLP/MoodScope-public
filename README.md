@@ -1,5 +1,17 @@
 # MoodScope
 
+Geprüfte Quellverbesserungen für die Entwicklungsversion 0.3:
+[Änderungen](docs/PUBLIC-RELEASE-NOTES.md), [Testverfahren](docs/TEST-BASELINE.md)
+und [offene Kernabnahmen](docs/CORE-ACCEPTANCE.md). Keine vollständige Kern-,
+Plattform- oder Qualitätsfreigabe; externe Datenbanken bleiben gesperrt.
+[Drittanbieter und Modelllizenzen](docs/THIRD-PARTY.md).
+
+Anbieterprofile, Passwortfelder und Aufgabenzuordnung sind in beiden Betriebsmodi
+unter **Modelle & API** erreichbar. Jede der fünf KI-Aufgaben kann lokal bleiben
+oder ein passendes Profil verwenden. Der API-Modus ist anbieterübergreifend;
+Fähigkeiten hängen vom gewählten Protokoll und Modell ab.
+[Einrichtung, Zustimmung und Neustart](docs/API-PROFILES.md).
+
 MoodScope ist eine lokale Desktop-App für die Frage, wie unterschiedlich Musik und Text eines Songs wirken. Die App spielt einen Song ab und zeigt zwei synchronisierte emotionale Verläufe:
 
 - **Audio Mood:** der geschätzte musikalische Ausdruck.
@@ -28,7 +40,7 @@ Im Reiter **Hörstudio** lassen sich Gesang, Schlagzeug, Bass und übrige Instru
 
 Vorher die optionale Erweiterung projektlokal installieren: `python -m pip install -r backend/requirements-separation.txt` in der aktivierten venv. Die torchaudio-Version muss zum vorhandenen PyTorch-/CUDA-Build passen. Der erste Trennlauf lädt die offiziellen Demucs-Gewichte nach `models/demucs/`. Ergebnisse liegen unter `data/stems/`.
 
-Unter **Modelle & API** können Gemini, OpenAI, Anthropic, DeepSeek und OpenAI-kompatible Textserver wie Ollama/LM Studio mit Basis-URL und exakter Modell-ID hinzugefügt werden. In **Interpretation** lässt sich das Textmodell unabhängig von der Audioanalyse auswählen. Vor dem Versand ist eine ausdrückliche Zustimmung nötig. Anbieter können kostenpflichtig sein; es gibt keine pauschale Gratiszusage. Profilangaben bleiben lokal gespeichert, Schlüssel nur im Arbeitsspeicher. Diese Adapter sind für Textdeutung vorbereitet, nicht für beliebige Audio- oder Bildmodelle. Unterstützt werden die dokumentierten Chat-Completions- bzw. Messages-Protokolle, nicht automatisch jede proprietäre API.
+Unter **Modelle & API** können Gemini, OpenAI, Anthropic, DeepSeek und OpenAI-kompatible Textserver wie Ollama/LM Studio mit Basis-URL und exakter Modell-ID hinzugefügt werden. In **Interpretation** lässt sich das Textmodell unabhängig von der Audioanalyse auswählen. Vor dem Versand ist eine ausdrückliche Zustimmung nötig. Anbieter können kostenpflichtig sein; es gibt keine pauschale Gratiszusage. Profilangaben bleiben lokal gespeichert, Schlüssel nur im Arbeitsspeicher. Textprofile dienen der Textdeutung und Textbewertung. Audioaufgaben benötigen Gemini oder ein ausdrücklich audiotaugliches Chat-Completions-Profil, etwa für OpenAI/Mistral oder einen kompatiblen eigenen Server. Unterstützt werden die dokumentierten Protokolle, nicht automatisch jede proprietäre API.
 
 KI-Deutungen werden automatisch gespeichert und beim erneuten Öffnen angezeigt. Gesamt- und Zeilendeutung werden getrennt aufbewahrt; eine Zeilendeutung überschreibt die Gesamtdeutung nicht. **Gesamtdeutung neu erstellen** umgeht ihren Cache; **Analyse-Cache löschen** entfernt auch die KI-Deutungen, erhält aber eigene Notizen und Audio. Getrennte Hörspuren werden separat gespeichert.
 
@@ -91,6 +103,10 @@ Importierte Songs, Analysen und eigene Notizen werden lokal in SQLite gespeicher
 Vorhandene Ergebnisse werden beim Import geladen, ohne erneut KI-Inferenz auszuführen. Bei geänderter Modellversion wird eine ältere Analyse als solche gekennzeichnet. **Neu analysieren** erzwingt eine neue Berechnung und umgeht Audio- und Gesamtanalyse-Cache. **Analyse-Cache löschen** entfernt gespeicherte Analysen, KI-Deutungen und Recherchewerte. Eigene Notizen, Wiedergabekopie und erzeugte Hörspuren bleiben erhalten; ausgeblendete Spuren werden zurückgesetzt. Beim Öffnen eines Songs aus der Bibliothek wird ein vorhandener Analyse-Cache geladen. Fehlt er, startet automatisch derselbe Recherche-, Lyrics- und Analyseablauf wie beim ersten Import. Das Löschen allein startet noch keine neue Analyse. **Song neu analysieren** erzwingt jederzeit eine neue Berechnung.
 
 **Song vollständig entfernen** löscht einen Bibliothekseintrag einschließlich zugehöriger Analysen, KI-Deutungen, eigener Notizen, normalisierter Wiedergabekopie und Hörspuren. Gleich erkannte Importvarianten werden gemeinsam entfernt. **Gesamte Bibliothek entfernen** löscht alle verwalteten Songs und zugehörigen Daten. Beide Aktionen verlangen eine Bestätigung in der App. Ursprüngliche Musikdateien, heruntergeladene Modelle und Anbieterprofile bleiben erhalten.
+
+Unterbrochene Löschaktionen werden beim nächsten Dienststart anhand eines lokalen Journals und des SQLite-Transaktionsstands wiederhergestellt oder fertig bereinigt. Bei Konflikten bleiben beide Dateistände erhalten. Fehlt eine Wiedergabekopie oder ist sie nicht mehr dekodierbar, dieselbe Originaldatei erneut importieren; Notizen und gespeicherte Analysen bleiben erhalten. Eine beschädigte Kopie wird davor separat aufbewahrt. Solche Reparaturkopien und ältere Quarantänen ohne Journal bleiben zur manuellen Prüfung auch nach einer Bibliothekslöschung erhalten.
+
+WAV-Exporte prüfen die vollständige RIFF-Länge, Format- und Datenblöcke sowie die Framegröße vor dem Ersetzen eines gewählten Ziels. Fehlgeschlagene Übertragungen erhalten die bisherige Zieldatei; ein ausdrücklich gewähltes vorhandenes Ziel kann nach erfolgreichem Export ersetzt werden. Details, Tests und Grenzen: [Audiowiedergabe und Export](docs/AUDIO-PLAYBACK.md), [lokale Musikdatenintegrität](docs/DATA-INTEGRITY.md).
 
 ### Songdetails
 
@@ -357,6 +373,10 @@ Balkenfarben: die staerkste Kategorie praegt die Flaeche, kleinere Anteile
 mischen sich dezent darunter. Balken und Hintergrund verwenden dieselbe Palette.
 Die Farben orientieren sich an verbreiteten psychologischen Assoziationen;
 die konkrete Gestaltung ist keine weitere Emotionsmessung.
+
+Die bestehende Palette, Mischung, Flächen, Bewegung und Sprachregeln sind in
+[DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) beschrieben. Kleine Sidebarangaben
+bleiben auch über farbigen Atmosphärenflächen kontrastreich lesbar.
 
 KI-Anbieterprofile und API-Key-Felder stehen unter **Modelle & API** sowohl
 im lokalen als auch im API-Modus bereit. Die obere Auswahl bezeichnet den
