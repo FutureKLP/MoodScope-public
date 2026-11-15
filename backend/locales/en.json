@@ -974,5 +974,12 @@
   "Gratisprojekt für das gewählte Gemini-Audioprofil bestätigen.": "Confirm a free project for the selected Gemini audio profile.",
   "Nutzungsbedingungen des gewählten Audioprofils bestätigen.": "Confirm the terms for the selected audio profile.",
   "Alle fünf Aufgaben ausdrücklich zuordnen.": "Explicitly assign all five tasks.",
-  "Aufgabenzuordnung ist ungültig. In Modelle & API erneut speichern.": "Task assignments are invalid. Save them again in Models & API."
+  "Aufgabenzuordnung ist ungültig. In Modelle & API erneut speichern.": "Task assignments are invalid. Save them again in Models & API.",
+  "Gespeicherte Songdaten sind beschädigt; keine Daten verändert.": "Stored song data is damaged; no data was changed.",
+  "Zyklischer Aufnahmeverweis; keine Daten verändert.": "Cyclic recording reference; no data was changed.",
+  "Aufnahmeverweis fehlt; keine Daten verändert.": "Recording reference is missing; no data was changed.",
+  "Lokale Audiokopie fehlt oder ist beschädigt. Originaldatei erneut importieren; gespeicherte Daten bleiben erhalten.": "The local audio copy is missing or damaged. Reimport the original file; stored data is preserved.",
+  "Gespeicherte Analyse ist beschädigt oder einem anderen Song zugeordnet; keine Daten verändert.": "The stored analysis is damaged or belongs to another song; no data was changed.",
+  "Gespeicherter Music2Emo-Verlauf ist beschädigt; keine Daten verändert.": "The stored Music2Emo timeline is damaged; no data was changed.",
+  "Music2Emo-Ergebnis enthält ungültige Werte oder Zeitbereiche; gespeicherte Daten bleiben erhalten.": "The Music2Emo result contains invalid values or time ranges; stored data is preserved."
 }

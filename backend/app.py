@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field, SecretStr
 from .core import parse_lrc, biggest_split,text_coverage
 from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
 from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method,cancellation,prompt_presets,runtime_devices
-from . import expression_compare,provider_routing
+from . import expression_compare,provider_routing,storage
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
@@ -86,14 +86,25 @@ async def local_only(request: Request, call_next):
     return result
 
 
+_db_init_lock=threading.RLock()
+_recovered_data=set()
+
+
 @contextmanager
 def db():
     conn = sqlite3.connect(DATA / 'cache.sqlite3', timeout=30)
-    conn.execute('CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, metadata TEXT NOT NULL)')
-    conn.execute('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, result TEXT NOT NULL)')
-    conn.execute('CREATE TABLE IF NOT EXISTS cache_owner (key TEXT PRIMARY KEY, track_id TEXT NOT NULL)')
-    conn.execute('CREATE TABLE IF NOT EXISTS cache_state (name TEXT PRIMARY KEY, revision INTEGER NOT NULL)')
     try:
+        with _db_init_lock:
+            conn.execute('CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, metadata TEXT NOT NULL)')
+            conn.execute('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, result TEXT NOT NULL)')
+            conn.execute('CREATE TABLE IF NOT EXISTS cache_owner (key TEXT PRIMARY KEY, track_id TEXT NOT NULL)')
+            conn.execute('CREATE TABLE IF NOT EXISTS cache_state (name TEXT PRIMARY KEY, revision INTEGER NOT NULL)')
+            root=DATA.resolve()
+            if root not in _recovered_data:
+                with conn:
+                    conn.execute('BEGIN IMMEDIATE')
+                    storage.recover_deletions(DATA,conn)
+                _recovered_data.add(root)
         with conn:
             cancellation.check()
             yield conn
@@ -121,7 +132,7 @@ def guard_research(conn,identity,generation):
 
 def song_cache_keys(conn,ids,include_personal=False):
     keys={r[0] for identity in ids for r in conn.execute('SELECT key FROM cache_owner WHERE track_id=?',(identity,))}
-    prefixes={'audio','latest','details','interpretation-latest','research-search-v5','research-recording','research-selected','research-results','stem-visibility'}
+    prefixes={'audio','latest','details','expression-comparison','interpretation-latest','research-search-v5','research-recording','research-selected','research-results','stem-visibility'}
     if include_personal:prefixes.update({'notes','fingerprint'})
     for key, in conn.execute('SELECT key FROM cache'):
         parts=key.split(':')
@@ -136,18 +147,30 @@ def song_cache_keys(conn,ids,include_personal=False):
 
 
 def track(track_id):
+    if not re.fullmatch(r'[a-f0-9]{64}',track_id):raise HTTPException(404,'Song nicht gefunden')
     with db() as conn:
         row = conn.execute('SELECT metadata FROM tracks WHERE id=?', (track_id,)).fetchone()
     if not row:
         raise HTTPException(404, 'Song nicht gefunden')
-    return json.loads(row[0])
+    try:
+        metadata=json.loads(row[0])
+        if not isinstance(metadata,dict) or metadata.get('id')!=track_id:raise ValueError()
+        return metadata
+    except (ValueError,TypeError):
+        raise HTTPException(409,'Gespeicherte Songdaten sind beschädigt; keine Daten verändert.') from None
 
 
 def canonical(identity):
     metadata=track(identity)
     seen={identity}
-    while metadata.get('reuse_source_id') and metadata['reuse_source_id'] not in seen:
-        identity=metadata['reuse_source_id'];seen.add(identity);metadata=track(identity)
+    while metadata.get('reuse_source_id'):
+        identity=metadata['reuse_source_id']
+        if identity in seen:raise HTTPException(409,'Zyklischer Aufnahmeverweis; keine Daten verändert.')
+        seen.add(identity)
+        try:metadata=track(identity)
+        except HTTPException as exc:
+            if exc.status_code==404:raise HTTPException(409,'Aufnahmeverweis fehlt; keine Daten verändert.') from None
+            raise
     return identity
 
 
@@ -209,6 +232,11 @@ def set_cloud_settings(request: CloudSettings):
 
 
 def import_path(source, name, supplied=None):
+    # Serialize import publication against library deletion and alias changes.
+    with job_lock:return _import_path(source,name,supplied)
+
+
+def _import_path(source, name, supplied=None):
     supplied=supplied or {}
     digest=hashlib.sha256(b'moodscope-stereo-decoder-v2')
     size=0
@@ -217,8 +245,13 @@ def import_path(source, name, supplied=None):
             size+=len(chunk)
             if size>250*1024*1024: raise HTTPException(413,'Maximal 250 MB pro Song')
             digest.update(chunk)
-    identity=digest.hexdigest();target=DATA/f'{identity}.wav'
-    if not target.exists():
+    identity=digest.hexdigest();target=storage.managed_path(DATA,f'{identity}.wav')
+    valid_copy=False
+    try:
+        with target.open('rb') as stream:header=sf.info(stream)
+        valid_copy=header.frames>0 and header.channels==2 and header.samplerate==48000
+    except (OSError,ValueError,RuntimeError):pass
+    if not valid_copy:
         import imageio_ffmpeg
         converted=DATA/f'{uuid.uuid4().hex}.wav'
         try:
@@ -228,6 +261,8 @@ def import_path(source, name, supplied=None):
             info=sf.info(converted)
             if info.duration<=0: raise ValueError('Leere Audiodatei')
             if info.duration>1800: raise HTTPException(413,'Maximal 30 Minuten; Datei wurde nicht abgeschnitten importiert.')
+            if target.exists():
+                target.rename(target.with_name(identity+'.damaged-'+uuid.uuid4().hex+'.wav'))
             converted.replace(target)
         except HTTPException: raise
         except (subprocess.SubprocessError,ValueError,RuntimeError):
@@ -255,6 +290,9 @@ def import_path(source, name, supplied=None):
         previous=conn.execute('SELECT metadata FROM tracks WHERE id=?',(identity,)).fetchone()
         if previous:
             prior=json.loads(previous[0])
+            for field in ['artist','title','source_url','uploader']:
+                if not metadata.get(field) and prior.get(field):metadata[field]=prior[field]
+            metadata['tags']={**prior.get('tags',{}),**metadata['tags']}
             if prior.get('reuse_source_id'):metadata['reuse_source_id']=prior['reuse_source_id']
             metadata['cache_match']='same-file'
         else:
@@ -292,7 +330,13 @@ def upload(file: UploadFile = File(...)):
 @app.get('/api/tracks/{identity}/audio')
 def audio(identity: str):
     track(identity)
-    return FileResponse(DATA / f'{identity}.wav', media_type='audio/wav')
+    path=storage.managed_path(DATA,f'{identity}.wav')
+    try:
+        with path.open('rb') as stream:
+            if sf.info(stream).frames<=0:raise ValueError()
+    except (OSError,ValueError,RuntimeError):
+        raise HTTPException(409,'Lokale Audiokopie fehlt oder ist beschädigt. Originaldatei erneut importieren; gespeicherte Daten bleiben erhalten.') from None
+    return FileResponse(path, media_type='audio/wav')
 
 
 class LyricsQuery(BaseModel):
@@ -431,7 +475,10 @@ def run_job(job_id, identity, request):
         with db() as conn:
             cached = conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force and not request.force_transcription:
-            result = {**json.loads(cached[0]), 'cached':True}
+            value=json.loads(cached[0])
+            if not isinstance(value,dict) or value.get('track_id',cache_identity)!=cache_identity:
+                raise ValueError('Gespeicherte Analyse ist beschädigt oder einem anderen Song zugeordnet; keine Daten verändert.')
+            result = {**value, 'cached':True}
         else:
             lines = parse_lrc(request.lyrics, metadata['duration'])
             lyric_source='lrc' if lines else 'plain-text' if request.lyrics.strip() else 'none'
@@ -689,16 +736,26 @@ def saved_expression_comparison(identity:str):
     track(identity);identity=canonical(identity)
     with db() as conn:
         row=conn.execute('SELECT result FROM cache WHERE key=?',(f'expression-comparison:{identity}',)).fetchone()
-    result=json.loads(row[0]) if row else None
+    result=expression_result(row,identity)
     return {'ready':expression_compare.ready(),'result':result,
             'stale':bool(result and result.get('model_basis')!=expression_compare.fingerprint())}
+
+
+def expression_result(row,identity):
+    if not row:return None
+    try:
+        value=json.loads(row[0])
+        if value.get('track_id',identity)!=identity:raise ValueError()
+        return expression_compare.validate_result(value,track(identity)['duration'])
+    except (ValueError,TypeError,AttributeError):
+        raise HTTPException(409,'Gespeicherter Music2Emo-Verlauf ist beschädigt; keine Daten verändert.') from None
 
 
 def run_expression_comparison(job_id,identity,request):
     identity=canonical(identity);basis=expression_compare.fingerprint()
     key=f'expression-comparison:{identity}'
     with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
-    result=json.loads(row[0]) if row else None
+    result=expression_result(row,identity) if not request.force else None
     if not result or request.force or result.get('model_basis')!=basis:
         def progress(message,value):
             cancellation.check()
@@ -708,7 +765,8 @@ def run_expression_comparison(job_id,identity,request):
         catalog.unload_models(engines)
         result=expression_compare.analyse(DATA/f'{identity}.wav',DATA,engines.device(),progress)
         cancellation.check()
-        result={**result,'model_basis':basis,'cached':False}
+        expression_compare.validate_result(result,track(identity)['duration'])
+        result={**result,'model_basis':basis,'track_id':identity,'cached':False}
         with db() as conn:
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
             own(conn,key,identity)
@@ -727,7 +785,7 @@ def with_music_source(identity,analysis,source):
     if source!='music2emo':return analysis
     with db() as conn:
         row=conn.execute('SELECT result FROM cache WHERE key=?',(f'expression-comparison:{canonical(identity)}',)).fetchone()
-    result=json.loads(row[0]) if row else None
+    result=expression_result(row,canonical(identity))
     basis=expression_compare.fingerprint()
     if not result or not basis or result.get('model_basis')!=basis:
         raise HTTPException(409,'Zuerst einen aktuellen Music2Emo-Verlauf berechnen.')
@@ -917,7 +975,11 @@ def stored_analysis(identity: str,mode: Literal['local','cloud']='local'):
     with db() as conn:
         row=conn.execute('SELECT result FROM cache WHERE key=?',(f'latest:{identity}:{mode}',)).fetchone()
         if not row:raise HTTPException(404,'Keine gespeicherte Analyse für diesen Modus.')
-        result=json.loads(row[0])
+        try:
+            result=json.loads(row[0])
+            if not isinstance(result,dict) or result.get('track_id',identity)!=identity:raise ValueError()
+        except (ValueError,TypeError):
+            raise HTTPException(409,'Gespeicherte Analyse ist beschädigt oder einem anderen Song zugeordnet; keine Daten verändert.') from None
         # Adopt identical legacy cache entries so deletion also clears old opaque keys.
         comparable={k:v for k,v in result.items() if k!='cached'}
         for key,raw in conn.execute('SELECT key,result FROM cache WHERE key NOT IN (SELECT key FROM cache_owner)').fetchall():
@@ -932,11 +994,11 @@ def stored_analysis(identity: str,mode: Literal['local','cloud']='local'):
 @app.get('/api/library')
 def song_library():
     with db() as conn:
-        rows=conn.execute('SELECT metadata FROM tracks ORDER BY rowid DESC').fetchall()
+        rows=conn.execute('SELECT id FROM tracks ORDER BY rowid DESC').fetchall()
         keys={r[0] for r in conn.execute("SELECT key FROM cache WHERE key LIKE 'latest:%'")}
     output=[];seen=set()
-    for raw, in rows:
-        metadata=json.loads(raw);identity=canonical(metadata['id'])
+    for song_id, in rows:
+        metadata=track(song_id);identity=canonical(song_id)
         if identity in seen:continue
         seen.add(identity)
         output.append({**metadata,'analysis_modes':[mode for mode in ['local','cloud'] if f'latest:{identity}:{mode}' in keys]})
@@ -964,7 +1026,6 @@ def delete_analysis_cache(identity: str):
 
 @app.post('/api/tracks/{identity}/delete')
 def delete_song(identity:str):
-    import shutil
     import re
     with job_lock:
         if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
@@ -972,15 +1033,9 @@ def delete_song(identity:str):
         with db() as conn:ids=[r[0] for r in conn.execute('SELECT id FROM tracks').fetchall()]
         family=[i for i in ids if canonical(i)==root_identity]
         if any(not re.fullmatch(r'[a-f0-9]{64}',i) for i in family):raise HTTPException(409,'Ungültige gespeicherte Song-ID; keine Dateien gelöscht.')
-        # Quarantine only generated files inside DATA; original imported files are never touched.
-        quarantine=DATA/('delete-'+uuid.uuid4().hex);quarantine.mkdir()
-        moved=[]
+        quarantine=None
         try:
-            for song_id in family:
-                for path in [DATA/(song_id+'.wav'),DATA/'stems'/song_id]:
-                    if path.exists():
-                        destination=quarantine/(song_id+('-stems' if path.is_dir() else '.wav'))
-                        path.rename(destination);moved.append((path,destination))
+            quarantine=storage.quarantine_files(DATA,family)
             with db() as conn:
                 keys=song_cache_keys(conn,set(family),include_personal=True)
                 invalidate_generation(conn)
@@ -988,12 +1043,14 @@ def delete_song(identity:str):
                     conn.execute('DELETE FROM cache WHERE key=?',(key,))
                     conn.execute('DELETE FROM cache_owner WHERE key=?',(key,))
                 for song_id in family:conn.execute('DELETE FROM tracks WHERE id=?',(song_id,))
+                storage.mark_deleted(conn,quarantine)
         except Exception as exc:
-            for original,temporary in reversed(moved):
-                if temporary.exists():temporary.rename(original)
+            if quarantine is not None:storage.restore(DATA,quarantine,family)
             raise HTTPException(409,diagnostics.user_error(DATA,'delete-song',exc,'Song konnte nicht entfernt werden. Wiedergabe stoppen und erneut versuchen.')) from None
         if quarantine.resolve().parent!=DATA.resolve():raise RuntimeError('Löschpfad liegt außerhalb des Datenordners.')
-        try:shutil.rmtree(quarantine)
+        try:
+            storage.cleanup(DATA,quarantine,family)
+            with db() as conn:conn.execute('DELETE FROM cache_state WHERE name=?',('delete:'+quarantine.name,))
         except OSError as exc:
             diagnostics.failure(DATA,'delete-song-cleanup',exc)
             return {'deleted':True,'removed_ids':family,'warning':'Bibliothekseintrag entfernt, temporäre Löschdateien sind noch gesperrt. Lokales Protokoll prüfen.'}
@@ -1121,8 +1178,9 @@ def focused_audio(identity:str,key:str):
     import re
     track(identity)
     if not re.fullmatch(r'[a-f0-9]{64}',key):raise HTTPException(422,'Ungültige Fokus-ID')
-    path=DATA/'stems'/identity/'focus'/(key+'.wav')
-    if not path.exists():path=DATA/'stems'/canonical(identity)/'focus'/(key+'.wav')
+    data=storage.long_path(DATA)
+    path=storage.managed_path(data,'stems',identity,'focus',key+'.wav')
+    if not path.exists():path=storage.managed_path(data,'stems',canonical(identity),'focus',key+'.wav')
     if not path.exists():raise HTTPException(404,'Fokusdatei fehlt; Filter erneut anwenden.')
     return FileResponse(path,media_type='audio/wav')
 

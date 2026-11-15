@@ -69,3 +69,18 @@ def test_cancellation_terminates_worker_and_removes_only_scratch(tmp_path,monkey
         expression_compare.analyse(original,tmp_path,'cpu',lambda *args:None)
     assert stopped and original.read_bytes()==b'authored source'
     assert not list(tmp_path.glob('expression-*'))
+
+
+@pytest.mark.parametrize('changes',[{'valence':float('nan')},{'arousal':2},{'start':-.1},{'end':2},{'tags':{'joy':float('inf')}}])
+def test_invalid_comparison_result_cannot_replace_existing_cache(client,monkeypatch,changes):
+    app=importlib.import_module('backend.app')
+    identity=client.post('/api/tracks',files={'file':('authored.wav',wav_bytes())}).json()['id']
+    baseline={'model_basis':'fixture-old','rows':[{'start':0,'end':1,'valence':.2,'arousal':.4}]}
+    key=f'expression-comparison:{identity}';raw=json.dumps(baseline)
+    with app.db() as conn:conn.execute('INSERT INTO cache VALUES (?,?)',(key,raw))
+    monkeypatch.setattr(expression_compare,'fingerprint',lambda:'fixture-new')
+    monkeypatch.setattr(expression_compare,'analyse',lambda *a:{'rows':[{**baseline['rows'][0],**changes}]})
+    monkeypatch.setattr(app.engines,'device',lambda:'cpu')
+    app.jobs['invalid']={'status':'running'}
+    with pytest.raises(ValueError):app.run_expression_comparison('invalid',identity,app.ExpressionRequest(force=True))
+    with app.db() as conn:assert conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()[0]==raw

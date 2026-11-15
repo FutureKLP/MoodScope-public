@@ -3,6 +3,7 @@ import json
 import math
 import hashlib
 import threading
+from . import storage
 from pathlib import Path
 import numpy as np
 import soundfile as sf
@@ -13,28 +14,41 @@ LABELS={'vocals':'Gesang / Stimmen','drums':'Schlagzeug','bass':'Bass','other':'
 
 def folder(data,identity,model):
     if model not in MODELS:raise ValueError('Nicht unterstütztes Trennmodell')
-    return Path(data)/'stems'/identity/model
+    return storage.managed_path(data,'stems',identity,model)
 
 
 def status(data,identity,model):
     root=folder(data,identity,model)
     try:
         info=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
-        if not all((root/(s+'.wav')).is_file() for s in info['sources']):raise ValueError()
+        sources=info['sources']
+        if (not isinstance(sources,list) or not sources or len(sources)>6 or
+            any(not isinstance(s,str) or s not in LABELS for s in sources) or
+            len(set(sources))!=len(sources) or info.get('model',model)!=model):raise ValueError()
+        shape=None
+        for source in sources:
+            path=storage.managed_path(data,'stems',identity,model,source+'.wav')
+            with path.open('rb') as stream:header=sf.info(stream)
+            current=(header.frames,header.samplerate)
+            if header.frames<=0 or header.channels not in {1,2} or (shape is not None and shape!=current):raise ValueError()
+            shape=current
+        if info.get('sample_rate',shape[1])!=shape[1]:raise ValueError()
+        if 'duration' in info and abs(info['duration']-shape[0]/shape[1])>1/shape[1]:raise ValueError()
+        info={**info,'model':model,'sample_rate':shape[1],'duration':shape[0]/shape[1]}
         if 'activity' not in info:
             energy={}
             for source in info['sources']:
                 squared=0.;count=0
-                with sf.SoundFile(root/(source+'.wav')) as audio:
+                with (root/(source+'.wav')).open('rb') as stream,sf.SoundFile(stream) as audio:
                     for block in audio.blocks(blocksize=65536,dtype='float32'):
+                        if not np.isfinite(block).all():raise ValueError()
                         squared+=float(np.square(block,dtype='float64').sum());count+=block.size
                 energy[source]=squared/max(1,count)
             total=sum(energy.values())
             info['activity']={s:float(v/max(1e-12,total)) for s,v in energy.items()}
             info['audible_sources']=[s for s in info['sources'] if info['activity'][s]>=.005]
-            (root/'manifest.json').write_text(json.dumps(info),encoding='utf-8')
         return {**info,'ready':True,'cached':True}
-    except (OSError,ValueError,KeyError):
+    except (OSError,ValueError,KeyError,TypeError,RuntimeError):
         return {'ready':False,'model':model,'sources':[]}
 
 
@@ -80,7 +94,7 @@ def separate(data,identity,model_name,engine,progress):
             'reconstruction_rms_after':float(np.sqrt(np.mean((y-stems.sum(axis=0))**2))),
             'duration':stems.shape[-1]/model.samplerate,'cached':False,'ready':True,
             'note':'Geschätzte Quellen mit möglichen Artefakten und Übersprechen. Gesang umfasst alle Stimmen; einzelne Sänger werden nicht getrennt. Gitarre/Klavier im 6-Spur-Modell sind experimentell.'}
-        (root/'manifest.json').write_text(json.dumps(info),encoding='utf-8')
+        storage.atomic_json(root/'manifest.json',info)
         return {**status(data,identity,model_name),'cached':False}
     finally:
         del model,mixture
@@ -127,8 +141,10 @@ def _mix(data,identity,model,sources,gains):
         with sf.SoundFile(temporary,'w',samplerate=info['sample_rate'],channels=2,subtype='FLOAT') as output:
             while True:
                 blocks=[h.read(65536,dtype='float32',always_2d=True)*gain for h,(_,gain) in zip(handles,chosen)]
+                blocks=[np.repeat(block,2,axis=1) if block.shape[1]==1 else block for block in blocks]
                 if not len(blocks[0]):break
                 mixture=sum(blocks);peak=max(peak,float(np.max(np.abs(mixture))))
+                if not np.isfinite(mixture).all():raise ValueError('Ungültige Audiodaten im Quellenmix.')
                 output.write(mixture)
         if peak>1:
             with sf.SoundFile(temporary) as source,sf.SoundFile(normalized,'w',samplerate=info['sample_rate'],channels=2,subtype='FLOAT') as output:

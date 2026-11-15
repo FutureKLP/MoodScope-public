@@ -7,11 +7,27 @@ import subprocess
 import sys
 import tempfile
 import time
+import math
 from . import cancellation
 
 ROOT=Path(__file__).resolve().parents[1]
 WEIGHTS=ROOT/'models/music2emo'
 METHOD='music2emo-curve-v1'
+
+
+def validate_result(result,duration):
+    try:
+        if not isinstance(result,dict) or result.get('method',METHOD)!=METHOD or not result['rows']:raise ValueError()
+        previous=0.
+        for row in result['rows']:
+            start,end,valence,arousal=(row[k] for k in ['start','end','valence','arousal'])
+            if (not all(isinstance(v,(int,float)) and not isinstance(v,bool) and math.isfinite(v) for v in [start,end,valence,arousal]) or
+                not previous<=start<end<=duration+.001 or not -1<=valence<=1 or not 0<=arousal<=1):raise ValueError()
+            if any(not isinstance(v,(int,float)) or not math.isfinite(v) or not 0<=v<=1 for v in row.get('tags',{}).values()):raise ValueError()
+            previous=end
+    except (ValueError,TypeError,KeyError,AttributeError):
+        raise ValueError('Music2Emo-Ergebnis enthält ungültige Werte oder Zeitbereiche; gespeicherte Daten bleiben erhalten.') from None
+    return result
 
 
 def project_analysis(analysis,result):

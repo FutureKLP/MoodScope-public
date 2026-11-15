@@ -25,6 +25,23 @@ fn suggested_name(filename: &str) -> String {
     if base.to_lowercase().ends_with(".wav") { base.into() } else { format!("{base}.wav") }
 }
 
+fn persist_wave_export(mut source: impl Read, path: &std::path::Path) -> Result<(), String> {
+    let parent = path.parent().ok_or("export-destination")?;
+    let mut header = [0_u8; 12];
+    source.read_exact(&mut header).map_err(|_| "export-download")?;
+    if &header[0..4] != b"RIFF" || &header[8..12] != b"WAVE" { return Err("export-format".into()); }
+    let expected = u32::from_le_bytes(header[4..8].try_into().unwrap()) as u64 + 8;
+    if expected < 12 || expected > MAX_BYTES { return Err("export-size".into()); }
+    let mut temporary = tempfile::NamedTempFile::new_in(parent).map_err(|_| "export-write")?;
+    temporary.write_all(&header).map_err(|_| "export-write")?;
+    let copied = std::io::copy(&mut source.take(MAX_BYTES + 1), &mut temporary).map_err(|_| "export-download")?;
+    if copied > MAX_BYTES - 12 { return Err("export-size".into()); }
+    if copied + 12 < expected { return Err("export-download".into()); }
+    temporary.as_file_mut().sync_all().map_err(|_| "export-write")?;
+    temporary.persist(path).map_err(|_| "export-write")?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn save_wave_export(app: tauri::AppHandle, track_id: String, model: String, sources: Vec<String>, gains: Vec<f64>, filename: String, language: String) -> Result<bool, String> {
     let url = export_url(&track_id, &model, &sources, &gains)?;
@@ -34,20 +51,11 @@ pub async fn save_wave_export(app: tauri::AppHandle, track_id: String, model: St
         let Some(chosen) = chosen else { return Ok(false); };
         let path = chosen.into_path().map_err(|_| "export-destination")?;
         if !path.extension().is_some_and(|s| s.to_string_lossy().eq_ignore_ascii_case("wav")) { return Err("export-extension".into()); }
-        let parent = path.parent().ok_or("export-destination")?;
         let client = reqwest::blocking::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(180)).build().map_err(|_| "export-download")?;
-        let mut response = client.get(url).send().map_err(|_| "export-download")?.error_for_status().map_err(|_| "export-download")?;
+        let response = client.get(url).send().map_err(|_| "export-download")?.error_for_status().map_err(|_| "export-download")?;
         if response.content_length().is_some_and(|size| size > MAX_BYTES) { return Err("export-size".into()); }
-        let mut header = [0_u8; 12];
-        response.read_exact(&mut header).map_err(|_| "export-download")?;
-        if &header[0..4] != b"RIFF" || &header[8..12] != b"WAVE" { return Err("export-format".into()); }
         // Keep the selected destination intact if transfer fails or the app exits.
-        let mut temporary = tempfile::NamedTempFile::new_in(parent).map_err(|_| "export-write")?;
-        temporary.write_all(&header).map_err(|_| "export-write")?;
-        let copied = std::io::copy(&mut response.take(MAX_BYTES + 1), &mut temporary).map_err(|_| "export-download")?;
-        if copied > MAX_BYTES - 12 { return Err("export-size".into()); }
-        temporary.as_file_mut().sync_all().map_err(|_| "export-write")?;
-        temporary.persist(path).map_err(|_| "export-write")?;
+        persist_wave_export(response, &path)?;
         Ok(true)
     }).await.map_err(|_| "export-failed".to_string())?
 }
@@ -69,5 +77,19 @@ mod tests {
     fn dialog_suggestions_cannot_contain_paths() {
         assert_eq!(suggested_name("../Song: vocals.wav"), "..Song vocals.wav");
         assert_eq!(suggested_name(""), "MoodScope-Mix.wav");
+    }
+    #[test]
+    fn failed_and_truncated_transfers_preserve_existing_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("authored.wav");
+        std::fs::write(&path, b"existing authored audio").unwrap();
+        for input in [b"RIFF".to_vec(), b"invalid-header".to_vec(), b"RIFF\x20\x00\x00\x00WAVEshort".to_vec()] {
+            assert!(persist_wave_export(std::io::Cursor::new(input), &path).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), b"existing authored audio");
+            assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+        }
+        let complete = b"RIFF\x08\x00\x00\x00WAVEdata";
+        persist_wave_export(std::io::Cursor::new(complete), &path).unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), complete);
     }
 }

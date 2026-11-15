@@ -40,3 +40,11 @@ def test_display_grid_covers_whole_track_without_overlaps():
     rows=analysis_grid(12)
     assert rows==[{'start':0,'end':5},{'start':5,'end':10},{'start':10,'end':12}]
     with pytest.raises(ValueError):analysis_grid(0)
+
+
+def test_coverage_ignores_outside_and_nonfinite_spans_without_negative_coverage():
+    from backend.core import text_coverage
+    rows=[{'start':-10,'end':-2}, {'start':25,'end':30}, {'start':float('nan'),'end':4}, {'start':2,'end':6}]
+    value=text_coverage(rows,20)
+    assert value['covered_seconds']==4
+    assert value['gaps']==[{'start':6,'end':20}]

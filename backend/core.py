@@ -1,9 +1,11 @@
 """Timing and comparison functions, independent of model inference."""
 import re
+import math
 
 
 def text_coverage(lines,duration):
-    intervals=sorted((max(0.,r['start']),min(duration,r['end'])) for r in lines if r['end']>r['start'])
+    intervals=sorted((max(0.,r['start']),min(duration,r['end'])) for r in lines
+                     if math.isfinite(r['start']) and math.isfinite(r['end']) and min(duration,r['end'])>max(0.,r['start']))
     merged=[]
     for start,end in intervals:
         if merged and start<=merged[-1][1]:merged[-1][1]=max(merged[-1][1],end)
