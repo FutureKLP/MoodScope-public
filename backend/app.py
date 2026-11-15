@@ -1,13 +1,11 @@
 import hashlib
 import json
 import os
-import sqlite3
 import subprocess
 import threading
 import uuid
 import tempfile
 import re
-from contextlib import contextmanager
 from typing import Literal
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -24,7 +22,7 @@ from pydantic import BaseModel, Field, SecretStr
 from .core import parse_lrc, biggest_split,text_coverage
 from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
 from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method,cancellation,prompt_presets,runtime_devices
-from . import expression_compare
+from . import expression_compare,provider_routing,storage,persistence
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
@@ -86,19 +84,12 @@ async def local_only(request: Request, call_next):
     return result
 
 
-@contextmanager
+store=persistence.SQLiteStore()
+
+
 def db():
-    conn = sqlite3.connect(DATA / 'cache.sqlite3', timeout=30)
-    conn.execute('CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, metadata TEXT NOT NULL)')
-    conn.execute('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, result TEXT NOT NULL)')
-    conn.execute('CREATE TABLE IF NOT EXISTS cache_owner (key TEXT PRIMARY KEY, track_id TEXT NOT NULL)')
-    conn.execute('CREATE TABLE IF NOT EXISTS cache_state (name TEXT PRIMARY KEY, revision INTEGER NOT NULL)')
-    try:
-        with conn:
-            cancellation.check()
-            yield conn
-            cancellation.check()
-    finally: conn.close()
+    return store.transaction(DATA)
+
 
 
 def cache_generation():
@@ -121,7 +112,7 @@ def guard_research(conn,identity,generation):
 
 def song_cache_keys(conn,ids,include_personal=False):
     keys={r[0] for identity in ids for r in conn.execute('SELECT key FROM cache_owner WHERE track_id=?',(identity,))}
-    prefixes={'audio','latest','details','interpretation-latest','research-search-v5','research-recording','research-selected','research-results','stem-visibility'}
+    prefixes={'audio','latest','details','expression-comparison','interpretation-latest','research-search-v5','research-recording','research-selected','research-results','stem-visibility'}
     if include_personal:prefixes.update({'notes','fingerprint'})
     for key, in conn.execute('SELECT key FROM cache'):
         parts=key.split(':')
@@ -136,18 +127,30 @@ def song_cache_keys(conn,ids,include_personal=False):
 
 
 def track(track_id):
+    if not re.fullmatch(r'[a-f0-9]{64}',track_id):raise HTTPException(404,'Song nicht gefunden')
     with db() as conn:
         row = conn.execute('SELECT metadata FROM tracks WHERE id=?', (track_id,)).fetchone()
     if not row:
         raise HTTPException(404, 'Song nicht gefunden')
-    return json.loads(row[0])
+    try:
+        metadata=json.loads(row[0])
+        if not isinstance(metadata,dict) or metadata.get('id')!=track_id:raise ValueError()
+        return metadata
+    except (ValueError,TypeError):
+        raise HTTPException(409,'Gespeicherte Songdaten sind beschädigt; keine Daten verändert.') from None
 
 
 def canonical(identity):
     metadata=track(identity)
     seen={identity}
-    while metadata.get('reuse_source_id') and metadata['reuse_source_id'] not in seen:
-        identity=metadata['reuse_source_id'];seen.add(identity);metadata=track(identity)
+    while metadata.get('reuse_source_id'):
+        identity=metadata['reuse_source_id']
+        if identity in seen:raise HTTPException(409,'Zyklischer Aufnahmeverweis; keine Daten verändert.')
+        seen.add(identity)
+        try:metadata=track(identity)
+        except HTTPException as exc:
+            if exc.status_code==404:raise HTTPException(409,'Aufnahmeverweis fehlt; keine Daten verändert.') from None
+            raise
     return identity
 
 
@@ -166,7 +169,7 @@ def health(purpose:Literal['audio','lyrics','whisper','interpretation','separati
     from scripts.runtime import environment_id
     device=engines.device() if purpose=='audio' else engines.device(purpose)
     name=next((d['name'] for d in runtime_devices.available() if d['id']==('cuda:0' if device=='cuda' else device)),device)
-    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':15,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
+    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':16,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 
@@ -201,14 +204,19 @@ def system_action(request:SystemAction):
 def set_cloud_settings(request: CloudSettings):
     with job_lock:
         if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
-    key=request.api_key.get_secret_value().strip()
-    if key and (len(key)<15 or any(c.isspace() for c in key)):
-        raise HTTPException(422,'Ungültiges Key-Format; der Wert wird nicht gespeichert oder protokolliert.')
-    cloud.configure(key,request.free_project_confirmed)
-    return cloud.settings()
+        key=request.api_key.get_secret_value().strip()
+        if key and (len(key)<15 or any(c.isspace() for c in key)):
+            raise HTTPException(422,'Ungültiges Key-Format; der Wert wird nicht gespeichert oder protokolliert.')
+        cloud.configure(key,request.free_project_confirmed)
+        return cloud.settings()
 
 
 def import_path(source, name, supplied=None):
+    # Serialize import publication against library deletion and alias changes.
+    with job_lock:return _import_path(source,name,supplied)
+
+
+def _import_path(source, name, supplied=None):
     supplied=supplied or {}
     digest=hashlib.sha256(b'moodscope-stereo-decoder-v2')
     size=0
@@ -217,8 +225,13 @@ def import_path(source, name, supplied=None):
             size+=len(chunk)
             if size>250*1024*1024: raise HTTPException(413,'Maximal 250 MB pro Song')
             digest.update(chunk)
-    identity=digest.hexdigest();target=DATA/f'{identity}.wav'
-    if not target.exists():
+    identity=digest.hexdigest();target=storage.managed_path(DATA,f'{identity}.wav')
+    valid_copy=False
+    try:
+        with target.open('rb') as stream:header=sf.info(stream)
+        valid_copy=header.frames>0 and header.channels==2 and header.samplerate==48000
+    except (OSError,ValueError,RuntimeError):pass
+    if not valid_copy:
         import imageio_ffmpeg
         converted=DATA/f'{uuid.uuid4().hex}.wav'
         try:
@@ -228,6 +241,8 @@ def import_path(source, name, supplied=None):
             info=sf.info(converted)
             if info.duration<=0: raise ValueError('Leere Audiodatei')
             if info.duration>1800: raise HTTPException(413,'Maximal 30 Minuten; Datei wurde nicht abgeschnitten importiert.')
+            if target.exists():
+                target.rename(target.with_name(identity+'.damaged-'+uuid.uuid4().hex+'.wav'))
             converted.replace(target)
         except HTTPException: raise
         except (subprocess.SubprocessError,ValueError,RuntimeError):
@@ -255,6 +270,9 @@ def import_path(source, name, supplied=None):
         previous=conn.execute('SELECT metadata FROM tracks WHERE id=?',(identity,)).fetchone()
         if previous:
             prior=json.loads(previous[0])
+            for field in ['artist','title','source_url','uploader']:
+                if not metadata.get(field) and prior.get(field):metadata[field]=prior[field]
+            metadata['tags']={**prior.get('tags',{}),**metadata['tags']}
             if prior.get('reuse_source_id'):metadata['reuse_source_id']=prior['reuse_source_id']
             metadata['cache_match']='same-file'
         else:
@@ -292,7 +310,13 @@ def upload(file: UploadFile = File(...)):
 @app.get('/api/tracks/{identity}/audio')
 def audio(identity: str):
     track(identity)
-    return FileResponse(DATA / f'{identity}.wav', media_type='audio/wav')
+    path=storage.managed_path(DATA,f'{identity}.wav')
+    try:
+        with path.open('rb') as stream:
+            if sf.info(stream).frames<=0:raise ValueError()
+    except (OSError,ValueError,RuntimeError):
+        raise HTTPException(409,'Lokale Audiokopie fehlt oder ist beschädigt. Originaldatei erneut importieren; gespeicherte Daten bleiben erhalten.') from None
+    return FileResponse(path, media_type='audio/wav')
 
 
 class LyricsQuery(BaseModel):
@@ -331,6 +355,7 @@ class AnalyzeRequest(BaseModel):
     whisper: bool = False
     mode: Literal['local','cloud'] = 'local'
     upload_consent: bool = False
+    routing_version:str | None=Field(default=None,max_length=64)
     force: bool = False
     force_transcription:bool=False
     transcription_quality:Literal['standard','precise']='standard'
@@ -346,19 +371,26 @@ def start_job(kind, function, *args):
         for identity in list(jobs):
             if len(jobs)<32: break
             if jobs[identity]['status']!='running': jobs.pop(identity)
+        local_job=bool(args) and (getattr(args[-1],'mode',None)=='local' or args[-1]=='local')
+        routing_snapshot=provider_routing.capture(DATA,local=local_job) if kind in {'analysis','interpretation','details'} else None
         job_id=uuid.uuid4().hex
         jobs[job_id]={'kind':kind,'status':'running','progress':0,'message':'Auftrag wird vorbereitet'}
         cancel_events[job_id]=threading.Event()
-    diagnostics.event(DATA,kind,'queued job='+job_id)
-    executor.submit(execute_job,kind,function,job_id,args)
+        try:
+            diagnostics.event(DATA,kind,'queued job='+job_id)
+            executor.submit(execute_job,kind,function,job_id,args,routing_snapshot)
+        except Exception:
+            jobs.pop(job_id,None)
+            cancel_events.pop(job_id,None)
+            raise
     return {'job_id':job_id}
 
 
-def execute_job(kind,function,job_id,args):
+def execute_job(kind,function,job_id,args,routing_snapshot=None):
     import time
     started=time.monotonic()
     try:
-        with cancellation.scope(cancel_events[job_id]):function(job_id,*args)
+        with cancellation.scope(cancel_events[job_id]),provider_routing.scope(DATA,routing_snapshot):function(job_id,*args)
     except cancellation.Cancelled:
         with job_lock:jobs[job_id].update(status='cancelled',message='Auftrag abgebrochen.',result=None)
     except Exception as exc:
@@ -368,6 +400,9 @@ def execute_job(kind,function,job_id,args):
             cancel_events.pop(job_id,None)
             job=jobs.get(job_id,{})
             state=job.get('status','unknown');result=job.get('result') or {}
+        # Exception tracebacks can retain model tensors until the handler exits.
+        # Release the allocator again here, after the exception scope has ended.
+        if state in {'cancelled','error'}:catalog.unload_models(engines)
         diagnostics.event(DATA,kind,f'job={job_id} status={state} elapsed_seconds={time.monotonic()-started:.2f} cached={result.get("cached",False)} audio_segments={len(result.get("audio",[]))} lyric_segments={len(result.get("lyrics",[]))}')
 
 
@@ -406,6 +441,10 @@ def import_link(request: LinkRequest):
     return start_job('import',run_link_job,url)
 
 
+def analysis_version(mode,active):
+    return local_version(active) if mode=='local' else local_version(active)+':routes-v1:'+provider_routing.status(DATA)['cache_version']+':'+cloud.version()
+
+
 def run_job(job_id, identity, request):
     def progress(message, value):
         cancellation.check()
@@ -416,19 +455,25 @@ def run_job(job_id, identity, request):
         metadata = track(identity)
         cache_identity=canonical(identity)
         active=catalog.configuration(DATA)['active']
-        version=local_version(active) if request.mode=='local' else cloud.version()
-        key = hashlib.sha256((cache_identity + version + json.dumps(request.model_dump(exclude={'force','force_transcription','upload_consent'}),sort_keys=True)).encode()).hexdigest()
+        version=analysis_version(request.mode,active)
+        local_audio=provider_routing.target(DATA,'audio',request.mode)=='local'
+        local_lyrics=provider_routing.target(DATA,'lyrics',request.mode)=='local'
+        local_transcription=provider_routing.target(DATA,'transcription',request.mode)=='local'
+        key = hashlib.sha256((cache_identity + version + json.dumps(request.model_dump(exclude={'force','force_transcription','upload_consent','routing_version'}),sort_keys=True)).encode()).hexdigest()
         with db() as conn:
             cached = conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force and not request.force_transcription:
-            result = {**json.loads(cached[0]), 'cached':True}
+            value=json.loads(cached[0])
+            if not isinstance(value,dict) or value.get('track_id',cache_identity)!=cache_identity:
+                raise ValueError('Gespeicherte Analyse ist beschädigt oder einem anderen Song zugeordnet; keine Daten verändert.')
+            result = {**value, 'cached':True}
         else:
             lines = parse_lrc(request.lyrics, metadata['duration'])
             lyric_source='lrc' if lines else 'plain-text' if request.lyrics.strip() else 'none'
             warnings = []
             if request.lyrics.strip() and not lines:
                 warnings.append('Text ohne LRC-Zeitstempel: keine synchronisierte Textkurve. Bitte LRC importieren oder Whisper aktivieren.')
-            if not lines and request.whisper and request.mode=='local':
+            if not lines and request.whisper and local_transcription:
                 vocal_candidates=[separation.folder(DATA,identity,name)/'vocals.wav' for name in ['htdemucs_auto','htdemucs_ft','htdemucs','htdemucs_6s']]
                 vocal_file=next((p for p in vocal_candidates if p.exists()),vocal_candidates[0])
                 if request.transcription_source=='vocals' and not vocal_file.exists():
@@ -439,13 +484,13 @@ def run_job(job_id, identity, request):
                 else:lines=engines.transcribe(input_file,progress,request.transcription_quality,request.transcription_language)
                 lyric_source='whisper' if lines else 'none'
                 warnings.append('Whisper-Zeitstempel und Gesangserkennung können ungenau sein.')
-            if request.mode=='cloud' and request.whisper and not lines:
+            if not local_transcription and request.whisper and not lines:
                 samples,sample_rate=sf.read(DATA/f'{identity}.wav',dtype='float32')
                 if samples.ndim==2:samples=samples.mean(axis=1)
-                lines=cloud.transcribe(samples,sample_rate,progress)
+                lines=provider_routing.execute(DATA,'transcription',request.mode,engines.transcribe,cloud.transcribe,samples,sample_rate,progress)
                 lyric_source='api-transcript' if lines else 'none'
                 warnings.append('API-Gesangserkennung und Zeitstempel sind unsicher. Text und Zeitangaben vor einer gemeinsamen Deutung prüfen.')
-            audio_version=PIPELINE_VERSION+prompt_presets.fingerprint(DATA,['audio'])+':audio-model:'+active['audio'] if request.mode=='local' else cloud.version()
+            audio_version=PIPELINE_VERSION+prompt_presets.fingerprint(DATA,['audio'])+':audio-model:'+active['audio'] if local_audio else 'routed:'+provider_routing.status(DATA)['cache_version']+':'+cloud.version()
             audio_key = f'audio:{cache_identity}:{audio_version}:resolution{request.audio_resolution}'
             with db() as conn:
                 audio_cached = conn.execute('SELECT result FROM cache WHERE key=?',(audio_key,)).fetchone()
@@ -457,13 +502,13 @@ def run_job(job_id, identity, request):
                 y, sr = sf.read(DATA / f'{identity}.wav', dtype='float32')
                 if y.ndim==2: y=y.mean(axis=1)
                 summary = insights.acoustic_features(y,sr)
-                analyzer=engines.audio if request.mode=='local' else cloud.audio_mood
+                def analyzer(*args):return provider_routing.execute(DATA,'audio',request.mode,engines.audio,cloud.audio_mood,*args)
                 a=analyzer(y,sr,progress) if request.audio_resolution==5 else analyzer(y,sr,progress,request.audio_resolution)
                 with db() as conn:
                     conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',
                                  (audio_key,json.dumps({'audio':a,'features':summary})))
                     own(conn,audio_key,identity)
-            l = engines.lyrics(lines,progress) if request.mode=='local' else cloud.lyric_mood(lines,progress)
+            l=provider_routing.execute(DATA,'lyrics',request.mode,engines.lyrics,cloud.lyric_mood,lines,progress) if lines else []
             if not l:
                 warnings.append('Keine synchronisierten Lyrics: Biggest Split ist nicht verfügbar.')
             result = {'audio':a, 'lyrics':l, 'split':biggest_split(a,l), 'features':summary,
@@ -473,10 +518,11 @@ def run_job(job_id, identity, request):
                       'lyrics_source':lyric_source,
                       'audio_resolution':request.audio_resolution,
                       'text_coverage':text_coverage(l,metadata['duration']),
-                      'models':{'audio':catalog.entries(DATA)[active['audio']]['repo'] if request.mode=='local' else cloud.MODEL,
-                                'lyrics':catalog.entries(DATA)[active['lyrics']]['repo'] if request.mode=='local' else cloud.MODEL},
+                      'models':{'audio':provider_routing.model(DATA,'audio',request.mode,catalog.entries(DATA)[active['audio']]['repo']),
+                                'lyrics':provider_routing.model(DATA,'lyrics',request.mode,catalog.entries(DATA)[active['lyrics']]['repo'])},
+                      'execution':provider_routing.status(DATA)['targets'] if request.mode=='cloud' else {},
                       'method':'CLAP Prompt-Ensemble und XLM-EMO mit Textkontext' if request.mode=='local' else 'API-Profil: getrennte Audio- und Textanalyse; subjektive unkalibrierte Valenz.'}
-            if request.mode=='local':result['audio_method']=audio_method.describe_current(result['models']['audio'],request.audio_resolution,DATA)
+            if local_audio:result['audio_method']=audio_method.describe_current(result['models']['audio'],request.audio_resolution,DATA)
             else:result=audio_method.with_method(result)
             result['warnings'].append('Modellwerte und Unsicherheit sind nicht wissenschaftlich kalibriert.')
             with db() as conn:
@@ -496,12 +542,19 @@ def run_job(job_id, identity, request):
 
 @app.post('/api/tracks/{identity}/analyze')
 def analyze(identity: str, request: AnalyzeRequest):
-    track(identity)
-    if request.mode=='cloud':
-        if not request.upload_consent: raise HTTPException(422,'API-Modus benötigt deine Zustimmung zum Upload von Audio und Lyrics an das ausgewählte Anbieterprofil.')
-        try: cloud.credential()
-        except cloud.CloudError as exc: raise HTTPException(422,str(exc)) from None
-    return start_job('analysis',run_job,identity,request)
+    with job_lock:
+        track(identity)
+        if request.mode=='cloud':
+            try:
+                provider_routing.check_consent(DATA,request.routing_version)
+                tasks=['audio']
+                has_lines=bool(parse_lrc(request.lyrics,track(identity)['duration']))
+                if has_lines or request.whisper:tasks.append('lyrics')
+                if request.whisper and not has_lines:tasks.append('transcription')
+                if any(provider_routing.target(DATA,t,request.mode)!='local' for t in tasks) and not request.upload_consent:raise ValueError('Zustimmung zur Übertragung an die zugeordneten Anbieter fehlt.')
+                for task in tasks:provider_routing.preflight(DATA,task,request.mode)
+            except (ValueError,cloud.CloudError) as exc:raise HTTPException(422,str(exc)) from None
+        return start_job('analysis',run_job,identity,request)
 
 
 @app.get('/api/jobs/{job_id}')
@@ -653,6 +706,7 @@ def save_notes(identity: str,request: Notes):
 class InterpretationRequest(BaseModel):
     mode: Literal['local','cloud'] = 'local'
     upload_consent: bool = False
+    routing_version:str | None=Field(default=None,max_length=64)
     time: float | None = Field(default=None,ge=0)
     force: bool = False
     provider_id: str | None = Field(default=None,max_length=64)
@@ -670,16 +724,26 @@ def saved_expression_comparison(identity:str):
     track(identity);identity=canonical(identity)
     with db() as conn:
         row=conn.execute('SELECT result FROM cache WHERE key=?',(f'expression-comparison:{identity}',)).fetchone()
-    result=json.loads(row[0]) if row else None
+    result=expression_result(row,identity)
     return {'ready':expression_compare.ready(),'result':result,
             'stale':bool(result and result.get('model_basis')!=expression_compare.fingerprint())}
+
+
+def expression_result(row,identity):
+    if not row:return None
+    try:
+        value=json.loads(row[0])
+        if value.get('track_id',identity)!=identity:raise ValueError()
+        return expression_compare.validate_result(value,track(identity)['duration'])
+    except (ValueError,TypeError,AttributeError):
+        raise HTTPException(409,'Gespeicherter Music2Emo-Verlauf ist beschädigt; keine Daten verändert.') from None
 
 
 def run_expression_comparison(job_id,identity,request):
     identity=canonical(identity);basis=expression_compare.fingerprint()
     key=f'expression-comparison:{identity}'
     with db() as conn:row=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
-    result=json.loads(row[0]) if row else None
+    result=expression_result(row,identity) if not request.force else None
     if not result or request.force or result.get('model_basis')!=basis:
         def progress(message,value):
             cancellation.check()
@@ -689,7 +753,8 @@ def run_expression_comparison(job_id,identity,request):
         catalog.unload_models(engines)
         result=expression_compare.analyse(DATA/f'{identity}.wav',DATA,engines.device(),progress)
         cancellation.check()
-        result={**result,'model_basis':basis,'cached':False}
+        expression_compare.validate_result(result,track(identity)['duration'])
+        result={**result,'model_basis':basis,'track_id':identity,'cached':False}
         with db() as conn:
             conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
             own(conn,key,identity)
@@ -708,7 +773,7 @@ def with_music_source(identity,analysis,source):
     if source!='music2emo':return analysis
     with db() as conn:
         row=conn.execute('SELECT result FROM cache WHERE key=?',(f'expression-comparison:{canonical(identity)}',)).fetchone()
-    result=json.loads(row[0]) if row else None
+    result=expression_result(row,canonical(identity))
     basis=expression_compare.fingerprint()
     if not result or not basis or result.get('model_basis')!=basis:
         raise HTTPException(409,'Zuerst einen aktuellen Music2Emo-Verlauf berechnen.')
@@ -726,6 +791,12 @@ def combined_evidence(identity:str,mode:Literal['local','cloud']='local',music_s
     return timeline(analysis)
 
 
+def interpretation_model_basis(mode,provider_id=None):
+    if provider_id:return json.dumps(providers.profile(DATA,provider_id),sort_keys=True)
+    if provider_routing.target(DATA,'interpretation',mode)=='local':return catalog.configuration(DATA)['active']['interpretation']
+    return provider_routing.status(DATA)['cache_version']+cloud.version()
+
+
 def run_interpretation(job_id,identity,request):
     try:
         engines.data=DATA
@@ -736,7 +807,7 @@ def run_interpretation(job_id,identity,request):
         if request.include_music:
             analysis=with_music_source(identity,analysis,request.music_source)
         if request.time is not None and request.time>=metadata['duration']:raise RuntimeError('Zeitpunkt liegt außerhalb des Songs.')
-        selected=json.dumps(providers.profile(DATA,request.provider_id),sort_keys=True) if request.provider_id else cloud.version() if request.mode=='cloud' else catalog.configuration(DATA)['active']['interpretation']
+        selected=interpretation_model_basis(request.mode,request.provider_id)
         # Add measured instrument hints when available, keeping them out of the text-only LLM prompt.
         with db() as conn:
             detail=conn.execute('SELECT result FROM cache WHERE key=?',(f'details:{identity}:{catalog.configuration(DATA)["active"]["audio"]}:v4-harmony-prompts:{prompt_presets.fingerprint(DATA,["instruments"])}',)).fetchone()
@@ -745,13 +816,18 @@ def run_interpretation(job_id,identity,request):
         research_facts=json.loads(research_row[0]) if research_row else None
         research_basis=hashlib.sha256(json.dumps(research_facts,sort_keys=True).encode()).hexdigest()
         prompt_basis=prompt_presets.fingerprint(DATA,[('whole_' if request.time is None else 'line_')+request.language])
-        interpretation_version='music-text-v13-grounded' if request.include_music else 'whole-song-v11-source'
-        key='interpretation:'+hashlib.sha256((interpretation_version+prompt_basis+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent','include_music'}),sort_keys=True)+selected).encode()).hexdigest()
+        interpretation_version='music-text-v14-line-evidence' if request.include_music else 'whole-song-v12-line-evidence'
+        key='interpretation:'+hashlib.sha256((interpretation_version+prompt_basis+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent','include_music','routing_version'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}
         else:
             with job_lock:jobs[job_id].update(message='Interpretiere Belege und Textkontext; erster Start kann Modell laden',progress=20)
-            args=(DATA,engines,analysis,metadata,request.time,request.mode,request.provider_id,request.language)
+            interpret_mode=request.mode;interpret_provider=request.provider_id
+            if request.mode=='cloud' and not interpret_provider:
+                chosen=provider_routing.target(DATA,'interpretation',request.mode)
+                if chosen=='local':interpret_mode='local'
+                elif chosen!='prepared':interpret_provider=chosen
+            args=(DATA,engines,analysis,metadata,request.time,interpret_mode,interpret_provider,request.language)
             result=insights.interpretation(*args,include_music=True) if request.include_music else insights.interpretation(*args)
             result['interpretation_kind']='music_text_v1' if request.include_music else 'lyrics'
             result['music_source']=request.music_source if request.include_music else 'analysis'
@@ -785,16 +861,21 @@ def run_interpretation(job_id,identity,request):
 
 @app.post('/api/tracks/{identity}/interpret')
 def interpret(identity: str,request: InterpretationRequest):
-    track(identity)
-    if request.provider_id:
-        if not request.upload_consent:raise HTTPException(422,'Zustimmung zum Textversand an den gewählten Server fehlt.')
-        try:providers.profile(DATA,request.provider_id)
-        except ValueError as exc:raise HTTPException(422,str(exc)) from None
-    elif request.mode=='cloud':
-        if not request.upload_consent:raise HTTPException(422,'Text und Analysebelege werden an Google gesendet; Zustimmung fehlt.')
-        try:cloud.credential()
-        except cloud.CloudError as exc:raise HTTPException(422,str(exc)) from None
-    return start_job('interpretation',run_interpretation,identity,request)
+    with job_lock:
+        track(identity)
+        if request.provider_id:
+            if not request.upload_consent:raise HTTPException(422,'Zustimmung zum Textversand an den gewählten Server fehlt.')
+            try:provider_routing.check_consent(DATA,request.routing_version)
+            except ValueError as exc:raise HTTPException(422,str(exc)) from None
+            try:providers.profile(DATA,request.provider_id)
+            except ValueError as exc:raise HTTPException(422,str(exc)) from None
+        elif request.mode=='cloud':
+            try:
+                provider_routing.check_consent(DATA,request.routing_version)
+                if provider_routing.target(DATA,'interpretation',request.mode)!='local' and not request.upload_consent:raise ValueError('Zustimmung zur Textübertragung an das zugeordnete Profil fehlt.')
+                provider_routing.preflight(DATA,'interpretation',request.mode)
+            except (ValueError,cloud.CloudError) as exc:raise HTTPException(422,str(exc)) from None
+        return start_job('interpretation',run_interpretation,identity,request)
 
 
 @app.get('/api/tracks/{identity}/interpretation')
@@ -823,7 +904,7 @@ def saved_interpretation(identity:str,mode:Literal['local','cloud']='local',prov
     research_basis=hashlib.sha256(json.dumps(current_research,sort_keys=True).encode()).hexdigest()
     stale=stale or (value.get('research_basis') is not None and value['research_basis']!=research_basis)
     try:
-        selected=json.dumps(providers.profile(DATA,provider_id),sort_keys=True) if provider_id else cloud.version() if mode=='cloud' else catalog.configuration(DATA)['active']['interpretation']
+        selected=interpretation_model_basis(mode,provider_id)
         stale=stale or (value.get('model_basis') is not None and value['model_basis']!=selected)
     except ValueError:stale=True
     return {**value,'cached':True,'stale':stale}
@@ -835,7 +916,7 @@ def run_details(job_id,identity,mode='local'):
         with job_lock:jobs[job_id].update(message=message,progress=value)
     try:
         engines.data=DATA
-        version=catalog.configuration(DATA)['active']['audio'] if mode=='local' else cloud.version()
+        version=catalog.configuration(DATA)['active']['audio'] if provider_routing.target(DATA,'instruments',mode)=='local' else 'routed:'+provider_routing.status(DATA)['cache_version']+':'+cloud.version()
         key=f'details:{identity}:{version}:v4-harmony-prompts:{prompt_presets.fingerprint(DATA,["instruments"])}'
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached:result={**json.loads(cached[0]),'cached':True}
@@ -845,9 +926,9 @@ def run_details(job_id,identity,mode='local'):
             if y.ndim==2:y=y.mean(axis=1)
             features=insights.acoustic_features(y,sr)
             progress('Vergleiche mögliche Instrumente in drei Audioausschnitten',30)
-            instruments=engines.instruments(y,sr,progress) if mode=='local' else cloud.instrument_hints(y,sr,progress)
+            instruments=provider_routing.execute(DATA,'instruments',mode,engines.instruments,cloud.instrument_hints,y,sr,progress)
             result={'features':features,'instruments':instruments,'cached':False,
-                    'source':mode,'model':version,'note':'Instrumente sind relative CLAP-Ähnlichkeiten, keine gesicherte Besetzung und keine kalibrierten Wahrscheinlichkeiten.' if mode=='local' else 'API-Instrumenthinweise sind unsichere Hypothesen, keine bestätigte Besetzung.'}
+                    'source':mode,'model':version,'note':'Instrumente sind relative CLAP-Ähnlichkeiten, keine gesicherte Besetzung und keine kalibrierten Wahrscheinlichkeiten.' if provider_routing.target(DATA,'instruments',mode)=='local' else 'API-Instrumenthinweise sind unsichere Hypothesen, keine bestätigte Besetzung.'}
             with db() as conn:
                 conn.execute('INSERT OR REPLACE INTO cache VALUES (?,?)',(key,json.dumps(result)))
                 own(conn,key,identity)
@@ -859,17 +940,21 @@ def run_details(job_id,identity,mode='local'):
 class DetailsRequest(BaseModel):
     mode:Literal['local','cloud']='local'
     upload_consent:bool=False
+    routing_version:str | None=Field(default=None,max_length=64)
 
 
 @app.post('/api/tracks/{identity}/details')
 def details(identity: str,request:DetailsRequest | None=None):
-    track(identity)
-    options=request or DetailsRequest();mode=options.mode
-    if mode=='cloud':
-        if not options.upload_consent:raise HTTPException(422,'Für API-Instrumenthinweise der Audioübertragung zustimmen.')
-        try:cloud.credential()
-        except cloud.CloudError as exc:raise HTTPException(422,str(exc)) from None
-    return start_job('details',run_details,identity,mode)
+    with job_lock:
+        track(identity)
+        options=request or DetailsRequest();mode=options.mode
+        if mode=='cloud':
+            try:
+                provider_routing.check_consent(DATA,options.routing_version)
+                if provider_routing.target(DATA,'instruments',mode)!='local' and not options.upload_consent:raise ValueError('Für API-Instrumenthinweise der Audioübertragung zustimmen.')
+                provider_routing.preflight(DATA,'instruments',mode)
+            except (ValueError,cloud.CloudError) as exc:raise HTTPException(422,str(exc)) from None
+        return start_job('details',run_details,identity,mode)
 
 
 @app.get('/api/tracks/{identity}/analysis')
@@ -878,7 +963,11 @@ def stored_analysis(identity: str,mode: Literal['local','cloud']='local'):
     with db() as conn:
         row=conn.execute('SELECT result FROM cache WHERE key=?',(f'latest:{identity}:{mode}',)).fetchone()
         if not row:raise HTTPException(404,'Keine gespeicherte Analyse für diesen Modus.')
-        result=json.loads(row[0])
+        try:
+            result=json.loads(row[0])
+            if not isinstance(result,dict) or result.get('track_id',identity)!=identity:raise ValueError()
+        except (ValueError,TypeError):
+            raise HTTPException(409,'Gespeicherte Analyse ist beschädigt oder einem anderen Song zugeordnet; keine Daten verändert.') from None
         # Adopt identical legacy cache entries so deletion also clears old opaque keys.
         comparable={k:v for k,v in result.items() if k!='cached'}
         for key,raw in conn.execute('SELECT key,result FROM cache WHERE key NOT IN (SELECT key FROM cache_owner)').fetchall():
@@ -886,18 +975,18 @@ def stored_analysis(identity: str,mode: Literal['local','cloud']='local'):
             except ValueError:continue
             if isinstance(value,dict) and {k:v for k,v in value.items() if k!='cached'}==comparable:own(conn,key,identity)
     active=catalog.configuration(DATA)['active']
-    version=local_version(active) if mode=='local' else cloud.version()
+    version=analysis_version(mode,active)
     return {**audio_method.with_method(result),'cached':True,'stale':result.get('pipeline_version')!=version}
 
 
 @app.get('/api/library')
 def song_library():
     with db() as conn:
-        rows=conn.execute('SELECT metadata FROM tracks ORDER BY rowid DESC').fetchall()
+        rows=conn.execute('SELECT id FROM tracks ORDER BY rowid DESC').fetchall()
         keys={r[0] for r in conn.execute("SELECT key FROM cache WHERE key LIKE 'latest:%'")}
     output=[];seen=set()
-    for raw, in rows:
-        metadata=json.loads(raw);identity=canonical(metadata['id'])
+    for song_id, in rows:
+        metadata=track(song_id);identity=canonical(song_id)
         if identity in seen:continue
         seen.add(identity)
         output.append({**metadata,'analysis_modes':[mode for mode in ['local','cloud'] if f'latest:{identity}:{mode}' in keys]})
@@ -925,7 +1014,6 @@ def delete_analysis_cache(identity: str):
 
 @app.post('/api/tracks/{identity}/delete')
 def delete_song(identity:str):
-    import shutil
     import re
     with job_lock:
         if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
@@ -933,15 +1021,9 @@ def delete_song(identity:str):
         with db() as conn:ids=[r[0] for r in conn.execute('SELECT id FROM tracks').fetchall()]
         family=[i for i in ids if canonical(i)==root_identity]
         if any(not re.fullmatch(r'[a-f0-9]{64}',i) for i in family):raise HTTPException(409,'Ungültige gespeicherte Song-ID; keine Dateien gelöscht.')
-        # Quarantine only generated files inside DATA; original imported files are never touched.
-        quarantine=DATA/('delete-'+uuid.uuid4().hex);quarantine.mkdir()
-        moved=[]
+        quarantine=None
         try:
-            for song_id in family:
-                for path in [DATA/(song_id+'.wav'),DATA/'stems'/song_id]:
-                    if path.exists():
-                        destination=quarantine/(song_id+('-stems' if path.is_dir() else '.wav'))
-                        path.rename(destination);moved.append((path,destination))
+            quarantine=storage.quarantine_files(DATA,family)
             with db() as conn:
                 keys=song_cache_keys(conn,set(family),include_personal=True)
                 invalidate_generation(conn)
@@ -949,12 +1031,14 @@ def delete_song(identity:str):
                     conn.execute('DELETE FROM cache WHERE key=?',(key,))
                     conn.execute('DELETE FROM cache_owner WHERE key=?',(key,))
                 for song_id in family:conn.execute('DELETE FROM tracks WHERE id=?',(song_id,))
+                storage.mark_deleted(conn,quarantine)
         except Exception as exc:
-            for original,temporary in reversed(moved):
-                if temporary.exists():temporary.rename(original)
+            if quarantine is not None:storage.restore(DATA,quarantine,family)
             raise HTTPException(409,diagnostics.user_error(DATA,'delete-song',exc,'Song konnte nicht entfernt werden. Wiedergabe stoppen und erneut versuchen.')) from None
         if quarantine.resolve().parent!=DATA.resolve():raise RuntimeError('Löschpfad liegt außerhalb des Datenordners.')
-        try:shutil.rmtree(quarantine)
+        try:
+            storage.cleanup(DATA,quarantine,family)
+            with db() as conn:conn.execute('DELETE FROM cache_state WHERE name=?',('delete:'+quarantine.name,))
         except OSError as exc:
             diagnostics.failure(DATA,'delete-song-cleanup',exc)
             return {'deleted':True,'removed_ids':family,'warning':'Bibliothekseintrag entfernt, temporäre Löschdateien sind noch gesperrt. Lokales Protokoll prüfen.'}
@@ -1082,8 +1166,9 @@ def focused_audio(identity:str,key:str):
     import re
     track(identity)
     if not re.fullmatch(r'[a-f0-9]{64}',key):raise HTTPException(422,'Ungültige Fokus-ID')
-    path=DATA/'stems'/identity/'focus'/(key+'.wav')
-    if not path.exists():path=DATA/'stems'/canonical(identity)/'focus'/(key+'.wav')
+    data=storage.long_path(DATA)
+    path=storage.managed_path(data,'stems',identity,'focus',key+'.wav')
+    if not path.exists():path=storage.managed_path(data,'stems',canonical(identity),'focus',key+'.wav')
     if not path.exists():raise HTTPException(404,'Fokusdatei fehlt; Filter erneut anwenden.')
     return FileResponse(path,media_type='audio/wav')
 
@@ -1201,6 +1286,18 @@ def provider_models(request:ProviderProbe):
     except ValueError as exc:raise HTTPException(422,str(exc)) from None
 
 
+@app.get('/api/provider-routes')
+def provider_routes():return provider_routing.status(DATA)
+
+
+@app.post('/api/provider-routes')
+def provider_routes_save(routes:dict[str,str]):
+    with job_lock:
+        if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
+        try:return provider_routing.save(DATA,routes)
+        except ValueError as exc:raise HTTPException(422,str(exc)) from None
+
+
 @app.get('/api/providers')
 def provider_status():return providers.status(DATA)
 
@@ -1209,16 +1306,16 @@ def provider_status():return providers.status(DATA)
 def provider_save(request:ProviderSettings):
     with job_lock:
         if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
-    try:return providers.save(DATA,{**request.model_dump(exclude={'api_key'}),'api_key':request.api_key.get_secret_value()})
-    except ValueError as exc:raise HTTPException(422,str(exc)) from None
+        try:return providers.save(DATA,{**request.model_dump(exclude={'api_key'}),'api_key':request.api_key.get_secret_value()})
+        except ValueError as exc:raise HTTPException(422,str(exc)) from None
 
 
 @app.post('/api/providers/{identity}/remove')
 def provider_remove(identity:str):
     with job_lock:
         if any(j['status']=='running' for j in jobs.values()):raise HTTPException(409,'Erst laufenden Auftrag beenden lassen.')
-    providers.remove(DATA,identity)
-    return providers.status(DATA)
+        providers.remove(DATA,identity)
+        return providers.status(DATA)
 
 
 @app.post('/api/providers/{identity}/audio')

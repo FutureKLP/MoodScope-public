@@ -9,8 +9,10 @@ from urllib.request import urlopen
 
 if __package__:
     from .runtime import preferred_python,environment_id
+    from .service import stop_children
 else:
     from runtime import preferred_python,environment_id
+    from service import stop_children
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -41,7 +43,7 @@ def ready():
         with urlopen('http://127.0.0.1:8765/api/health',timeout=2) as response:
             state=json.load(response)
             if state.get('status')!='ok': return False
-            if state.get('version')!='0.3.0' or state.get('api_revision')!=15:
+            if state.get('version')!='0.3.0' or state.get('api_revision')!=16:
                 raise RuntimeError('Ein älteres Backend läuft auf Port 8765. Den bisherigen MoodScope-Dienst beenden und erneut starten.')
             if state.get('runtime_id')!=environment_id():
                 raise RuntimeError('Ein MoodScope-Dienst aus einer anderen Python-Umgebung läuft. In der App Beenden wählen und den Projektstarter erneut öffnen.')
@@ -77,11 +79,8 @@ def main():
         finally:
             if backend and backend.poll() is None:
                 import psutil
-                process=psutil.Process(backend.pid)
-                descendants=process.children(recursive=True)
-                for child in reversed(descendants):
-                    try:child.terminate()
-                    except psutil.Error:pass
+                try:stop_children(psutil.Process(backend.pid))
+                except psutil.NoSuchProcess:pass
                 if backend.poll() is None:backend.terminate()
                 try: backend.wait(timeout=10)
                 except subprocess.TimeoutExpired:

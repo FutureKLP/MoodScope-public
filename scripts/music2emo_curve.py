@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import math
+import time
 from pathlib import Path
 from scripts.audio_evaluation import digest
 from scripts.music2emo_evaluation import prepare_runtime,load_local_model,checked_result
@@ -45,14 +46,22 @@ def verify_installation(weights):
         if not path.is_relative_to(weights/'source') or digest(path)!=expected:raise ValueError('Source checksum mismatch')
 
 
-def run(audio,weights,output,device):
+def run(audio,weights,output,device,timings=False):
     import soundfile as sf
     import torch
+    measured=[]
+    def timed(name,fn):
+        if not timings:return fn()
+        if torch.cuda.is_available():torch.cuda.synchronize()
+        started=time.perf_counter();value=fn()
+        if torch.cuda.is_available():torch.cuda.synchronize()
+        measured.append({'name':'music2emo_'+name,'seconds':time.perf_counter()-started})
+        return value
     source_hash=digest(audio)
-    verify_installation(weights)
+    timed('verify_weights',lambda:verify_installation(weights))
     runtime=output/'runtime';runtime.mkdir()
-    prepare_runtime(weights/'source',runtime,correct_key_mode=True)
-    model=load_local_model(weights,runtime,output,device,str(weights/'packages'))
+    timed('prepare_runtime',lambda:prepare_runtime(weights/'source',runtime,correct_key_mode=True))
+    model=timed('model_load',lambda:load_local_model(weights,runtime,output,device,str(weights/'packages')))
     samples,sr=sf.read(audio,dtype='float32',always_2d=True);samples=samples.mean(axis=1)
     duration=len(samples)/sr;rows=[];spans=list(context_spans(duration))
     previous=Path.cwd();os.chdir(runtime)
@@ -63,17 +72,24 @@ def run(audio,weights,output,device):
         def progress(done,total):
             temporary=output/'progress.tmp';temporary.write_text(json.dumps({'done':done,'total':total}))
             temporary.replace(output/'progress.json')
-        rows=predict_spans(samples,sr,spans,predict,progress)
+        rows=timed('predict_spans',lambda:predict_spans(samples,sr,spans,predict,progress))
     finally:os.chdir(previous)
     if digest(audio)!=source_hash:raise RuntimeError('Source changed during analysis')
     result={'method':'music2emo-curve-v1','context_seconds':30,'grid_seconds':5,
             'experimental':True,'calibrated_for_timeline':False,'rows':rows}
     (output/'result.json').write_text(json.dumps(result,allow_nan=False),encoding='utf8')
+    if timings:
+        import platform
+        report={'rows':measured,'python':platform.python_version(),'torch':torch.__version__,
+                'device':device,'contexts':len({(s['context_start'],s['context_end']) for s in spans})}
+        if torch.cuda.is_available():report['cuda_peak_allocated_mib']=torch.cuda.max_memory_allocated()/2**20
+        (output/'performance.json').write_text(json.dumps(report),encoding='utf8')
 
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('audio','weights','output'):parser.add_argument('--'+name,required=True)
     parser.add_argument('--device',default='cpu',choices=['cpu','cuda','cuda:0'])
+    parser.add_argument('--timings',action='store_true',help='Write aggregate phase timings, without predictions, into the output directory')
     args=parser.parse_args()
-    run(Path(args.audio).resolve(),Path(args.weights).resolve(),Path(args.output).resolve(),args.device)
+    run(Path(args.audio).resolve(),Path(args.weights).resolve(),Path(args.output).resolve(),args.device,args.timings)

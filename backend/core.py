@@ -1,9 +1,11 @@
 """Timing and comparison functions, independent of model inference."""
 import re
+import math
 
 
 def text_coverage(lines,duration):
-    intervals=sorted((max(0.,r['start']),min(duration,r['end'])) for r in lines if r['end']>r['start'])
+    intervals=sorted((max(0.,r['start']),min(duration,r['end'])) for r in lines
+                     if math.isfinite(r['start']) and math.isfinite(r['end']) and min(duration,r['end'])>max(0.,r['start']))
     merged=[]
     for start,end in intervals:
         if merged and start<=merged[-1][1]:merged[-1][1]=max(merged[-1][1],end)
@@ -19,7 +21,7 @@ def text_coverage(lines,duration):
 
 
 def analysis_grid(duration: float, hop: float = 5.) -> list[dict]:
-    if duration <= 0 or hop <= 0:
+    if not all(math.isfinite(v) and v>0 for v in (duration,hop)):
         raise ValueError('Duration and hop must be positive')
     rows=[]
     start=0.

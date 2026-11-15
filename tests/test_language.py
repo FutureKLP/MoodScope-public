@@ -45,7 +45,7 @@ def test_language_caches_are_separate_and_both_deleted(client,monkeypatch):
 def test_server_prompt_and_audio_evidence_follow_output_language(tmp_path,monkeypatch):
     from backend import providers
     prompts=[]
-    monkeypatch.setattr(providers,'generate',lambda *args:(prompts.append(args[-1]) or {'text':'The narrator expresses a possible hope for tomorrow, although this reading is uncertain.'}))
+    monkeypatch.setattr(providers,'generate',lambda *args:(prompts.append(args[-1]) or {'text':'L1 expresses a possible hope for tomorrow, although this reading is uncertain.'}))
     data={'lyrics':[{'start':0,'end':4,'text':'Ich hoffe auf morgen.'}],'audio':[{'start':0,'end':4,'valence':.2,'scores':{'joy':.7}}],'features':{'bpm':120,'brightness_hz':1800}}
     result=insights.interpretation(tmp_path,None,data,{},provider_id='fixture',language='en')
     assert 'Write every paragraph in English' in prompts[0] and 'Ich hoffe auf morgen.' in prompts[0]
@@ -56,3 +56,13 @@ def test_server_prompt_and_audio_evidence_follow_output_language(tmp_path,monkey
 @pytest.mark.parametrize('origin',['https://untrusted.example','null','http://127.0.0.1.attacker.invalid'])
 def test_untrusted_origin_cannot_write_profiles_even_with_language_header(client,origin):
     assert client.post('/api/providers',headers={'Origin':origin,'Accept-Language':'en'},json={}).status_code==403
+
+
+def test_shipped_catalogue_has_unique_keys_nonempty_values_and_matching_placeholders():
+    import re
+    from pathlib import Path
+    pairs=json.loads((Path(language.__file__).parent/'locales/en.json').read_text(encoding='utf8'),object_pairs_hook=list)
+    assert len(pairs)==len(dict(pairs))
+    for source,translated in pairs:
+        assert isinstance(translated,str) and translated.strip()
+        assert sorted(re.findall(r'\{\d+\}',source))==sorted(re.findall(r'\{\d+\}',translated)),source

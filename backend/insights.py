@@ -107,17 +107,18 @@ def interpretation(data,engine,analysis,metadata,time_position=None,mode='local'
     default_scope=scope
     prompt=prompt.replace(default_scope,prompt_presets.content(data,purpose),1)
     references=None
+    line_references={line['reference'] for line in context['lines']}
     if provider_id:
         from . import providers
         result=providers.generate(data,provider_id,prompt)
-        validate_text_interpretation(result['text'],context['full_text'])
+        validate_text_interpretation(result['text'],context['full_text'],line_references)
         validate_music_references(result['text'],references)
         return {**result,'audio_evidence':evidence,'music_evidence':music,'mode':'server','time':time_position}
     if mode=='cloud':
         result=InterpretationText.model_validate(cloud.request_json(prompt,InterpretationText.model_json_schema()))
-        validate_text_interpretation(result.text,context['full_text'])
+        validate_text_interpretation(result.text,context['full_text'],line_references)
         validate_music_references(result.text,references)
-        return {'text':result.text,'audio_evidence':evidence,'music_evidence':music,'model':cloud.MODEL,'mode':'cloud','time':time_position}
+        return {'text':result.text,'audio_evidence':evidence,'music_evidence':music,'model':cloud.settings()['model'],'mode':'cloud','time':time_position}
     from transformers import AutoModelForCausalLM, AutoTokenizer
     import torch
     source=catalog.model_source(data,'interpretation')
@@ -136,13 +137,15 @@ def interpretation(data,engine,analysis,metadata,time_position=None,mode='local'
             inputs=tokenizer(text,return_tensors='pt',truncation=True,max_length=8192).to(device)
             limit=1100 if time_position is None else 650
             with torch.inference_mode():
-                output=model.generate(**inputs,max_new_tokens=limit,do_sample=False,pad_token_id=tokenizer.eos_token_id)
+                from .cancellation import generation_stopping_criteria
+                output=model.generate(**inputs,max_new_tokens=limit,do_sample=False,pad_token_id=tokenizer.eos_token_id,
+                    stopping_criteria=generation_stopping_criteria())
             return {'text':tokenizer.decode(output[0,inputs['input_ids'].shape[1]:],skip_special_tokens=True).strip(),
                     'input_truncated':len(tokenizer.encode(text))>8192,
                     'output_truncated':output.shape[1]-inputs['input_ids'].shape[1]>=limit}
         from .cancellation import check
         check()
-        result=checked_local_generation(generate,context['full_text'],language,references)
+        result=checked_local_generation(generate,context['full_text'],language,references,line_references)
         return {**result,'audio_evidence':evidence,'music_evidence':music,'model':catalog.entries(data)[catalog.configuration(data)['active']['interpretation']]['repo'],
                 'mode':'local','time':time_position}
     finally:
@@ -199,8 +202,11 @@ def audio_evidence(analysis,time_position=None,language='de'):
     return text+'Die genannten Messwerte sind überprüfbare Begleitmerkmale, beweisen aber keine Ursache für Traurigkeit oder Freude. Ohne gesicherte Harmonieanalyse werden Tonart und Akkorde nicht als Fakten behauptet.'
 
 
-def validate_text_interpretation(answer,source_text=None):
+def validate_text_interpretation(answer,source_text=None,line_references=None):
     import re
+    cited=set(re.findall(r'\bL\d+\b',answer))
+    if line_references is not None and (cited-line_references or (line_references and not cited)):
+        raise RuntimeError('Das Sprachmodell hat fehlende oder unbekannte Textbelegreferenzen erzeugt. Keine Interpretation übernommen.')
     # A text-only model cannot substantiate claims that it heard the recording.
     if re.search(r'(?i)\b(ich höre|wir hören|I hear|we hear|I can hear|we can hear|bpm|rms|arb-wert|tonart|spektralzentrum|spectral centroid|musical key)\b',answer):
         raise RuntimeError('Das Sprachmodell hat unbelegte Audioaussagen erzeugt. Keine Interpretation übernommen; anderes Modell wählen oder erneut versuchen.')
@@ -220,7 +226,7 @@ def validate_music_references(text,references):
         raise RuntimeError('Musikvergleich enthält fehlende oder unbekannte Belegreferenzen.')
 
 
-def checked_local_generation(generate,source,language='de',music_references=None):
+def checked_local_generation(generate,source,language='de',music_references=None,line_references=None):
     repair=None
     for attempt in range(2):
         result=generate(repair)
@@ -229,7 +235,7 @@ def checked_local_generation(generate,source,language='de',music_references=None
             import re
             if re.search(r'[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]',result['text']):
                 raise RuntimeError('Das lokale Modell hat die gewählte Ausgabesprache nicht eingehalten. Keine Deutung übernommen.')
-            validate_text_interpretation(result['text'],source)
+            validate_text_interpretation(result['text'],source,line_references)
             validate_music_references(result['text'],music_references)
             return {**result,'validation_attempts':attempt+1}
         except RuntimeError:
@@ -239,6 +245,8 @@ def checked_local_generation(generate,source,language='de',music_references=None
                 'übersetzten oder erfundenen Beispielsätze. Keine Audio- oder biografischen Aussagen. '
                 'Beschreibe vorsichtig in eigenen Worten die belegbare Aussage. Erfinde keine Moral.')
             if language=='en':repair='The previous answer was rejected for unsupported claims. Write a NEW interpretation in English based only on the original text above. Use NO quotation marks or quotations, including translated or invented examples. No audio or biographical claims. Carefully paraphrase the supported meaning. Invent no moral.'
+            if line_references:
+                repair+=(' Cite only supplied line references: ' if language=='en' else ' Nenne nur vorhandene Zeilenreferenzen: ')+', '.join(sorted(line_references))+'.'
             if music_references:
                 repair+=(' Compare only the supplied music observations using actual M references; do not repeat acoustic facts.' if language=='en' else ' Vergleiche nur die gelieferten Musikbeobachtungen mit vorhandenen M-Referenzen; wiederhole keine Klangdetails.')
 

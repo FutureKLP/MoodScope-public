@@ -12,10 +12,25 @@ def test_private_music_and_cache_are_rejected():
     assert path_problem('src-tauri/target/release/app.exe')
 
 
+def test_git_excludes_private_audio_lyrics_database_sidecars_and_outputs():
+    import subprocess
+    from scripts.check_publication import GIT,ROOT
+    names=['data/cache.sqlite3','data/cache.sqlite3-wal','data/cache.sqlite3-shm',
+           'data/stems/authored/manifest.json','data/delete-fixture/journal.json',
+           'models/music2emo/installation.json','authored.mp3','authored.wav','authored.flac',
+           'authored.lrc','authored.srt','authored.vtt','authored.m4a','authored.aac','authored.ogg','authored.opus',
+           'backend/private.sqlite3-wal','backend/private.sqlite3-shm','.tools/s5/baseline.json','data/export.wav']
+    result=subprocess.run([GIT,'check-ignore','-z','--stdin'],input=('\0'.join(names)+'\0').encode(),capture_output=True,cwd=ROOT,check=True)
+    assert set(result.stdout.decode().strip('\0').split('\0'))==set(names)
+    assert all(path_problem(name) for name in names)
+
+
 def test_source_and_project_icons_are_allowed():
     assert path_problem('src/main.tsx') is None
     assert path_problem('src-tauri/icons/icon.png') is None
     assert path_problem('README.md') is None
+    assert path_problem('pytest.ini') is None
+    assert path_problem('pytest-local.ini') is not None
 
 
 def test_secret_patterns_do_not_print_values():

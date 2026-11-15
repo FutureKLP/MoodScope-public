@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import numpy as np
 import pytest
 import soundfile as sf
@@ -51,3 +52,35 @@ def test_peak_safe_mix_preserves_waveform_shape_instead_of_clipping(tmp_path):
     (root/'manifest.json').write_text(json.dumps({'sources':['vocals','drums'],'sample_rate':48000}))
     output=sf.read(separation.mix(tmp_path,'test','htdemucs',['vocals','drums']))[0]
     assert np.allclose(output,[[1,1],[.5,.5]])
+
+
+def test_mix_cache_tracks_replaced_stems_and_repairs_truncated_outputs(tmp_path):
+    root=separation.folder(tmp_path,'test','htdemucs');root.mkdir(parents=True)
+    for name in ['vocals','drums']:sf.write(root/(name+'.wav'),np.full((480,2),.1),48000,subtype='FLOAT')
+    (root/'manifest.json').write_text(json.dumps({'sources':['vocals','drums'],'sample_rate':48000}))
+    path=separation.mix(tmp_path,'test','htdemucs',['vocals','drums'])
+    path.write_bytes(b'broken cached output')
+    assert separation.mix(tmp_path,'test','htdemucs',['vocals','drums'])==path
+    assert np.allclose(sf.read(path)[0],.2)
+    sf.write(root/'drums.wav',np.full((480,2),.3),48000,subtype='FLOAT')
+    new=separation.mix(tmp_path,'test','htdemucs',['vocals','drums'])
+    assert new!=path and np.allclose(sf.read(new)[0],.4)
+    (root/'drums.wav').unlink()
+    assert not separation.status(tmp_path,'test','htdemucs')['ready']
+    with pytest.raises(ValueError):separation.mix(tmp_path,'test','htdemucs',['vocals','drums'])
+
+
+def test_open_failure_releases_previously_opened_stems(tmp_path,monkeypatch):
+    root=separation.folder(tmp_path,'test','htdemucs');root.mkdir(parents=True)
+    for name in ['vocals','drums']:sf.write(root/(name+'.wav'),np.full((480,2),.1),48000,subtype='FLOAT')
+    (root/'manifest.json').write_text(json.dumps({'sources':['vocals','drums'],'sample_rate':48000,'activity':{}}))
+    original=sf.SoundFile;opened=[]
+    def fail_second(file,*args,**kwargs):
+        if isinstance(file,Path):
+            if file.name=='vocals.wav':raise OSError('fixture second decoder failure')
+            handle=original(file,*args,**kwargs);opened.append(handle);return handle
+        return original(file,*args,**kwargs)
+    monkeypatch.setattr(sf,'SoundFile',fail_second)
+    with pytest.raises(OSError):separation.mix(tmp_path,'test','htdemucs',['vocals','drums'])
+    assert len(opened)==1 and opened[0].closed
+    assert not list(root.glob('*.tmp.wav'))

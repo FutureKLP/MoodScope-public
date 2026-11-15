@@ -286,6 +286,8 @@ def test_cloud_mode_needs_key_and_upload_permission(client):
 
 def test_cloud_job_never_calls_local_models(client,monkeypatch):
     module=importlib.import_module('backend.app')
+    # The routed adapter validates the prepared target even when inference is mocked.
+    module.cloud.configure('fixture-key',True)
     identity=client.post('/api/tracks',files={'file':('silence.wav',wav_bytes())}).json()['id']
     def forbidden(*args):raise AssertionError('Local model must not run in cloud mode')
     monkeypatch.setattr(module.engines,'audio',forbidden)

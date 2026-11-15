@@ -71,7 +71,7 @@ def test_interpretation_prompt_does_not_use_unvalidated_category_ranking_as_lyri
 def test_grounded_prompt_reaches_provider_without_weakening_text_guards(tmp_path,monkeypatch):
     from backend import providers
     prompts=[]
-    monkeypatch.setattr(providers,'generate',lambda *args:(prompts.append(args[-1]) or {'text':'The words may suggest uncertainty.'}))
+    monkeypatch.setattr(providers,'generate',lambda *args:(prompts.append(args[-1]) or {'text':'L1 may suggest uncertainty in the supplied words.'}))
     result=interpretation(tmp_path,None,analysis(),{},provider_id='fixture',language='en',include_music=True)
     assert result['music_evidence']['version']=='music-observations-v2-joint'
     assert 'Measured energy development' not in prompts[0]
@@ -82,7 +82,7 @@ def test_grounded_prompt_reaches_provider_without_weakening_text_guards(tmp_path
 
 def test_text_model_cannot_invent_a_music_reference_in_joint_mode(tmp_path,monkeypatch):
     from backend import providers
-    monkeypatch.setattr(providers,'generate',lambda *args:{'text':'The supplied observation M99 proves a particular musical feeling.'})
+    monkeypatch.setattr(providers,'generate',lambda *args:{'text':'L1 and the supplied observation M99 prove a particular musical feeling.'})
     with pytest.raises(RuntimeError,match='Musikreferenzen'):
         interpretation(tmp_path,None,analysis(),{},provider_id='fixture',language='en',include_music=True)
 

@@ -48,7 +48,7 @@ def test_custom_interpretation_instruction_reaches_provider_with_fixed_grounding
     from backend import insights,providers
     value=prompts.change(tmp_path,'save','whole_en',name='Authored style',text='Use concise numbered observations and compare two possible readings.')
     prompts.change(tmp_path,'select','whole_en',value['presets'][0]['id']);seen=[]
-    monkeypatch.setattr(providers,'generate',lambda *args:(seen.append(args[-1]) or {'text':'The supplied words may express cautious hope for the future.'}))
+    monkeypatch.setattr(providers,'generate',lambda *args:(seen.append(args[-1]) or {'text':'L1 may express cautious hope for the future.'}))
     insights.interpretation(tmp_path,None,{'lyrics':[{'start':0,'end':2,'text':'I hope for tomorrow.'}],'audio':[]},{},provider_id='authored',language='en')
     assert 'concise numbered' in seen[0] and 'cannot hear audio' in seen[0] and 'Write every paragraph in English' in seen[0]
 

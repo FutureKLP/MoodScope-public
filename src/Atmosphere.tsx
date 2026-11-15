@@ -1,5 +1,7 @@
-import {CSSProperties,createContext} from 'react';
-import {Point} from './types';
+import {CSSProperties,ReactNode,createContext,memo,useMemo} from 'react';
+import {Analysis,Point,activeLine} from './types';
+import {interpolatePoint} from './timeline';
+import {PlaybackClock,usePlaybackTime} from './PlaybackClock';
 export const AtmosphereThemeContext=createContext<{enabled:boolean;style:CSSProperties}>({enabled:false,style:{}});
 export const EMOTION_PALETTE=[
  {id:'joy',color:'#f4ce54'},
@@ -40,4 +42,12 @@ export function atmosphereStyle(audio?:Point,lyric?:Point,bpm?:number|null):CSSP
  const secondary=words.dominant?`color-mix(in oklab, ${mix.leadColor} 88%, ${words.color})`:mix.leadColor;
  return {...Object.fromEntries(Object.entries(mix.weights).map(([id,value])=>['--emotion-'+id,value])),'--mood-color':mix.leadColor,'--lyric-color':secondary,'--mood-hue':moodHue(audio),'--lyric-hue':moodHue(lyric),'--ambient-energy':energy,'--breath-duration':`${240/tempo}s`,'--flow-duration':'24s'} as CSSProperties;
 }
-export function Atmosphere(){return <div className="ambient-field" aria-hidden="true"><div className="ambient-mist mist-one"/><div className="ambient-mist mist-two"/><div className="ambient-undertones">{[...EMOTION_PALETTE,...MUSIC_TAG_PALETTE.filter(tag=>!EMOTION_PALETTE.some(item=>String(item.id)===tag.id))].map(item=><span key={item.id} style={{background:`radial-gradient(ellipse, ${item.color}, transparent 70%)`,opacity:`calc(var(--emotion-${item.id}, 0) * .22)`}}/>)}</div><div className="ambient-water"/></div>}
+export const Atmosphere=memo(function Atmosphere(){return <div className="ambient-field" aria-hidden="true"><div className="ambient-mist mist-one"/><div className="ambient-mist mist-two"/><div className="ambient-undertones">{[...EMOTION_PALETTE,...MUSIC_TAG_PALETTE.filter(tag=>!EMOTION_PALETTE.some(item=>String(item.id)===tag.id))].map(item=><span key={item.id} style={{background:`radial-gradient(ellipse, ${item.color}, transparent 70%)`,opacity:`calc(var(--emotion-${item.id}, 0) * .22)`}}/>)}</div><div className="ambient-water"/></div>});
+
+/** Stable children keep the application shell outside playback renders. */
+export function PlaybackTheme({clock,analysis,curve,enabled,playing,children}:{clock:PlaybackClock;analysis:Analysis|null;curve:Analysis|null;enabled:boolean;playing:boolean;children:ReactNode}){
+ const time=usePlaybackTime(clock,enabled);
+ const style=useMemo(()=>atmosphereStyle(interpolatePoint(curve?.audio||[],time),activeLine(analysis?.lyrics||[],time)>=0?interpolatePoint(analysis?.lyrics||[],time):undefined,analysis?.features?.bpm),[curve,analysis,time]);
+ const theme=useMemo(()=>({enabled,style}),[enabled,style]);
+ return <AtmosphereThemeContext.Provider value={theme}><div className={`app ${enabled?'ambient-enabled':''} ${playing?'is-playing':''}`} style={style}>{enabled&&<Atmosphere/>}{children}</div></AtmosphereThemeContext.Provider>;
+}

@@ -7,10 +7,26 @@ from urllib.parse import urlsplit
 import uuid
 import socket
 import httpx
+from contextvars import ContextVar
+from contextlib import contextmanager
 
 _keys={}
 _lock=threading.RLock()
 _audio_profile=None
+_bound_profiles=ContextVar('moodscope_profiles',default=None)
+
+
+@contextmanager
+def bound_profiles(data,values,keys):
+    token=_bound_profiles.set((str(Path(data).resolve()),values,keys))
+    try:yield
+    finally:_bound_profiles.reset(token)
+
+
+def session_key(data,identity):
+    bound=_bound_profiles.get()
+    if bound and bound[0]==str(Path(data).resolve()):return bound[2].get(identity,'')
+    with _lock:return _keys.get(identity,'')
 
 
 def endpoint(value):
@@ -51,6 +67,8 @@ def discover_models(base_url,key=''):
 
 
 def profiles(data):
+    bound=_bound_profiles.get()
+    if bound and bound[0]==str(Path(data).resolve()):return [dict(p) for p in bound[1]]
     try:return json.loads((Path(data)/'providers.json').read_text(encoding='utf-8'))
     except (OSError,ValueError):return []
 
@@ -72,6 +90,7 @@ def save(data,request):
         raise ValueError('Gemini benötigt die offizielle v1beta-Basis-URL und eine gültige Modell-ID.')
     if not p['name'] or not p['model']:raise ValueError('Name und Modell-ID fehlen.')
     with _lock:
+        previous=next((v for v in profiles(data) if v['id']==p['id']),None)
         if _audio_profile==(str(Path(data).resolve()),p['id']):
             from . import cloud
             cloud.configure('',False)
@@ -79,6 +98,9 @@ def save(data,request):
         if len(values)>20:raise ValueError('Maximal 20 Serverprofile.')
         path=Path(data)/'providers.json';path.parent.mkdir(parents=True,exist_ok=True)
         tmp=path.with_suffix('.tmp');tmp.write_text(json.dumps(values,indent=2),encoding='utf-8');tmp.replace(path)
+        # Never reuse a credential at a newly edited recipient.
+        if previous and any(previous[k]!=p[k] for k in ('protocol','base_url')):
+            _keys.pop(p['id'],None)
         key=request.get('api_key','').strip()
         if key:_keys[p['id']]=key
     return p
@@ -103,22 +125,26 @@ def profile(data,identity):
 
 def generate(data,identity,prompt):
     with _lock:
-        p=profile(data,identity);key=_keys.get(identity,'')
+        p=profile(data,identity);key=session_key(data,identity)
+    return generate_snapshot(p,key,prompt)
+
+
+def generate_snapshot(p,key,prompt,max_tokens=1800):
     base=endpoint(p['base_url'])
     if not key and (p['protocol'] in {'gemini','anthropic'} or urlsplit(base).hostname in {'api.openai.com','api.deepseek.com','api.mistral.ai'}):
         raise RuntimeError('API-Key für dieses Anbieterprofil fehlt. In Modelle & API den Sitzungs-Key setzen oder ein lokales Modell wählen.')
     if p['protocol']=='gemini':
         url=base+'/models/'+p['model']+':generateContent'
         headers={'x-goog-api-key':key}
-        payload={'contents':[{'role':'user','parts':[{'text':prompt}]}],'generationConfig':{'maxOutputTokens':1800}}
+        payload={'contents':[{'role':'user','parts':[{'text':prompt}]}],'generationConfig':{'maxOutputTokens':max_tokens}}
     elif p['protocol']=='anthropic':
         url=base+'/messages'
         headers={'x-api-key':key,'anthropic-version':'2023-06-01'}
-        payload={'model':p['model'],'max_tokens':1800,'messages':[{'role':'user','content':prompt}]}
+        payload={'model':p['model'],'max_tokens':max_tokens,'messages':[{'role':'user','content':prompt}]}
     else:
         url=base+'/chat/completions'
         headers={'Authorization':'Bearer '+key} if key else {}
-        payload={'model':p['model'],'max_completion_tokens':1800,'messages':[{'role':'user','content':prompt}]}
+        payload={'model':p['model'],'max_completion_tokens':max_tokens,'messages':[{'role':'user','content':prompt}]}
         # Many local compatible servers accept max_tokens rather than max_completion_tokens.
         if urlsplit(base).hostname not in {'api.openai.com'}:
             payload['max_tokens']=payload.pop('max_completion_tokens')

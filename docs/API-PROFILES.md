@@ -54,6 +54,44 @@ Die Anbindung wird mit simulierten Antworten der dokumentierten Protokolle
 getestet. Ein echter kostenpflichtiger Durchlauf und eine wissenschaftliche
 Genauigkeitspruefung dieser Anbieter sind damit nicht nachgewiesen.
 
+## Aufgaben, Zustimmung und Neustart
+
+Unter Modelle & API sind Profile und Passwortfelder in beiden Betriebsmodi
+erreichbar. Audio-Gefuehle, Text-Gefuehle, Gesangserkennung, Instrumenthinweise
+und Interpretation lassen sich einzeln lokal, dem vorbereiteten Audioprofil
+oder einem passenden gespeicherten Profil zuweisen. Die Modellauswahl fuer
+lokal zugewiesene Aufgaben gilt auch im API-Modus. Eine ausdrueckliche
+Textprofilauswahl in Interpretation ueberschreibt nur diese Aufgabe.
+
+Die Zustimmung bindet Protokoll, Adresse, Modell, Profil und Faehigkeiten.
+Zielaenderung oder Backendneustart erfordern eine neue Zustimmung. Ein laufender
+Job behaelt den geprueften Profil-/Key-Stand; Profilwechsel waehrend laufender
+Auftraege werden abgewiesen. Fehler fuehren zu keinem automatischen Fallback.
+
+Profile, Aufgaben und lokale Modellauswahl bleiben gespeichert. Keys werden
+nicht in Dateien oder Browser-LocalStorage gespeichert und nach Backendneustart
+erneut eingegeben. Das vorbereitete Audioprofil danach erneut aktivieren.
+Ein leeres Key-Feld beim Bearbeiten erhaelt den vorhandenen Sitzungsschluessel
+nur bei unveraenderter Adresse und unveraendertem Protokoll. Adress-/Protokollwechsel
+und Profilentfernung loeschen den bisherigen Key. Die Oberflaeche startet lokal;
+Uebertragungszustimmung wird nie gespeichert. Caches bleiben von der zufaelligen
+Zustimmungskennung der Backend-Sitzung getrennt.
+
+Verbindung pruefen und Modelle laden ist fuer kompatible Chat-Completions-Server
+verfuegbar und liest ausschliesslich Modellmetadaten. Gemini/Claude verwenden
+hier manuell eingetragene exakte Modell-IDs; es gibt fuer sie keinen vorgetaeuschten
+Verbindungstest. Eine Modellliste bestaetigt keine Audiofaehigkeit, Tarif- oder
+Kontofreischaltung. Verspaetete Listen eines vorherigen Servers werden verworfen.
+
+Protokollgrundlagen: [Gemini-Audio](https://ai.google.dev/gemini-api/docs/audio),
+[OpenAI-Audio](https://developers.openai.com/api/docs/guides/audio-chat-completions),
+[Mistral-Audio](https://docs.mistral.ai/studio/audio/audio-in-chat),
+[Claude Messages](https://platform.claude.com/docs/en/api/messages/create) und
+[DeepSeek-Kompatibilitaet](https://api-docs.deepseek.com/). Die vorhandenen Adapter
+unterstuetzen diese Wege innerhalb ihrer dokumentierten Grenzen, keine beliebigen
+Produkte des jeweiligen Anbieters. Automatisierte Abnahme und offene native
+Pruefungen: [Testbaseline](TEST-BASELINE.md).
+
 
 ## Eigene Heimserver mit Ollama oder LM Studio
 

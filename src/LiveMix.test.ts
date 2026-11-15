@@ -2,8 +2,8 @@
 import {it,expect,vi,afterEach} from 'vitest';
 import {LiveStemMixer} from './LiveMix';
 class Media extends EventTarget{paused=true;private position=0;get currentTime(){return this.position}set currentTime(value:number){this.position=value}readyState=4;seeking=false;volume=.8;muted=false;playbackRate=1;src='';preload='';crossOrigin='';play=vi.fn(async()=>{this.paused=false;this.dispatchEvent(new Event('play'))});pause=vi.fn(()=>{this.paused=true;this.dispatchEvent(new Event('pause'))});removeAttribute=vi.fn();load=vi.fn()}
-class Gain{gain={value:0,setTargetAtTime:vi.fn()};connect=vi.fn();disconnect=vi.fn()}
-class Context{currentTime=0;destination={};gains:Gain[]=[];resume=vi.fn(async()=>{});close=vi.fn(async()=>{});createGain(){const g=new Gain();this.gains.push(g);return g}createMediaElementSource(){return {connect:vi.fn(),disconnect:vi.fn()}}}
+class Gain{gain={value:0,setTargetAtTime:vi.fn(),cancelScheduledValues:vi.fn(),setValueAtTime:vi.fn()};connect=vi.fn();disconnect=vi.fn()}
+class Context{currentTime=0;destination={};gains:Gain[]=[];resume=vi.fn(async()=>{});suspend=vi.fn(async()=>{});close=vi.fn(async()=>{});createGain(){const g=new Gain();this.gains.push(g);return g}createMediaElementSource(){return {connect:vi.fn(),disconnect:vi.fn()}}}
 afterEach(()=>vi.unstubAllGlobals());
 it('updates stem gains live, follows master transport and restores original audio on cleanup',async()=>{
  vi.stubGlobal('Audio',Media);vi.stubGlobal('AudioContext',Context);vi.stubGlobal('requestAnimationFrame',vi.fn(()=>1));vi.stubGlobal('cancelAnimationFrame',vi.fn());
@@ -57,4 +57,31 @@ it('cleans up already-created and failing channels when audio graph construction
  const create=vi.spyOn(Context.prototype,'createMediaElementSource');create.mockImplementationOnce(()=>({connect:vi.fn(),disconnect:vi.fn()})).mockImplementationOnce(()=>{throw Error('Authored graph failure')});
  expect(()=>new LiveStemMixer(new Media() as unknown as HTMLAudioElement,{vocals:'local',drums:'local'},vi.fn())).toThrow('Authored graph failure');
  expect(created).toHaveLength(2);for(const audio of created)expect(audio.load).toHaveBeenCalledOnce();create.mockRestore();
+});
+
+it('keeps partially loaded stems silent when volume changes and suspends paused graphs',async()=>{
+ vi.stubGlobal('Audio',Media);vi.stubGlobal('AudioContext',Context);vi.stubGlobal('requestAnimationFrame',vi.fn(()=>1));vi.stubGlobal('cancelAnimationFrame',vi.fn());
+ const master=new Media(),mixer=new LiveStemMixer(master as unknown as HTMLAudioElement,{vocals:'local',drums:'local'},vi.fn()),context=mixer.context as unknown as Context;
+ let loaded!:()=>void;vi.mocked(mixer.channels[1].audio.play).mockImplementationOnce(()=>new Promise<void>(resolve=>{loaded=resolve}));
+ await master.play();await vi.waitFor(()=>expect(loaded).toBeTypeOf('function'));
+ master.volume=.4;master.dispatchEvent(new Event('volumechange'));
+ expect(context.gains[0].gain.setTargetAtTime).toHaveBeenLastCalledWith(0,0,.02);expect(master.muted).toBe(false);
+ master.currentTime=9;loaded();await vi.waitFor(()=>expect(master.muted).toBe(true));expect(mixer.channels.every(c=>c.audio.currentTime===9)).toBe(true);expect(context.gains[0].gain.setTargetAtTime).toHaveBeenLastCalledWith(.4,0,.02);
+ master.pause();expect(context.suspend).toHaveBeenCalledTimes(2);await master.play();await vi.waitFor(()=>expect(context.gains[0].gain.setValueAtTime).toHaveBeenCalledTimes(2));mixer.dispose();
+});
+it('closes the context even when output graph construction fails',()=>{
+ vi.stubGlobal('AudioContext',Context);vi.stubGlobal('cancelAnimationFrame',vi.fn());
+ const close=vi.spyOn(Context.prototype,'createGain').mockImplementationOnce(()=>{throw Error('output failure')});
+ // Track the context separately because no mixer instance can be returned.
+ const contexts:Context[]=[];class TrackedContext extends Context{constructor(){super();contexts.push(this)}}
+ vi.stubGlobal('AudioContext',TrackedContext);
+ expect(()=>new LiveStemMixer(new Media() as unknown as HTMLAudioElement,{},vi.fn())).toThrow('output failure');
+ expect(contexts[0].close).toHaveBeenCalledOnce();close.mockRestore();
+});
+it('rejects nonfinite gain values and releases failed channels without restarting from old events',async()=>{
+ vi.stubGlobal('Audio',Media);vi.stubGlobal('AudioContext',Context);vi.stubGlobal('requestAnimationFrame',vi.fn(()=>1));vi.stubGlobal('cancelAnimationFrame',vi.fn());
+ const master=new Media(),state=vi.fn(),mixer=new LiveStemMixer(master as unknown as HTMLAudioElement,{vocals:'missing'},state),context=mixer.context as unknown as Context;
+ mixer.setLevels(['vocals'],{vocals:NaN});expect(context.gains[1].gain.setTargetAtTime).toHaveBeenLastCalledWith(0,0,.015);
+ mixer.channels[0].audio.dispatchEvent(new Event('error'));mixer.dispose();await master.play();master.dispatchEvent(new Event('seeked'));
+ expect(state).toHaveBeenCalledWith('error');expect(context.close).toHaveBeenCalledOnce();expect(context.resume).not.toHaveBeenCalled();expect(master.muted).toBe(false);
 });

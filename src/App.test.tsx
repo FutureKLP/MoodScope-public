@@ -57,6 +57,65 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it('applies the visible Whisper model when transcription is routed locally in API mode',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      if(String(input).endsWith('/provider-routes'))return new Response(JSON.stringify({routes:{transcription:'local'},targets:{},version:'fixture'}));
+      if(String(input).endsWith('/models'))return new Response(JSON.stringify({models:[{id:'whisper-small',name:'Whisper Small',purpose:'whisper',active:true,installed:true}]}));
+      return original(input,init);
+    }));
+    render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/Gespeicherte Analyse geladen/);
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
+    await userEvent.selectOptions(screen.getByLabelText('Texterkennungsmodell'),'whisper-small');
+    await userEvent.click(screen.getByRole('checkbox',{name:'Ich erlaube für diese Sitzung die beschriebenen Übertragungen an die zugeordneten Anbieter oder Server.'}));
+    await userEvent.click(screen.getByRole('button',{name:'Text lokal erkennen'}));
+    await waitFor(()=>expect(requests.some(r=>r.path==='/models/select'&&r.body.model_id==='whisper-small')).toBe(true));
+    expect(requests.some(r=>r.path.endsWith('/analyze')&&r.body.mode==='cloud'&&r.body.transcription_quality==='precise')).toBe(true);
+  });
+
+  it('keeps provider setup reachable across local/API/local and names the actual API targets',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      if(String(input).endsWith('/provider-routes'))return new Response(JSON.stringify({
+        routes:{audio:'fixture',lyrics:'fixture',transcription:'fixture',instruments:'fixture',interpretation:'fixture'},
+        targets:Object.fromEntries(['audio','lyrics','transcription','instruments','interpretation'].map(task=>[task,{source:'profile',name:'Mistral fixture',model:'authored-voxtral'}])),version:'fixture-routes'
+      }));
+      return original(input,init);
+    }));
+    render(<App/>);
+    await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
+    for(const mode of ['local','cloud','local']){
+      await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),mode);
+      expect(screen.getByLabelText('KI-Server API-Key').getAttribute('type')).toBe('password');
+      expect(screen.getByRole('button',{name:'Mistral / Voxtral'})).toBeTruthy();
+      if(mode==='cloud'){
+        expect(document.querySelector('.local-badge')?.textContent).toContain('Mistral fixture · authored-voxtral');
+        expect(document.querySelector('.local-badge')?.textContent).not.toContain('Gemini');
+      }
+    }
+    expect(requests.some(r=>r.path.endsWith('/analyze')||r.path.endsWith('/interpret'))).toBe(false);
+  });
+
+  it('restores atmosphere after remount while resetting transfer consent',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      if(String(input).endsWith('/provider-routes'))return new Response(JSON.stringify({routes:{},targets:{},version:'fixture'}));
+      return original(input,init);
+    }));
+    const view=render(<App/>);await userEvent.click(screen.getByRole('button',{name:'Atmosphäre'}));
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
+    await userEvent.click(screen.getByRole('checkbox',{name:'Ich erlaube für diese Sitzung die beschriebenen Übertragungen an die zugeordneten Anbieter oder Server.'}));
+    expect(localStorage.getItem('moodscope-atmosphere')).toBe('true');
+    view.unmount();const next=render(<App/>);
+    expect(next.container.querySelector('.ambient-field')).toBeTruthy();
+    expect((screen.getByLabelText('Analysemodus') as HTMLSelectElement).value).toBe('local');
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
+    expect((screen.getByRole('checkbox',{name:'Ich erlaube für diese Sitzung die beschriebenen Übertragungen an die zugeordneten Anbieter oder Server.'}) as HTMLInputElement).checked).toBe(false);
+    expect(JSON.stringify(localStorage)).not.toContain('upload_consent');
+  });
+
   it('exposes provider key setup in both analysis modes without sending a provider request',async()=>{
     render(<App/>);await userEvent.click(screen.getByRole('button',{name:'Modelle & API'}));
     await screen.findByRole('heading',{name:'KI-Anbieter und eigene Modellserver'});
@@ -106,6 +165,105 @@ describe('workspace flows',()=>{
     await userEvent.click(screen.getByRole('button',{name:'Stimmungsverlauf'}));
     expect(vi.mocked(fetch).mock.calls.filter(([input])=>String(input).includes('/expression-comparison'))).toHaveLength(1);
     expect(screen.getByText('0.70')).toBeTruthy();
+  });
+  it('keeps the selected CLAP atmosphere when an earlier Music2Emo cache request finishes',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    let finish!:(value:Response)=>void;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      if(String(input).includes('/expression-comparison'))return new Promise<Response>(resolve=>{finish=resolve});
+      if(String(input).includes('/analysis?'))return new Response(JSON.stringify({...stored,audio:[{...stored.audio[0],scores:{sadness:.9,joy:.1}}]}));
+      return original(input,init);
+    }));
+    const {container}=render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    await userEvent.click(screen.getByRole('button',{name:'Atmosphäre'}));
+    await userEvent.click(screen.getByText('Modellwahl und Grenzen'));
+    await userEvent.click(screen.getByRole('button',{name:'CLAP verwenden'}));
+    const color=(container.querySelector('.app') as HTMLElement).style.getPropertyValue('--mood-color');
+    expect(color).toContain('#668cce');
+    await act(async()=>finish(new Response(JSON.stringify({ready:true,stale:false,result:{rows:[{start:0,end:12,valence:.8,arousal:.9,tags:{energetic:1}}]}}))));
+    expect((container.querySelector('.app') as HTMLElement).style.getPropertyValue('--mood-color')).toBe(color);
+    expect(localStorage.getItem('moodscope-audio-curve-model')).toBe('clap');
+    expect(requests.some(r=>r.path.endsWith('/analyze'))).toBe(false);
+  });
+  it('changes the shared bar and atmosphere palette with the displayed model and restores it after toggling',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      if(String(input).includes('/expression-comparison'))return new Response(JSON.stringify({ready:true,stale:false,result:{rows:[{start:0,end:12,valence:.7,arousal:.8,tags:{energetic:.9,powerful:.6}}]}}));
+      if(String(input).includes('/analysis?'))return new Response(JSON.stringify({...stored,audio:[{...stored.audio[0],scores:{sadness:.9,joy:.1}}]}));
+      return original(input,init);
+    }));
+    const {container}=render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText('0.70');await userEvent.click(screen.getByRole('button',{name:'Atmosphäre'}));
+    const color=()=> (container.querySelector('.app') as HTMLElement).style.getPropertyValue('--mood-color');
+    const learned=color();expect(learned).toContain('#eb9c52');
+    await userEvent.click(screen.getByRole('button',{name:'Methode & Werte'}));
+    expect((container.querySelector('[data-emotion=energetic]') as HTMLElement).style.getPropertyValue('--emotion-color')).toBe('#eb9c52');
+    await userEvent.click(screen.getByText('Modellwahl und Grenzen'));
+    await userEvent.click(screen.getByRole('button',{name:'CLAP verwenden'}));
+    expect(color()).toContain('#668cce');expect(color()).not.toBe(learned);
+    expect((container.querySelector('[data-emotion=sadness]') as HTMLElement).style.getPropertyValue('--emotion-color')).toBe('#668cce');
+    await userEvent.click(screen.getByRole('button',{name:'Music2Emo verwenden'}));expect(color()).toBe(learned);
+    await userEvent.click(screen.getByRole('button',{name:'Atmosphäre'}));expect(container.querySelector('.ambient-field')).toBeNull();
+    await userEvent.click(screen.getByRole('button',{name:'Atmosphäre'}));expect(color()).toBe(learned);
+    expect(container.querySelectorAll('.ambient-field')).toHaveLength(1);
+    expect(localStorage.getItem('moodscope-atmosphere')).toBe('true');
+    expect(requests.some(r=>r.path.endsWith('/analyze'))).toBe(false);
+  });
+  it('replaces a song color with neutral evidence and rejects the previous song delayed cache',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    let finish!:(value:Response)=>void;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      const path=String(input).split('/api')[1];
+      if(path==='/tracks/test-song/expression-comparison')return new Promise<Response>(resolve=>{finish=resolve});
+      if(path==='/library')return new Response(JSON.stringify({tracks:[{...track,id:'second-song',name:'Second fixture',title:'Second fixture',analysis_modes:['local']}]}));
+      if(path.startsWith('/tracks/second-song/analysis'))return new Response(JSON.stringify({...stored,audio:[{...stored.audio[0],scores:{}}]}));
+      if(path.startsWith('/tracks/second-song/'))return new Response(JSON.stringify({ready:false,result:null,...notes}));
+      if(path.startsWith('/tracks/test-song/analysis'))return new Response(JSON.stringify({...stored,audio:[{...stored.audio[0],scores:{anger:1}}]}));
+      return original(input,init);
+    }));
+    const {container}=render(<App/>);
+    const color=()=> (container.querySelector('.app') as HTMLElement).style.getPropertyValue('--mood-color');
+    const neutral=color();
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    await userEvent.click(screen.getByRole('button',{name:'Atmosphäre'}));expect(color()).toContain('#e36b62');
+    await userEvent.click(screen.getByRole('button',{name:'Bibliothek'}));
+    await userEvent.click(await screen.findByRole('button',{name:'Öffnen'}));
+    await waitFor(()=>expect(color()).toBe(neutral));
+    await act(async()=>finish(new Response(JSON.stringify({ready:true,stale:false,result:{rows:[{start:0,end:12,valence:.7,arousal:.8,tags:{energetic:1}}]}}))));
+    expect(color()).toBe(neutral);expect(container.querySelector('.app.ambient-enabled')).toBeTruthy();
+    expect(requests.some(r=>r.path.endsWith('/analyze'))).toBe(false);
+  });
+  it('uses API cache colors in English and ignores a local cache arriving in API mode',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    let finish!:(value:Response)=>void;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      const url=String(input);
+      if(url.includes('/expression-comparison'))return new Promise<Response>(resolve=>{finish=resolve});
+      if(url.includes('/analysis?mode=cloud'))return new Response(JSON.stringify({...stored,mode:'cloud',audio:[{...stored.audio[0],score_source:'provider_emotions',scores:{powerful:.9,joy:.2}}]}));
+      if(url.includes('/analysis?mode=local'))return new Response(JSON.stringify({...stored,audio:[{...stored.audio[0],scores:{sadness:1}}]}));
+      return original(input,init);
+    }));
+    const {container}=render(<App/>);
+    await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText(/keine erneute KI-Inferenz/);
+    await userEvent.click(screen.getByRole('button',{name:'Atmosphäre'}));
+    const color=()=> (container.querySelector('.app') as HTMLElement).style.getPropertyValue('--mood-color');
+    expect(color()).toContain('#668cce');
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
+    await waitFor(()=>expect(color()).toContain('#d5a351'));const cloudColor=color();
+    await act(async()=>finish(new Response(JSON.stringify({ready:true,stale:false,result:{rows:[{start:0,end:12,valence:.7,arousal:.8,tags:{energetic:1}}]}}))));
+    expect(color()).toBe(cloudColor);
+    await userEvent.selectOptions(screen.getByLabelText('App-Sprache'),'en');
+    await userEvent.click(screen.getByRole('button',{name:'Method & values'}));
+    expect((container.querySelector('[data-emotion=powerful]') as HTMLElement).style.getPropertyValue('--emotion-color')).toBe('#d5a351');
+    await userEvent.selectOptions(screen.getByLabelText('Analysis mode'),'local');
+    await waitFor(()=>expect(color()).toContain('#668cce'));
+    expect(container.querySelector('.app.ambient-enabled .ambient-field')).toBeTruthy();
+    expect(requests.some(r=>r.path.endsWith('/analyze')||r.path.endsWith('/interpret'))).toBe(false);
   });
   it('uses learned valence in the existing curve and restores CLAP without a new chart',async()=>{
     const original=vi.mocked(fetch).getMockImplementation()!;
@@ -397,4 +555,43 @@ it('recovers play control when the displayed state and native paused flag disagr
  expect(play).toHaveBeenCalledTimes(2);expect(paused).toBe(false);
  await act(async()=>rejectFirst(new DOMException('Earlier play aborted','AbortError')));
  expect(screen.getByRole('button',{name:'Pause'})).toBeTruthy();expect(screen.queryByRole('alert')).toBeNull();
+});
+
+it('keeps timeline, details, interpretation and transport on the same exact playback clock',async()=>{
+ const original=vi.mocked(fetch).getMockImplementation()!;
+ const analysis={...stored,audio:[{start:0,end:6,valence:-.4,scores:{joy:.1}},{start:6,end:12,valence:.6,scores:{joy:.8}}],lyrics:[{start:0,end:6,valence:0,scores:{},text:'First authored line'},{start:6,end:12,valence:.5,scores:{},text:'Second authored line'}],features:{harmony:{key:null,chords:[{start:0,end:6,label:'C',similarity:.8,margin:.2},{start:6,end:12,label:'G',similarity:.8,margin:.2}]}}};
+ vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>String(input).includes('/analysis?')?new Response(JSON.stringify(analysis)):original(input,init)));
+ const {container}=render(<App/>);
+ await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+ await screen.findByText(/keine erneute KI-Inferenz/);
+ const media=document.querySelector('audio')!;media.currentTime=7.125;fireEvent.timeUpdate(media);
+ expect(screen.getByRole('slider',{name:'Wiedergabeposition im Stimmungsverlauf'}).getAttribute('aria-valuenow')).toBe('7.125');
+ expect((screen.getByRole('slider',{name:'Wiedergabeposition'}) as HTMLInputElement).value).toBe('7.125');
+ expect(container.querySelector('.lyric-row.active')?.textContent).toContain('Second authored line');
+ await userEvent.click(screen.getByRole('button',{name:'Songdetails'}));
+ expect(container.querySelector('.chord-timeline [aria-pressed=true]')?.textContent).toContain('G');
+ media.currentTime=2.25;fireEvent.seeked(media);
+ expect(container.querySelector('.chord-timeline [aria-pressed=true]')?.textContent).toContain('C');
+ await userEvent.click(screen.getByRole('button',{name:'Interpretation'}));
+ await screen.findByRole('button',{name:'Aktuelle Stelle bei 0:02 erklären'});
+ media.currentTime=8.5;fireEvent.timeUpdate(media);
+ expect(screen.getByRole('button',{name:'Aktuelle Stelle bei 0:08 erklären'})).toBeTruthy();
+ await userEvent.click(screen.getByRole('button',{name:'10 Sekunden zurück'}));expect(media.currentTime).toBe(0);
+ await userEvent.click(screen.getByRole('button',{name:'10 Sekunden vor'}));expect(media.currentTime).toBe(10);
+ await userEvent.selectOptions(screen.getByLabelText('App-Sprache'),'en');
+ expect(screen.getByRole('button',{name:'Explain position at 0:10 in context'})).toBeTruthy();
+});
+
+it('releases the master decoder and ignores a pending play after the workspace unmounts',async()=>{
+ let reject!:(reason:Error)=>void;
+ vi.spyOn(HTMLMediaElement.prototype,'play').mockImplementation(()=>new Promise<void>((_,fail)=>{reject=fail}));
+ const view=render(<App/>);
+ await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+ await screen.findByText(/Gespeicherte Analyse geladen/);
+ const media=document.querySelector('audio')!;
+ await userEvent.click(screen.getByRole('button',{name:'Abspielen'}));
+ vi.mocked(HTMLMediaElement.prototype.load).mockClear();vi.mocked(HTMLMediaElement.prototype.pause).mockClear();
+ view.unmount();expect(media.hasAttribute('src')).toBe(false);expect(media.isConnected).toBe(false);
+ expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();expect(HTMLMediaElement.prototype.load).toHaveBeenCalled();
+ await act(async()=>reject(new Error('old decoder cancelled')));
 });

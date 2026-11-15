@@ -5,6 +5,8 @@ import json
 import os
 import threading
 import hashlib
+from contextvars import ContextVar
+from contextlib import contextmanager
 from urllib.parse import urlsplit
 
 import httpx
@@ -19,6 +21,14 @@ _lock = threading.RLock()
 _key = ''
 _free_project = False
 _profile = None
+_bound_target=ContextVar('moodscope_api_target',default=None)
+
+
+@contextmanager
+def bound_target(profile,key):
+    token=_bound_target.set((dict(profile),key))
+    try:yield
+    finally:_bound_target.reset(token)
 
 
 class CloudError(RuntimeError):
@@ -42,39 +52,62 @@ def configure_profile(profile,key):
 
 
 def version():
-    with _lock:
-        descriptor={k:_profile.get(k) for k in ('id','protocol','base_url','model','audio_input')} if _profile else {'protocol':'gemini','model':MODEL}
+    selected,_=snapshot()
+    descriptor={k:selected.get(k) for k in ('id','protocol','base_url','model','audio_input')}
     return 'provider-audio-text-v2:'+hashlib.sha256(json.dumps(descriptor,sort_keys=True).encode()).hexdigest()
 
 
-def settings():
+def snapshot():
+    bound=_bound_target.get()
+    if bound:return dict(bound[0]),bound[1]
     with _lock:
-        return {'configured':bool((_profile and _profile['protocol']=='openai') or _key or os.environ.get('GEMINI_API_KEY')),
-                'free_project_confirmed':_free_project, 'model':MODEL,
-                'provider':_profile['name'] if _profile else 'Gemini',
-                'profile_id':_profile['id'] if _profile else None,
-                'key_storage':'process memory only'}
+        return (dict(_profile) if _profile else {
+            'id':None,'name':'Gemini','protocol':'gemini',
+            'base_url':'https://generativelanguage.googleapis.com/v1beta','model':MODEL,
+            'audio_input':True,'free_project_confirmed':_free_project
+        }),_key or (os.environ.get('GEMINI_API_KEY','') if not _profile else '')
+
+
+def settings():
+    p,key=snapshot()
+    key_required=p['protocol'] in {'gemini','anthropic'} or urlsplit(p['base_url']).hostname in {'api.openai.com','api.mistral.ai','api.deepseek.com'}
+    return {'configured':bool(key or not key_required),
+            'free_project_confirmed':bool(p.get('free_project_confirmed')), 'model':p['model'],
+            'provider':p['name'],'profile_id':p['id'],'protocol':p['protocol'],
+            'base_url':p['base_url'],'audio_input':p.get('audio_input',False),
+            'audio_usage_confirmed':p.get('audio_usage_confirmed',False),
+            'key_storage':'process memory only'}
 
 
 def credential():
-    with _lock:
-        if _profile and _profile['protocol']=='openai':
-            if not _profile.get('audio_usage_confirmed'):raise CloudError('Nutzungsbedingungen und mögliche API-Kosten für dieses Audioprofil bestätigen.')
-            host=urlsplit(_profile['base_url']).hostname
-            if not _key and host in {'api.openai.com','api.mistral.ai'}:raise CloudError('API-Key für das ausgewählte Audioprofil fehlt.')
-            return _key
-        key = _key or os.environ.get('GEMINI_API_KEY','')
-        if not key:
-            raise CloudError('Kein Audio-API-Profil aktiv. Lokal analysieren oder ein Gemini-Profil unter Modelle & API hinzufügen und für Audio aktivieren.')
-        if not _free_project:
-            raise CloudError('API-Modus benötigt die Bestätigung eines Projekts ohne aktivierte Abrechnung.')
+    p,key=snapshot()
+    if p['protocol']=='openai':
+        if not p.get('audio_usage_confirmed'):raise CloudError('Nutzungsbedingungen und mögliche API-Kosten für dieses Audioprofil bestätigen.')
+        if not key and urlsplit(p['base_url']).hostname in {'api.openai.com','api.mistral.ai','api.deepseek.com'}:raise CloudError('API-Key für das ausgewählte Audioprofil fehlt.')
         return key
+    if not key:
+        raise CloudError('Kein Audio-API-Profil aktiv. Lokal analysieren oder ein audiotaugliches Profil unter Modelle & API hinzufügen und für Audio aktivieren.')
+    if not p.get('free_project_confirmed'):
+        raise CloudError('API-Modus benötigt die Bestätigung eines Projekts ohne aktivierte Abrechnung.')
+    return key
 
 
 def request_json(prompt, schema, audio=None):
     # Keep recipient, model and credential in one immutable request snapshot.
-    with _lock:
-        key=credential();selected=dict(_profile) if _profile else None;model=MODEL
+    bound=_bound_target.get()
+    if bound:
+        selected,key=bound;model=selected['model']
+    else:
+        with _lock:
+            key=credential();selected=dict(_profile) if _profile else None;model=MODEL
+    if selected and selected['protocol']=='anthropic':
+        if audio is not None:raise CloudError('Dieses Textprofil unterstützt hier keine Audioeingaben.')
+        from .providers import generate_snapshot
+        result=generate_snapshot(selected,key,prompt+'\nReturn only JSON matching this schema: '+json.dumps(schema),16000)
+        try:
+            if result['output_truncated']:raise ValueError()
+            return json.loads(result['text'])
+        except (ValueError,TypeError):raise CloudError('Textprofil lieferte keine vollständige strukturierte Antwort.') from None
     if selected and selected['protocol']=='openai':
         return compatible_json(selected,key,prompt,schema,audio)
     parts = [{'text':prompt}]
@@ -86,7 +119,7 @@ def request_json(prompt, schema, audio=None):
     # No tools, URL context, automatic retries or paid-provider fallback.
     try:
         response=httpx.post(f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
-            headers={'x-goog-api-key':key},json=payload,timeout=httpx.Timeout(180,connect=15))
+            headers={'x-goog-api-key':key},json=payload,timeout=httpx.Timeout(180,connect=15),follow_redirects=False)
     except httpx.HTTPError:
         raise CloudError('API nicht erreichbar oder Zeitlimit überschritten. Es wurde nicht auf ein anderes Modell gewechselt.') from None
     if response.status_code==429:
