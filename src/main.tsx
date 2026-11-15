@@ -124,6 +124,7 @@ export function App(){
   const [sourceUrl,setSourceUrl]=useState(''),[sourceLabel,setSourceLabel]=useState(tr("Originalmix"));
   const mediaEpoch=useRef(0),playAttempt=useRef(0),volume=useRef(.8),trackRequest=useRef(0);
   const [playbackSession,setPlaybackSession]=useState(0);
+  useEffect(()=>{const element=audio.current;return()=>{element?.pause();element?.removeAttribute('src');element?.load()}},[playbackSession]);
   const liveClock=useRef<{trackId:string;url:string}|null>(null);
   const playbackRestore=useRef<{time:number;playing:boolean;url?:string;epoch?:number}|null>(null);
   function releaseLive(){stopLiveMix.current?.();setLiveMix(null);if(liveClock.current){URL.revokeObjectURL(liveClock.current.url);liveClock.current=null}}

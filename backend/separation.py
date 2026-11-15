@@ -130,13 +130,21 @@ def _mix(data,identity,model,sources,gains):
     chosen=sorted(zip(sources,weights))
     root=folder(data,identity,model)
     if len(chosen)==1 and chosen[0][1]==1:return root/(chosen[0][0]+'.wav')
-    fingerprint=hashlib.sha256(('peak-safe-v3:'+json.dumps(chosen)).encode()).hexdigest()[:24]
+    versions=[(s,(root/(s+'.wav')).stat().st_size,(root/(s+'.wav')).stat().st_mtime_ns) for s,_ in chosen]
+    fingerprint=hashlib.sha256(('peak-safe-v4:'+json.dumps([chosen,versions])).encode()).hexdigest()[:24]
     destination=root/('mix-'+fingerprint+'.wav')
-    if destination.exists():return destination
-    handles=[sf.SoundFile(root/(s+'.wav')) for s,_ in chosen]
+    if destination.exists():
+        try:
+            cached=sf.info(destination)
+            if (cached.frames==round(info['duration']*info['sample_rate']) and
+                cached.samplerate==info['sample_rate'] and cached.channels==2 and
+                cached.format=='WAV' and cached.subtype=='FLOAT'):return destination
+        except (OSError,ValueError,RuntimeError):pass
+    handles=[]
     temporary=destination.with_suffix('.tmp.wav')
     normalized=destination.with_suffix('.normalized.tmp.wav')
     try:
+        for source,_ in chosen:handles.append(sf.SoundFile(root/(source+'.wav')))
         peak=0.
         with sf.SoundFile(temporary,'w',samplerate=info['sample_rate'],channels=2,subtype='FLOAT') as output:
             while True:

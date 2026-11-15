@@ -4,7 +4,7 @@ import {exportWave,waveFilename} from './exportWave';
 import {setLanguage} from './i18n';
 import {API} from './api';
 vi.mock('@tauri-apps/api/core',()=>({isTauri:()=>false}));
-const authoredWave=()=>new Uint8Array([82,73,70,70,8,0,0,0,87,65,86,69,100,97,116,97]);
+const authoredWave=()=>{const bytes=new Uint8Array(48),view=new DataView(bytes.buffer);for(const [at,text] of [[0,'RIFF'],[8,'WAVE'],[12,'fmt '],[36,'data']] as const)for(let i=0;i<text.length;i++)bytes[at+i]=text.charCodeAt(i);view.setUint32(4,40,true);view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,2,true);view.setUint32(24,48000,true);view.setUint32(28,192000,true);view.setUint16(32,4,true);view.setUint16(34,16,true);view.setUint32(40,4,true);return bytes};
 afterEach(()=>{vi.unstubAllGlobals();delete (window as any).showSaveFilePicker;setLanguage('de')});
 it('suggests song and selected instruments and writes only after destination selection',async()=>{
  const order:string[]=[],write=vi.fn(),close=vi.fn();
@@ -43,4 +43,17 @@ it('aborts a failed destination write without committing the replacement',async(
  vi.stubGlobal('fetch',vi.fn(async()=>new Response(authoredWave())));
  await expect(exportWave({id:'fixture',name:'Song.wav',duration:10},'htdemucs',['vocals'])).rejects.toThrow();
  expect(abort).toHaveBeenCalledOnce();expect(close).not.toHaveBeenCalled();
+});
+
+it('requires coherent format and frame chunks before replacing a selected file',async()=>{
+ const createWritable=vi.fn();(window as any).showSaveFilePicker=vi.fn(async()=>({createWritable}));
+ const missing=authoredWave();missing.set(new TextEncoder().encode('JUNK'),36);
+ const alignment=authoredWave();new DataView(alignment.buffer).setUint16(32,3,true);
+ const overflow=authoredWave();new DataView(overflow.buffer).setUint32(40,100,true);
+ const trailing=new Uint8Array(50);trailing.set(authoredWave());
+ for(const bytes of [missing,alignment,overflow,trailing]){
+  vi.stubGlobal('fetch',vi.fn(async()=>new Response(bytes)));
+  await expect(exportWave({id:'fixture',name:'Song.wav',duration:10},'htdemucs',['vocals'])).rejects.toThrow();
+ }
+ expect(createWritable).not.toHaveBeenCalled();
 });

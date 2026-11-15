@@ -16,7 +16,22 @@ async function waveBlob(response:Response){
  const header=new Uint8Array(await blob.slice(0,12).arrayBuffer());
  const signature=(start:number,end:number)=>String.fromCharCode(...header.slice(start,end));
  const expected=new DataView(header.buffer).getUint32(4,true)+8;
- if(signature(0,4)!=='RIFF'||signature(8,12)!=='WAVE'||expected<12||expected>blob.size)throw Error('export-format');
+ if(signature(0,4)!=='RIFF'||signature(8,12)!=='WAVE'||expected!==blob.size||expected<44)throw Error('export-format');
+ let offset=12,alignment=0,hasData=false;
+ while(offset+8<=blob.size){
+  const chunk=new DataView(await blob.slice(offset,offset+24).arrayBuffer());
+  const id=String.fromCharCode(...new Uint8Array(chunk.buffer,0,4)),size=chunk.getUint32(4,true);
+  if(offset+8+size+(size%2)>blob.size)throw Error('export-format');
+  if(id==='fmt '){
+   if(alignment||size<16)throw Error('export-format');
+   const format=chunk.getUint16(8,true),channels=chunk.getUint16(10,true),rate=chunk.getUint32(12,true),bits=chunk.getUint16(22,true);
+   alignment=chunk.getUint16(20,true);
+   if(![1,3].includes(format)||![1,2].includes(channels)||!rate||![8,16,24,32,64].includes(bits)||(format===3&&![32,64].includes(bits))||alignment!==channels*bits/8||chunk.getUint32(16,true)!==rate*alignment)throw Error('export-format');
+  }
+  if(id==='data'){if(!alignment||hasData||!size||size%alignment)throw Error('export-format');hasData=true}
+  offset+=8+size+(size%2);
+ }
+ if(offset!==blob.size||!hasData)throw Error('export-format');
  return blob;
 }
 export async function exportWave(track:Track,model:string,sources:string[],levels:Record<string,number>={}){

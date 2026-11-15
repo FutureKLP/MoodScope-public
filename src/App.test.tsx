@@ -581,3 +581,17 @@ it('keeps timeline, details, interpretation and transport on the same exact play
  await userEvent.selectOptions(screen.getByLabelText('App-Sprache'),'en');
  expect(screen.getByRole('button',{name:'Explain position at 0:10 in context'})).toBeTruthy();
 });
+
+it('releases the master decoder and ignores a pending play after the workspace unmounts',async()=>{
+ let reject!:(reason:Error)=>void;
+ vi.spyOn(HTMLMediaElement.prototype,'play').mockImplementation(()=>new Promise<void>((_,fail)=>{reject=fail}));
+ const view=render(<App/>);
+ await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+ await screen.findByText(/Gespeicherte Analyse geladen/);
+ const media=document.querySelector('audio')!;
+ await userEvent.click(screen.getByRole('button',{name:'Abspielen'}));
+ vi.mocked(HTMLMediaElement.prototype.load).mockClear();vi.mocked(HTMLMediaElement.prototype.pause).mockClear();
+ view.unmount();expect(media.hasAttribute('src')).toBe(false);expect(media.isConnected).toBe(false);
+ expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();expect(HTMLMediaElement.prototype.load).toHaveBeenCalled();
+ await act(async()=>reject(new Error('old decoder cancelled')));
+});
