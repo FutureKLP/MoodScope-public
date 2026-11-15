@@ -556,3 +556,28 @@ it('recovers play control when the displayed state and native paused flag disagr
  await act(async()=>rejectFirst(new DOMException('Earlier play aborted','AbortError')));
  expect(screen.getByRole('button',{name:'Pause'})).toBeTruthy();expect(screen.queryByRole('alert')).toBeNull();
 });
+
+it('keeps timeline, details, interpretation and transport on the same exact playback clock',async()=>{
+ const original=vi.mocked(fetch).getMockImplementation()!;
+ const analysis={...stored,audio:[{start:0,end:6,valence:-.4,scores:{joy:.1}},{start:6,end:12,valence:.6,scores:{joy:.8}}],lyrics:[{start:0,end:6,valence:0,scores:{},text:'First authored line'},{start:6,end:12,valence:.5,scores:{},text:'Second authored line'}],features:{harmony:{key:null,chords:[{start:0,end:6,label:'C',similarity:.8,margin:.2},{start:6,end:12,label:'G',similarity:.8,margin:.2}]}}};
+ vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>String(input).includes('/analysis?')?new Response(JSON.stringify(analysis)):original(input,init)));
+ const {container}=render(<App/>);
+ await userEvent.upload(document.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+ await screen.findByText(/keine erneute KI-Inferenz/);
+ const media=document.querySelector('audio')!;media.currentTime=7.125;fireEvent.timeUpdate(media);
+ expect(screen.getByRole('slider',{name:'Wiedergabeposition im Stimmungsverlauf'}).getAttribute('aria-valuenow')).toBe('7.125');
+ expect((screen.getByRole('slider',{name:'Wiedergabeposition'}) as HTMLInputElement).value).toBe('7.125');
+ expect(container.querySelector('.lyric-row.active')?.textContent).toContain('Second authored line');
+ await userEvent.click(screen.getByRole('button',{name:'Songdetails'}));
+ expect(container.querySelector('.chord-timeline [aria-pressed=true]')?.textContent).toContain('G');
+ media.currentTime=2.25;fireEvent.seeked(media);
+ expect(container.querySelector('.chord-timeline [aria-pressed=true]')?.textContent).toContain('C');
+ await userEvent.click(screen.getByRole('button',{name:'Interpretation'}));
+ await screen.findByRole('button',{name:'Aktuelle Stelle bei 0:02 erklären'});
+ media.currentTime=8.5;fireEvent.timeUpdate(media);
+ expect(screen.getByRole('button',{name:'Aktuelle Stelle bei 0:08 erklären'})).toBeTruthy();
+ await userEvent.click(screen.getByRole('button',{name:'10 Sekunden zurück'}));expect(media.currentTime).toBe(0);
+ await userEvent.click(screen.getByRole('button',{name:'10 Sekunden vor'}));expect(media.currentTime).toBe(10);
+ await userEvent.selectOptions(screen.getByLabelText('App-Sprache'),'en');
+ expect(screen.getByRole('button',{name:'Explain position at 0:10 in context'})).toBeTruthy();
+});
