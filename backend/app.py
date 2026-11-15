@@ -396,8 +396,13 @@ def start_job(kind, function, *args):
         job_id=uuid.uuid4().hex
         jobs[job_id]={'kind':kind,'status':'running','progress':0,'message':'Auftrag wird vorbereitet'}
         cancel_events[job_id]=threading.Event()
-    diagnostics.event(DATA,kind,'queued job='+job_id)
-    executor.submit(execute_job,kind,function,job_id,args,routing_snapshot)
+        try:
+            diagnostics.event(DATA,kind,'queued job='+job_id)
+            executor.submit(execute_job,kind,function,job_id,args,routing_snapshot)
+        except Exception:
+            jobs.pop(job_id,None)
+            cancel_events.pop(job_id,None)
+            raise
     return {'job_id':job_id}
 
 
@@ -415,6 +420,9 @@ def execute_job(kind,function,job_id,args,routing_snapshot=None):
             cancel_events.pop(job_id,None)
             job=jobs.get(job_id,{})
             state=job.get('status','unknown');result=job.get('result') or {}
+        # Exception tracebacks can retain model tensors until the handler exits.
+        # Release the allocator again here, after the exception scope has ended.
+        if state in {'cancelled','error'}:catalog.unload_models(engines)
         diagnostics.event(DATA,kind,f'job={job_id} status={state} elapsed_seconds={time.monotonic()-started:.2f} cached={result.get("cached",False)} audio_segments={len(result.get("audio",[]))} lyric_segments={len(result.get("lyrics",[]))}')
 
 
@@ -828,7 +836,7 @@ def run_interpretation(job_id,identity,request):
         research_facts=json.loads(research_row[0]) if research_row else None
         research_basis=hashlib.sha256(json.dumps(research_facts,sort_keys=True).encode()).hexdigest()
         prompt_basis=prompt_presets.fingerprint(DATA,[('whole_' if request.time is None else 'line_')+request.language])
-        interpretation_version='music-text-v13-grounded' if request.include_music else 'whole-song-v11-source'
+        interpretation_version='music-text-v14-line-evidence' if request.include_music else 'whole-song-v12-line-evidence'
         key='interpretation:'+hashlib.sha256((interpretation_version+prompt_basis+research_basis+cache_identity+insights.analysis_basis(analysis)+json.dumps(analysis.get('instruments',[]),sort_keys=True)+json.dumps(request.model_dump(exclude={'force','upload_consent','include_music','routing_version'}),sort_keys=True)+selected).encode()).hexdigest()
         with db() as conn:cached=conn.execute('SELECT result FROM cache WHERE key=?',(key,)).fetchone()
         if cached and not request.force:result={**json.loads(cached[0]),'cached':True}

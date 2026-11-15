@@ -981,5 +981,10 @@
   "Lokale Audiokopie fehlt oder ist beschädigt. Originaldatei erneut importieren; gespeicherte Daten bleiben erhalten.": "The local audio copy is missing or damaged. Reimport the original file; stored data is preserved.",
   "Gespeicherte Analyse ist beschädigt oder einem anderen Song zugeordnet; keine Daten verändert.": "The stored analysis is damaged or belongs to another song; no data was changed.",
   "Gespeicherter Music2Emo-Verlauf ist beschädigt; keine Daten verändert.": "The stored Music2Emo timeline is damaged; no data was changed.",
-  "Music2Emo-Ergebnis enthält ungültige Werte oder Zeitbereiche; gespeicherte Daten bleiben erhalten.": "The Music2Emo result contains invalid values or time ranges; stored data is preserved."
+  "Music2Emo-Ergebnis enthält ungültige Werte oder Zeitbereiche; gespeicherte Daten bleiben erhalten.": "The Music2Emo result contains invalid values or time ranges; stored data is preserved.",
+  "Das Sprachmodell hat fehlende oder unbekannte Textbelegreferenzen erzeugt. Keine Interpretation übernommen.": "The language model returned missing or unknown lyric evidence references. No interpretation was accepted.",
+  "CLAP benötigt nicht leere, endliche Audiodaten.": "CLAP requires nonempty, finite audio data.",
+  "CLAP lieferte nicht endliche Modellwerte; Analyse verworfen.": "CLAP returned nonfinite model values; the analysis was rejected.",
+  "Textmodell lieferte ungültige Emotionswerte; Analyse verworfen.": "The text model returned invalid emotion values; the analysis was rejected.",
+  "Whisper lieferte ungültige Zeitstempel oder Wortkonfidenzen.": "Whisper returned invalid timestamps or word confidence values."
 }

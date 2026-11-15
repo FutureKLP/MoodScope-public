@@ -21,7 +21,7 @@ def text_coverage(lines,duration):
 
 
 def analysis_grid(duration: float, hop: float = 5.) -> list[dict]:
-    if duration <= 0 or hop <= 0:
+    if not all(math.isfinite(v) and v>0 for v in (duration,hop)):
         raise ValueError('Duration and hop must be positive')
     rows=[]
     start=0.

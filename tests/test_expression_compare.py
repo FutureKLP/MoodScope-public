@@ -71,6 +71,28 @@ def test_cancellation_terminates_worker_and_removes_only_scratch(tmp_path,monkey
     assert not list(tmp_path.glob('expression-*'))
 
 
+def test_timeout_kills_resistant_worker_and_removes_scratch(tmp_path,monkeypatch):
+    import subprocess
+    stopped=[]
+    class Process:
+        returncode=None
+        def poll(self):return self.returncode
+        def terminate(self):stopped.append('terminate')
+        def kill(self):stopped.append('kill');self.returncode=-9
+        def wait(self,timeout=None):
+            if timeout:raise subprocess.TimeoutExpired('fixture',timeout)
+            return self.returncode
+    monkeypatch.setattr(expression_compare,'ready',lambda:True)
+    monkeypatch.setattr(expression_compare.subprocess,'Popen',lambda *args,**kwargs:Process())
+    from types import SimpleNamespace
+    times=iter([0,1801]);monkeypatch.setattr(expression_compare,'time',SimpleNamespace(monotonic=lambda:next(times)))
+    original=tmp_path/'original.wav';original.write_bytes(b'authored source')
+    with pytest.raises(RuntimeError,match='Zeitlimit'):
+        expression_compare.analyse(original,tmp_path,'cpu',lambda *args:None)
+    assert stopped==['terminate','kill'] and original.read_bytes()==b'authored source'
+    assert not list(tmp_path.glob('expression-*'))
+
+
 @pytest.mark.parametrize('changes',[{'valence':float('nan')},{'arousal':2},{'start':-.1},{'end':2},{'tags':{'joy':float('inf')}}])
 def test_invalid_comparison_result_cannot_replace_existing_cache(client,monkeypatch,changes):
     app=importlib.import_module('backend.app')

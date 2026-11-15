@@ -64,3 +64,47 @@ def test_restart_selects_a_versioned_build_beside_a_running_executable(tmp_path,
     original=root/('moodscope'+suffix);original.write_bytes(b'authored placeholder');os.utime(original,(1000,1000))
     fresh=root/('moodscope-build-20300101'+suffix);fresh.write_bytes(b'authored replacement');os.utime(fresh,(2000,2000))
     assert launch.latest_binary()==fresh
+
+
+def test_service_reaps_resistant_owned_children(monkeypatch):
+    from scripts import service
+    import psutil
+    calls=[]
+    class Child:
+        def terminate(self):calls.append('terminate')
+        def kill(self):calls.append('kill')
+    child=Child()
+    class Parent:
+        def children(self,recursive):
+            assert recursive
+            return [child]
+    def wait(children,timeout):
+        calls.append(('wait',tuple(children)))
+        return ([],[child]) if len(calls)==2 else ([child],[])
+    monkeypatch.setattr(psutil,'wait_procs',wait)
+    service.stop_children(Parent())
+    assert calls==['terminate',('wait',(child,)),'kill',('wait',(child,))]
+
+
+def test_worker_exit_always_cleans_model_children(monkeypatch):
+    from scripts import service
+    import uvicorn,importlib
+    app=importlib.import_module('backend.app')
+    monkeypatch.setattr(app,'SYSTEM_CONTROL',None)
+    cleaned=[]
+    monkeypatch.setattr(service,'stop_children',lambda:cleaned.append(True))
+    class Server:
+        def __init__(self,*args):pass
+        def run(self):raise RuntimeError('authored server failure')
+    monkeypatch.setattr(uvicorn,'Server',Server)
+    with pytest.raises(RuntimeError,match='server failure'):service.worker(12345)
+    assert cleaned==[True]
+
+
+def test_direct_launcher_resolves_cleanup_without_project_on_import_path(tmp_path):
+    import subprocess,sys
+    scripts=__import__('pathlib').Path(launch.__file__).parent
+    result=subprocess.run([sys.executable,'-I','-c',
+        'import sys; sys.path.insert(0,sys.argv[1]); import launch; assert callable(launch.stop_children)',
+        str(scripts)],cwd=tmp_path,capture_output=True,timeout=10)
+    assert result.returncode==0

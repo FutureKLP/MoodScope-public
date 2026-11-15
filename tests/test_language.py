@@ -45,7 +45,7 @@ def test_language_caches_are_separate_and_both_deleted(client,monkeypatch):
 def test_server_prompt_and_audio_evidence_follow_output_language(tmp_path,monkeypatch):
     from backend import providers
     prompts=[]
-    monkeypatch.setattr(providers,'generate',lambda *args:(prompts.append(args[-1]) or {'text':'The narrator expresses a possible hope for tomorrow, although this reading is uncertain.'}))
+    monkeypatch.setattr(providers,'generate',lambda *args:(prompts.append(args[-1]) or {'text':'L1 expresses a possible hope for tomorrow, although this reading is uncertain.'}))
     data={'lyrics':[{'start':0,'end':4,'text':'Ich hoffe auf morgen.'}],'audio':[{'start':0,'end':4,'valence':.2,'scores':{'joy':.7}}],'features':{'bpm':120,'brightness_hz':1800}}
     result=insights.interpretation(tmp_path,None,data,{},provider_id='fixture',language='en')
     assert 'Write every paragraph in English' in prompts[0] and 'Ich hoffe auf morgen.' in prompts[0]

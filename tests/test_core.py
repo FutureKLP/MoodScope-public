@@ -42,6 +42,12 @@ def test_display_grid_covers_whole_track_without_overlaps():
     with pytest.raises(ValueError):analysis_grid(0)
 
 
+@pytest.mark.parametrize('duration,hop',[(float('inf'),5),(12,float('nan')),(12,float('inf'))])
+def test_nonfinite_grid_cannot_hang_or_create_invalid_intervals(duration,hop):
+    from backend.core import analysis_grid
+    with pytest.raises(ValueError):analysis_grid(duration,hop)
+
+
 def test_coverage_ignores_outside_and_nonfinite_spans_without_negative_coverage():
     from backend.core import text_coverage
     rows=[{'start':-10,'end':-2}, {'start':25,'end':30}, {'start':float('nan'),'end':4}, {'start':2,'end':6}]

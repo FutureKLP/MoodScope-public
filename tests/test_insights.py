@@ -52,6 +52,25 @@ def test_invalid_local_repair_is_also_rejected():
         checked_local_generation(lambda repair:{'text':'Ich höre deutlich eine traurige Tonart.'},'Eigener Text')
 
 
+def test_unknown_line_reference_is_rejected_including_after_repair():
+    validate_text_interpretation('L1 kann Hoffnung ausdrücken.','Morgen kommt ein neuer Tag.',{'L1'})
+    with pytest.raises(RuntimeError,match='Textbelegreferenzen'):
+        checked_local_generation(lambda repair:{'text':'L99 beweist die Rückkehr der erzählenden Person.'},
+            'Morgen kommt ein neuer Tag.',line_references={'L1'})
+    with pytest.raises(RuntimeError,match='Textbelegreferenzen'):
+        validate_text_interpretation('L1 beschreibt eine Reise.','Eigener ungetakteter Text',set())
+
+
+def test_missing_line_reference_triggers_repair_with_actual_identifiers():
+    calls=[]
+    def generate(repair):
+        calls.append(repair)
+        return {'text':'The supplied words might suggest uncertainty.' if repair is None else
+            'L1 might suggest uncertainty; the text does not establish the cause.'}
+    result=checked_local_generation(generate,'Authored words',language='en',line_references={'L1'})
+    assert result['validation_attempts']==2 and 'L1' in calls[1]
+
+
 def test_missing_lyrics_returns_actionable_result_without_loading_llm(tmp_path):
     result=interpretation(tmp_path,None,{'audio':[],'lyrics':[]},{})
     assert result['missing_lyrics'] and 'Texterkennung' in result['text']

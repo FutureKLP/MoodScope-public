@@ -21,6 +21,18 @@ def capture():
     return checkpoint
 
 
+def generation_stopping_criteria():
+    """Check the owning job between generated tokens, including worker threads."""
+    from transformers import StoppingCriteria, StoppingCriteriaList
+    import torch
+    checkpoint=capture()
+    class JobCancellation(StoppingCriteria):
+        def __call__(self,input_ids,scores,**kwargs):
+            checkpoint()
+            return torch.zeros(input_ids.shape[0],device=input_ids.device,dtype=torch.bool)
+    return StoppingCriteriaList([JobCancellation()])
+
+
 @contextmanager
 def scope(event):
     previous=getattr(_local,'event',None);_local.event=event

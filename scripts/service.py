@@ -15,9 +15,10 @@ else:
 ROOT=Path(__file__).resolve().parents[1]
 
 
-def stop_children():
+def stop_children(parent=None):
     import psutil
-    children=psutil.Process().children(recursive=True)
+    try:children=(parent or psutil.Process()).children(recursive=True)
+    except psutil.NoSuchProcess:return
     for child in reversed(children):
         try:child.terminate()
         except psutil.Error:pass
@@ -25,6 +26,7 @@ def stop_children():
     for child in alive:
         try:child.kill()
         except psutil.Error:pass
+    psutil.wait_procs(alive,timeout=3)
 
 
 def worker(port):
@@ -47,7 +49,8 @@ def worker(port):
             watchdog=threading.Timer(8,deadline);watchdog.daemon=True;watchdog.start()
         threading.Timer(.5,finish).start()
     module.SYSTEM_CONTROL=control
-    server.run()
+    try:server.run()
+    finally:stop_children()
     return state['code']
 
 

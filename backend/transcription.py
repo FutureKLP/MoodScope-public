@@ -55,8 +55,14 @@ def device_for(engine):
 
 
 def owned_segments(segments,window_start,owner_start,owner_end,duration):
+    from .cancellation import check
     output=[]
     for segment in segments:
+        check()
+        timings=[segment.start,segment.end]
+        for word in segment.words or []:timings.extend([word.start,word.end,word.probability])
+        if not all(isinstance(value,(int,float)) and np.isfinite(value) for value in timings):
+            raise ValueError('Whisper lieferte ungültige Zeitstempel oder Wortkonfidenzen.')
         words=[w for w in (segment.words or []) if owner_start<=window_start+(w.start+w.end)/2<owner_end]
         if words:
             start=max(owner_start,window_start+words[0].start);end=min(duration,owner_end,window_start+words[-1].end)
@@ -85,12 +91,14 @@ def transcribe(engine,path,progress,quality='standard',language=None):
     catalog.unload_models(engine)
     model=WhisperModel(catalog.model_source(engine.data,'whisper'),device=device,device_index=device_index,
         compute_type='float16' if device=='cuda' else 'int8',download_root=str(catalog.ROOT/'models'/'whisper'))
-    audio=decode_audio(str(path),sampling_rate=16000);duration=len(audio)/16000
-    options={'beam_size':7 if quality=='precise' else 5,'vad_filter':False,
-        'condition_on_previous_text':False,'word_timestamps':True,'language':language,
-        'temperature':0.,'no_speech_threshold':.6}
-    output=[]
     try:
+        from .cancellation import check
+        check()
+        audio=decode_audio(str(path),sampling_rate=16000);duration=len(audio)/16000
+        options={'beam_size':7 if quality=='precise' else 5,'vad_filter':False,
+            'condition_on_previous_text':False,'word_timestamps':True,'language':language,
+            'temperature':0.,'no_speech_threshold':.6}
+        output=[]
         if quality=='precise':
             for start in np.arange(0,duration,24):
                 left=max(0,float(start)-3);right=min(duration,float(start)+27)
@@ -103,6 +111,7 @@ def transcribe(engine,path,progress,quality='standard',language=None):
         output.sort(key=lambda line:line['start'])
         for i in range(len(output)-1):output[i]['end']=min(output[i]['end'],output[i+1]['start'])
         output=[row for row in output if row['end']>row['start']]
+        check()
         diagnostics.event(engine.data,'whisper',f'device={device} quality={quality} segments={len(output)} duration={duration:.1f}')
         return output
     finally:

@@ -37,12 +37,16 @@ class Engines:
         return 'cpu'
 
     def audio(self, y, sr, progress,step=5):
+        from .cancellation import check
+        check()
         import numpy as np
         import torch
         import librosa
         from transformers import ClapModel, ClapProcessor
         from . import catalog
         from .core import analysis_grid
+        if sr<=0 or not len(y) or not np.isfinite(y).all():
+            raise ValueError('CLAP benötigt nicht leere, endliche Audiodaten.')
         device = self.device()
         if self.audio_model is None:
             progress('Lade CLAP-Musikmodell (erster Start: Download)', 10)
@@ -60,6 +64,7 @@ class Engines:
         result = []
         # Non-overlapping display bins, each estimated using centered 10-second context.
         for span in analysis_grid(duration,step):
+            check()
             start,end=span['start'],span['end']
             center=(start+end)/2
             context_start=max(0.,center-5);context_end=min(duration,center+5)
@@ -69,6 +74,7 @@ class Engines:
                                     return_tensors='pt', padding=True).to(device)
             with torch.inference_mode():
                 pairs=self.audio_model(**inputs).logits_per_audio[0].reshape(6,2)
+                if not torch.isfinite(pairs).all():raise ValueError('CLAP lieferte nicht endliche Modellwerte; Analyse verworfen.')
                 logits=pairs.mean(dim=1)
                 scores = logits.softmax(dim=-1)
                 confidence=1-float((-(scores*scores.clamp_min(1e-8).log()).sum()/np.log(len(labels))).cpu())
@@ -83,6 +89,8 @@ class Engines:
         return result
 
     def lyrics(self, lines, progress, context_weight=.3):
+        from .cancellation import check
+        check()
         from transformers import pipeline
         import math
         from . import catalog
@@ -95,18 +103,29 @@ class Engines:
             self.lyric_pipe = pipeline('text-classification', model=source, **kwargs,
                                        model_kwargs={'use_safetensors':catalog.entries(self.data)[catalog.configuration(self.data)['active']['lyrics']].get('custom',False)},
                                        device=self.device('lyrics'))
-        results = self.lyric_pipe([l['text'] for l in lines], top_k=None,
-                                 truncation=True, max_length=256, batch_size=8)
+        def predict(texts,max_length):
+            predictions=[]
+            for start in range(0,len(texts),8):
+                check()
+                predictions.extend(self.lyric_pipe(texts[start:start+8],top_k=None,
+                    truncation=True,max_length=max_length,batch_size=8))
+                check()
+            return predictions
+        results = predict([l['text'] for l in lines],256)
         contexts=[]
         for i,line in enumerate(lines):
             previous=lines[i-1]['text'] if i and line['start']-lines[i-1]['end']<12 else ''
             following=lines[i+1]['text'] if i+1<len(lines) and lines[i+1]['start']-line['end']<12 else ''
             contexts.append(' '.join([previous,line['text'],following]).strip())
-        contextual=self.lyric_pipe(contexts,top_k=None,truncation=True,max_length=384,batch_size=8) if context_weight else results
+        contextual=predict(contexts,384) if context_weight else results
         output = []
         for line, prediction,context in zip(lines, results,contextual):
             isolated={p['label'].lower():p['score'] for p in prediction}
             surrounding={p['label'].lower():p['score'] for p in context}
+            required={'joy','sadness','anger','fear'}
+            if (not required.issubset(isolated) or not required.issubset(surrounding) or
+                any(not math.isfinite(value) or not 0<=value<=1 for values in (isolated,surrounding) for value in values.values())):
+                raise ValueError('Textmodell lieferte ungültige Emotionswerte; Analyse verworfen.')
             scores = {key:(1-context_weight)*value+context_weight*surrounding[key] for key,value in isolated.items()}
             if not {'joy', 'sadness', 'anger', 'fear'}.issubset(scores):
                 raise ValueError(f'Unexpected model labels: {list(scores)}')
@@ -123,6 +142,8 @@ class Engines:
         return transcribe(self,path,progress,quality,language)
 
     def instruments(self,y,sr,progress):
+        from .cancellation import check
+        check()
         import numpy as np
         import torch
         if self.audio_model is None:self.audio(y[:min(len(y),sr*10)],sr,progress)
@@ -137,6 +158,7 @@ class Engines:
         prompts=content(self.data,'instruments').splitlines()
         estimates=[];duration=len(y)/sr;device=self.device()
         for fraction in [.2,.5,.8]:
+            check()
             start=max(0.,duration*fraction-5)
             clip=y[int(start*sr):int(min(duration,start+10)*sr)]
             inputs=self.processor(text=prompts,audio=clip,sampling_rate=sr,return_tensors='pt',padding=True).to(device)
