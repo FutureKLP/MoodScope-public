@@ -1,13 +1,11 @@
 import hashlib
 import json
 import os
-import sqlite3
 import subprocess
 import threading
 import uuid
 import tempfile
 import re
-from contextlib import contextmanager
 from typing import Literal
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -24,7 +22,7 @@ from pydantic import BaseModel, Field, SecretStr
 from .core import parse_lrc, biggest_split,text_coverage
 from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
 from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method,cancellation,prompt_presets,runtime_devices
-from . import expression_compare,provider_routing,storage
+from . import expression_compare,provider_routing,storage,persistence
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
@@ -86,30 +84,12 @@ async def local_only(request: Request, call_next):
     return result
 
 
-_db_init_lock=threading.RLock()
-_recovered_data=set()
+store=persistence.SQLiteStore()
 
 
-@contextmanager
 def db():
-    conn = sqlite3.connect(DATA / 'cache.sqlite3', timeout=30)
-    try:
-        with _db_init_lock:
-            conn.execute('CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, metadata TEXT NOT NULL)')
-            conn.execute('CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, result TEXT NOT NULL)')
-            conn.execute('CREATE TABLE IF NOT EXISTS cache_owner (key TEXT PRIMARY KEY, track_id TEXT NOT NULL)')
-            conn.execute('CREATE TABLE IF NOT EXISTS cache_state (name TEXT PRIMARY KEY, revision INTEGER NOT NULL)')
-            root=DATA.resolve()
-            if root not in _recovered_data:
-                with conn:
-                    conn.execute('BEGIN IMMEDIATE')
-                    storage.recover_deletions(DATA,conn)
-                _recovered_data.add(root)
-        with conn:
-            cancellation.check()
-            yield conn
-            cancellation.check()
-    finally: conn.close()
+    return store.transaction(DATA)
+
 
 
 def cache_generation():

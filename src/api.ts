@@ -10,7 +10,7 @@ export function controlOrigin(origin:string){
 }
 export const CONTROL_API=controlOrigin(API);
 export class ApiError extends Error{constructor(message:string,public status:number){super(message)}}
-export async function api(path:string,init?:RequestInit){
+export async function api<T=any>(path:string,init?:RequestInit):Promise<T>{
   const response=await fetch(CONTROL_API+'/api'+path,{...init,headers:{...Object.fromEntries(new Headers(init?.headers).entries()),'Accept-Language':getLanguage()},signal:init?.signal||AbortSignal.timeout(180000)});
   if(!response.ok){
     const error=await response.json().catch(()=>({detail:response.statusText}));

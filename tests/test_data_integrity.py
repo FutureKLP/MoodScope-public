@@ -45,7 +45,7 @@ os._exit(91)
 '''
     result = subprocess.run([sys.executable, '-c', code, str(app.DATA), identity, str(committed)], cwd=Path(__file__).resolve().parents[1])
     assert result.returncode == 91
-    app._recovered_data.discard(app.DATA.resolve())
+    app.store.recovered_data.discard(app.DATA.resolve())
     with app.db() as conn:
         assert bool(conn.execute('SELECT 1 FROM tracks').fetchone()) is not committed
     if committed:
@@ -87,7 +87,7 @@ def test_restore_conflict_preserves_both_versions_and_journal(client):
     original = app.DATA / (identity + '.wav'); before = original.read_bytes()
     quarantine = storage.quarantine_files(app.DATA, [identity])
     original.write_bytes(b'newer authored version')
-    app._recovered_data.discard(app.DATA.resolve())
+    app.store.recovered_data.discard(app.DATA.resolve())
     with pytest.raises(RuntimeError, match='konflikt'):
         with app.db():pass
     assert original.read_bytes() == b'newer authored version'
@@ -201,7 +201,7 @@ def test_locked_cleanup_keeps_journal_and_retries_on_next_open(client, monkeypat
         response=client.post(f'/api/tracks/{identity}/delete')
     assert response.status_code==200 and response.json()['warning']
     assert next(app.DATA.glob('delete-*/journal.json')).is_file()
-    app._recovered_data.discard(app.DATA.resolve())
+    app.store.recovered_data.discard(app.DATA.resolve())
     with app.db() as conn:assert not conn.execute('SELECT * FROM tracks').fetchall()
     assert not list(app.DATA.glob('delete-*'))
 
@@ -213,7 +213,7 @@ def test_reimport_after_committed_locked_deletion_is_not_rolled_back(client,monk
         assert client.post(f'/api/tracks/{identity}/delete').status_code==200
     assert imported(client)==identity
     path=app.DATA/(identity+'.wav');before=path.read_bytes()
-    app._recovered_data.discard(app.DATA.resolve())
+    app.store.recovered_data.discard(app.DATA.resolve())
     with app.db() as conn:assert conn.execute('SELECT id FROM tracks').fetchone()[0]==identity
     assert path.read_bytes()==before and not list(app.DATA.glob('delete-*'))
 
