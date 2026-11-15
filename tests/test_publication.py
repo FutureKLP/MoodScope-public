@@ -16,6 +16,8 @@ def test_source_and_project_icons_are_allowed():
     assert path_problem('src/main.tsx') is None
     assert path_problem('src-tauri/icons/icon.png') is None
     assert path_problem('README.md') is None
+    assert path_problem('pytest.ini') is None
+    assert path_problem('pytest-local.ini') is not None
 
 
 def test_secret_patterns_do_not_print_values():

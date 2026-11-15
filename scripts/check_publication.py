@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GIT = shutil.which('git.exe') or shutil.which('git')
 ALLOWED_ROOTS = {'.github', '.githooks', 'backend', 'docs', 'scripts', 'src', 'src-tauri', 'tests'}
 ALLOWED_TOP = {'.gitattributes', '.gitignore', 'README.md', 'LICENSE', 'Start-MoodScope.cmd',
-               'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts'}
+               'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts', 'pytest.ini'}
 DENIED_PARTS = {'.git', '.venv', '.tools', 'node_modules', 'dist', 'data', 'models',
                 '__pycache__', '.pytest_cache', 'target', 'gen', 'for test only music files'}
 DENIED_EXTENSIONS = {'.mp3','.wav','.flac','.lrc','.mp4','.webm','.sqlite','.sqlite3','.db',

@@ -117,7 +117,7 @@ def interpretation(data,engine,analysis,metadata,time_position=None,mode='local'
         result=InterpretationText.model_validate(cloud.request_json(prompt,InterpretationText.model_json_schema()))
         validate_text_interpretation(result.text,context['full_text'])
         validate_music_references(result.text,references)
-        return {'text':result.text,'audio_evidence':evidence,'music_evidence':music,'model':cloud.MODEL,'mode':'cloud','time':time_position}
+        return {'text':result.text,'audio_evidence':evidence,'music_evidence':music,'model':cloud.settings()['model'],'mode':'cloud','time':time_position}
     from transformers import AutoModelForCausalLM, AutoTokenizer
     import torch
     source=catalog.model_source(data,'interpretation')

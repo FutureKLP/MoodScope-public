@@ -55,6 +55,40 @@ def test_cache_delete_removes_analysis_but_preserves_notes_and_audio(state):
     assert len(calls)==2
 
 
+def test_song_deletion_preserves_the_original_import_file(state,tmp_path_factory):
+    module,client,_=state
+    original=tmp_path_factory.mktemp('originals')/'authored.wav'
+    content=sample();original.write_bytes(content)
+    imported=module.import_path(original,original.name)
+    managed=module.DATA/(imported['id']+'.wav')
+    assert managed.exists() and managed!=original
+    response=client.post(f"/api/tracks/{imported['id']}/delete")
+    assert response.status_code==200 and response.json()['original_source_preserved']
+    assert original.read_bytes()==content and not managed.exists()
+    assert client.get('/api/library').json()['tracks']==[]
+
+
+def test_failed_song_deletion_restores_managed_audio_and_keeps_notes(state,monkeypatch):
+    from pathlib import Path
+    module,client,_=state
+    identity=client.post('/api/tracks',files={'file':('authored.wav',sample())}).json()['id']
+    audio=module.DATA/(identity+'.wav');before=audio.read_bytes()
+    stems=module.DATA/'stems'/identity;stems.mkdir(parents=True)
+    (stems/'marker').write_text('synthetic fixture',encoding='utf8')
+    assert client.post(f'/api/tracks/{identity}/notes',json={'interpretation':'Authored note'}).status_code==200
+    rename=Path.rename
+    def locked_stems(path,target):
+        if path==stems:raise PermissionError('Simulated locked managed stems')
+        return rename(path,target)
+    monkeypatch.setattr(Path,'rename',locked_stems)
+    response=client.post(f'/api/tracks/{identity}/delete')
+    assert response.status_code==409
+    assert audio.read_bytes()==before and (stems/'marker').exists()
+    assert client.get(f'/api/tracks/{identity}/notes').json()['interpretation']=='Authored note'
+    assert client.get(f'/api/tracks/{identity}/audio').status_code==200
+    assert len(client.get('/api/library').json()['tracks'])==1
+
+
 def test_reimport_recognizes_file_and_lists_only_one_track(state):
     module,client,_=state
     first=client.post('/api/tracks',files={'file':('one.wav',sample())}).json()

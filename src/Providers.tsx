@@ -1,9 +1,10 @@
+import {ProviderRouting,RoutingState} from './ProviderRouting';
 import {useConfirm} from './ConfirmDialog';
 import {t as tr,useLanguage} from './i18n';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {api,json} from './api';
 
-type Props={perform:(work:()=>Promise<void>)=>Promise<void>;busy:boolean;onAudioChange?:(profile:{provider:string;model:string})=>void};
+type Props={perform:(work:()=>Promise<void>)=>Promise<void>;busy:boolean;onAudioChange?:(profile:{provider:string;model:string})=>void;onRoutesChange?:(value:RoutingState)=>void};
 const presets:Record<string,{name:string;protocol:string;url:string}>={
   gemini:{name:'Google Gemini',protocol:'gemini',url:'https://generativelanguage.googleapis.com/v1beta'},
   openai:{name:'OpenAI / ChatGPT',protocol:'openai',url:'https://api.openai.com/v1'},
@@ -12,43 +13,60 @@ const presets:Record<string,{name:string;protocol:string;url:string}>={
   deepseek:{name:'DeepSeek',protocol:'openai',url:'https://api.deepseek.com'},
   ollama:{name:'Ollama',protocol:'openai',url:'http://127.0.0.1:11434/v1'},
   lm:{name:'LM Studio',protocol:'openai',url:'http://127.0.0.1:1234/v1'},
+  custom:{name:'Eigener kompatibler Server',protocol:'openai',url:'http://127.0.0.1:1234/v1'},
 };
 
-export function ProviderSettings({perform,busy,onAudioChange}:Props){
+export function ProviderSettings({perform,busy,onAudioChange,onRoutesChange}:Props){
   const language=useLanguage();
   const {confirm,dialog}=useConfirm();
+  const [presetId,setPresetId]=useState('ollama');
   const [profiles,setProfiles]=useState<any[]>([]),[name,setName]=useState(''),[url,setUrl]=useState(presets.ollama.url);
   const [protocol,setProtocol]=useState('openai'),[model,setModel]=useState(''),[key,setKey]=useState('');
   const [serverModels,setServerModels]=useState<string[]>([]);
+  const discoveryRequest=useRef(0);
   const [audioInput,setAudioInput]=useState(false),[usage,setUsage]=useState(false),[activeAudio,setActiveAudio]=useState<any>(null);
   const [editing,setEditing]=useState<string|null>(null),[free,setFree]=useState(false),[message,setMessage]=useState('');
   async function refresh(){const value=await api('/providers');setProfiles(value.profiles||[]);setActiveAudio(value.audio||null)}
+  async function changed(){await refresh();onRoutesChange?.(await api('/provider-routes'))}
+  function invalidateDiscovery(){discoveryRequest.current++;setServerModels([]);setMessage('')}
   useEffect(()=>{void perform(refresh)},[]);
-  function preset(type:string){const p=presets[type];setEditing(null);setKey('');setModel('');setFree(false);setAudioInput(false);setUsage(false);setServerModels([]);setProtocol(p.protocol);setName(p.name);setUrl(p.url);setMessage('')}
+  useEffect(()=>()=>{discoveryRequest.current++},[]);
+  function preset(type:string){invalidateDiscovery();setPresetId(type);const p=presets[type];setEditing(null);setKey('');setModel('');setFree(false);setAudioInput(false);setUsage(false);setProtocol(p.protocol);setName(p.name);setUrl(p.url)}
   return <>{dialog}<section className="panel workspace-panel provider-settings">
     <h2>{tr("KI-Anbieter und eigene Modellserver")}</h2>
-    <p>{tr("Profile für Gemini, OpenAI, Mistral, Claude, DeepSeek und eigene Server. Textprofile wählst du unter Interpretation. Ein passendes Audioprofil aktivierst du hier für Emotionskurve, Gesangserkennung und Instrumenthinweise. Lokale Berechnung bleibt der Standard.")}</p>
-    <div className="provider-presets">{Object.entries(presets).map(([id,p])=><button key={id} onClick={()=>preset(id)}>{p.name}</button>)}</div>
+    <p>{tr("Ein Profil verbindet Anbieter oder eigenen Server mit genau einer Modell-ID. Speichere zuerst die benötigten Modelle als Profile und ordne sie danach den Aufgaben unten zu. Lokale Modelle bleiben unabhängig auswählbar.")}</p>
+    <div className="provider-presets">{Object.entries(presets).map(([id,p])=><button key={id} disabled={busy} onClick={()=>preset(id)}>{tr(p.name)}</button>)}</div>
+    <p className="provider-description">{tr(({
+      gemini:'Google Gemini: Cloud-Modelle für Text und, je nach Modell, Audio. Exakte Modell-ID und Google-API-Key eintragen. Die kostenlose Audiooption setzt hier ein bestätigtes Projekt ohne Abrechnung voraus.',
+      openai:'OpenAI: Cloud-Textmodelle für Textbewertung und Interpretation. Audioaufgaben benötigen ein ausdrücklich audiotaugliches Modell. Ein ChatGPT-Abonnement ersetzt keinen API-Key.',
+      mistral:'Mistral: Textmodelle für Textaufgaben; passende Voxtral-Modelle für Audioaufgaben. API-Key und genaue Modell-ID deines Kontos verwenden.',
+      anthropic:'Anthropic Claude: Textbewertung und Interpretation über Messages. Dieses Profil überträgt hier keine Audiodateien.',
+      deepseek:'DeepSeek: Textbewertung und Interpretation. Dieses Textprofil unterstützt hier keine Audioeingaben.',
+      ollama:'Ollama: eigenes Textmodell auf diesem Rechner oder einem Heimserver. localhost bezeichnet den MoodScope-Rechner. Für einen anderen Rechner dessen LAN-Adresse einsetzen. Ein übliches Ollama-Textmodell kann kein Audio auswerten.',
+      lm:'LM Studio: eigenes Modell über den aktivierten kompatiblen Server. Für einen Heimserver die LAN-Adresse statt localhost einsetzen. Audio nur aktivieren, wenn Server und Modell input_audio tatsächlich unterstützen.',
+      custom:'Eigener Server: Protokoll, Zieladresse und exakte Modell-ID müssen zusammenpassen. Text und Audio nur mit den tatsächlich unterstützten Fähigkeiten verwenden.'
+    } as Record<string,string>)[presetId])}</p>
     <div className="note-grid provider-form">
       <label>{tr("Profilname")}<input aria-label={tr("KI-Profilname")} value={name} onChange={e=>setName(e.target.value)}/></label>
-      <label>{tr("API-Protokoll")}<select aria-label={tr("API-Protokoll")} value={protocol} onChange={e=>{setProtocol(e.target.value);setAudioInput(false);setUsage(false);setServerModels([])}}><option value="openai">{tr("OpenAI-kompatibel · Text / optional Audio")}</option><option value="anthropic">{tr("Anthropic Messages · Text")}</option><option value="gemini">{tr("Gemini · Text und vorbereitete Audioanalyse")}</option></select></label>
-      <label>{tr("Basis-URL")}<input aria-label={tr("KI-Server Basis-URL")} value={url} onChange={e=>{setUrl(e.target.value);setServerModels([])}}/></label>
+      <label>{tr("API-Protokoll")}<select aria-label={tr("API-Protokoll")} value={protocol} onChange={e=>{invalidateDiscovery();setKey('');setProtocol(e.target.value);setAudioInput(false);setUsage(false)}}><option value="openai">{tr("OpenAI-kompatibel · Text / optional Audio")}</option><option value="anthropic">{tr("Anthropic Messages · Text")}</option><option value="gemini">{tr("Gemini · Text und vorbereitete Audioanalyse")}</option></select></label>
+      <label>{tr("Basis-URL")}<input aria-label={tr("KI-Server Basis-URL")} value={url} onChange={e=>{invalidateDiscovery();setKey('');setUrl(e.target.value)}}/></label>
       <label>{tr("Exakte Modell-ID")}<input aria-label={tr("KI-Server Modell-ID")} value={model} onChange={e=>setModel(e.target.value)} placeholder={tr("Modell-ID aus deinem Anbieter oder lokalen Server")}/></label>
-      <label>{tr("API-Key · bei lokalem Server optional")}<input aria-label={tr("KI-Server API-Key")} autoComplete="off" type="password" value={key} onChange={e=>setKey(e.target.value)}/></label>
+      <label>{tr("API-Key · bei lokalem Server optional")}<input aria-label={tr("KI-Server API-Key")} autoComplete="off" type="password" value={key} onChange={e=>{invalidateDiscovery();setKey(e.target.value)}}/></label>
     </div>
-    {protocol==='openai'&&<div className="server-discovery"><p>{tr('Eigener Heimserver: Ollama, LM Studio oder ein kompatibler Server im LAN. Basis-URL mit /v1 eingeben. Ohne Server-Authentifizierung darf der Key leer bleiben. Der Test liest nur Modellnamen und startet keine KI-Berechnung.')}</p><button disabled={busy||!url.trim()} onClick={()=>void perform(async()=>{setServerModels([]);const value=await api('/providers/models',json({base_url:url,api_key:key}));setServerModels(value.models);setMessage(value.models.length?'Modellliste geladen. Gewünschtes Modell auswählen.':'Server erreichbar, aber keine Modelle gemeldet.')})}>{tr('Verbindung prüfen und Modelle laden')}</button>{serverModels.length>0&&<label>{tr('Modell vom Server')}<select aria-label={tr('Modell vom Server')} value={serverModels.includes(model)?model:''} onChange={e=>setModel(e.target.value)}><option value="" disabled>{tr('Modell auswählen')}</option>{serverModels.map(id=><option key={id} value={id}>{id}</option>)}</select></label>}</div>}
+    {protocol==='openai'&&<div className="server-discovery"><p>{tr('Eigener Heimserver: Ollama, LM Studio oder ein kompatibler Server im LAN. Basis-URL mit /v1 eingeben. Ohne Server-Authentifizierung darf der Key leer bleiben. Der Test liest nur Modellnamen und startet keine KI-Berechnung.')}</p><button disabled={busy||!url.trim()} onClick={()=>void perform(async()=>{invalidateDiscovery();const request=discoveryRequest.current;const value=await api('/providers/models',json({base_url:url,api_key:key}));if(request!==discoveryRequest.current)return;setServerModels(value.models);setMessage(value.models.length?'Modellliste geladen. Gewünschtes Modell auswählen.':'Server erreichbar, aber keine Modelle gemeldet.')})}>{tr('Verbindung prüfen und Modelle laden')}</button>{serverModels.length>0&&<label>{tr('Modell vom Server')}<select aria-label={tr('Modell vom Server')} value={serverModels.includes(model)?model:''} onChange={e=>setModel(e.target.value)}><option value="" disabled>{tr('Modell auswählen')}</option>{serverModels.map(id=><option key={id} value={id}>{id}</option>)}</select></label>}</div>}
     {protocol==='openai'&&<><label className="check"><input type="checkbox" checked={audioInput} onChange={e=>{setAudioInput(e.target.checked);setUsage(false)}}/>{tr('Dieses Modell unterstützt Audioeingaben über Chat Completions (input_audio).')}</label><p>{tr('Zum Beispiel OpenAI-Audiomodelle, Mistral/Voxtral oder ein kompatibler eigener Audioserver. Eine normale Textmodell-ID reicht nicht. Claude und das DeepSeek-Textprofil erhalten hier keine Audiodateien.')}</p>{audioInput&&<label className="check"><input type="checkbox" checked={usage} onChange={e=>setUsage(e.target.checked)}/>{tr('Nutzungsbedingungen und mögliche Kosten dieses Audioprofils habe ich geprüft.')}</label>}</>}
     {activeAudio?.configured&&<p>{tr('Vorbereitetes Audioprofil')}: {activeAudio.provider} · {activeAudio.model}</p>}
-    <p>{tr("OpenAI, Claude und DeepSeek können kostenpflichtig sein. Ein Chat-Abonnement ist kein API-Key. Eigene lokale Server können ohne Key laufen. Adresse und Modellwahl werden lokal gespeichert, Keys ausschließlich im Arbeitsspeicher bis zum Backend-Neustart. Leeres Key-Feld beim Bearbeiten erhält den vorhandenen Sitzungs-Key. Profil entfernen löscht ihn.")}</p>
+    <p>{tr("OpenAI, Claude und DeepSeek können kostenpflichtig sein. Ein Chat-Abonnement ist kein API-Key. Eigene lokale Server können ohne Key laufen. Adresse und Modellwahl werden lokal gespeichert, Keys ausschließlich im Arbeitsspeicher bis zum Backend-Neustart. Leeres Key-Feld erhält den Sitzungs-Key nur bei unveränderter Adresse und unverändertem Protokoll. Profil entfernen löscht ihn.")}</p>
     {protocol==='gemini'&&<><p>{tr("Für Gemini-Audio werden Audio und Lyrics übertragen. Kostenlose Kontingente sind begrenzt; die App kann den Abrechnungsstatus nicht überprüfen. Im Gratis-Tarif können Inhalte zur Produktverbesserung verwendet werden.")}</p><label className="check"><input type="checkbox" checked={free} onChange={e=>setFree(e.target.checked)}/>{tr("Mein Gemini-Projekt hat keine aktivierte Abrechnung; Gratisbedingungen habe ich geprüft.")}</label></>}
     <p>{tr("Textprofile übertragen keine Audiodateien. Lokale/LAN-Server können selbst Cloud-Modelle nutzen; deren Konfiguration prüfen. Es gibt keinen automatischen Anbieterwechsel und keine pauschale Gratiszusage.")}</p>
-    <button disabled={busy||!name.trim()||!model.trim()} onClick={()=>void perform(async()=>{await api('/providers',json({id:editing,name,protocol,base_url:url,model,api_key:key,free_project_confirmed:free,audio_input:audioInput,audio_usage_confirmed:usage}));setKey('');setEditing(null);await refresh();setMessage(tr("Profil lokal gespeichert. Zugangsdaten bleiben nur in dieser Sitzung."))})}>{tr("Serverprofil speichern")}</button>
+    <button disabled={busy||!name.trim()||!model.trim()} onClick={()=>void perform(async()=>{await api('/providers',json({id:editing,name,protocol,base_url:url,model,api_key:key,free_project_confirmed:free,audio_input:audioInput,audio_usage_confirmed:usage}));setKey('');setEditing(null);await changed();setMessage(tr("Profil lokal gespeichert. Zugangsdaten bleiben nur in dieser Sitzung."))})}>{tr("Serverprofil speichern")}</button>
     <p className="progress" role="status">{tr(message)}</p>
     <div className="library-list">{profiles.map(p=><article className="library-card" key={p.id}>
       <div><h3>{p.name} · {p.model}</h3><p>{p.base_url} · {p.configured?tr("Sitzungs-Key vorhanden"):tr("Kein Sitzungs-Key")} · {(p.protocol==='gemini'||p.audio_input)?tr("Text + Audio möglich"):tr("Textdeutung")}</p></div>
       {(p.protocol==='gemini'||p.audio_input)&&<button aria-pressed={activeAudio?.profile_id===p.id} disabled={busy||(p.protocol==='gemini'?(!p.configured||!p.free_project_confirmed):!p.audio_usage_confirmed)} onClick={()=>void perform(async()=>{const result=await api(`/providers/${p.id}/audio`,json({}));await refresh();onAudioChange?.(result);setMessage(tr("{0} / {1} für den ausdrücklich gewählten Audio-API-Modus vorbereitet.",[result.provider,result.model]))})}>{tr("Für Audio-API verwenden")}</button>}
-      <button disabled={busy} onClick={()=>{setServerModels([]);setEditing(p.id);setName(p.name);setUrl(p.base_url);setProtocol(p.protocol);setModel(p.model);setFree(p.free_project_confirmed||false);setAudioInput(p.audio_input||false);setUsage(p.audio_usage_confirmed||false);setKey('')}}>{tr("Bearbeiten / Key setzen")}</button>
-      <button disabled={busy} onClick={async()=>{if(await confirm({title:'Profil entfernen',message:'Dieses Serverprofil und den gespeicherten Sitzungs-Key entfernen? Songdaten bleiben erhalten.',confirmLabel:'Profil entfernen',danger:true}))void perform(async()=>{await api(`/providers/${p.id}/remove`,json({}));await refresh()})}}>{tr("Profil entfernen")}</button>
+      <button disabled={busy} onClick={()=>{invalidateDiscovery();setPresetId(Object.keys(presets).find(id=>id!=='custom'&&presets[id].url===p.base_url&&presets[id].protocol===p.protocol)||'custom');setEditing(p.id);setName(p.name);setUrl(p.base_url);setProtocol(p.protocol);setModel(p.model);setFree(p.free_project_confirmed||false);setAudioInput(p.audio_input||false);setUsage(p.audio_usage_confirmed||false);setKey('')}}>{tr("Bearbeiten / Key setzen")}</button>
+      <button disabled={busy} onClick={async()=>{if(await confirm({title:'Profil entfernen',message:'Dieses Serverprofil und den gespeicherten Sitzungs-Key entfernen? Songdaten bleiben erhalten.',confirmLabel:'Profil entfernen',danger:true}))void perform(async()=>{await api(`/providers/${p.id}/remove`,json({}));await changed()})}}>{tr("Profil entfernen")}</button>
     </article>)}</div>
+    <ProviderRouting profiles={profiles} busy={busy} perform={perform} onSaved={onRoutesChange}/>
   </section></>;
 }
