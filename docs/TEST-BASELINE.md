@@ -27,7 +27,33 @@ benötigt. Node 22.16.0 ist die hier verwendete Version. Ein Windows/CUDA-
 Paketsnapshot ist kein universeller Plattformlock. Offline-Rust benötigt
 bereits vorhandene Pakete. Native Kompilierung ist keine Bedienabnahme.
 
-## Kandidatenprüfung
+## Wiederholungsprüfung am 16. November 2026
+
+Auf dem öffentlichen Entwicklungsstand mit begrenzter LRC-/Katalogbereinigung
+erneut bestanden: 371 Backendtests (35,37 s), 133 Frontendtests in 25 Dateien
+(20,08 s), vier Rusttests offline mit Lockfile sowie TypeScript/Webbuild.
+Der Backendlauf erfasste 74 strikt isolierte SQLite-Ziele; die produktive
+SQLite blieb bytegleich. Ein erster Sandboxlauf hing ohne Fortschritt und wurde
+abgebrochen; die isolierte Wiederholung außerhalb bestand.
+
+Die Windows-Releasekompilierung mit eingebetteter Oberfläche bestand über
+`npm run tauri build -- --no-bundle` mit offline geschaltetem Cargo.
+Die Vite-Größenwarnung bei 501,48 kB und der Rust-Hardlink-Kopierfallback
+bleiben bestehen. Kein Installer oder anderer Zielplattformbuild in diesem Lauf.
+Der englische Katalog enthält 990 Einträge; die zusätzliche Quelltextprüfung
+fand keine fehlende deutsche Zeichenkette unter den erfassten Übersetzungsaufrufen.
+
+Unit-/Vertragstests verwenden deterministische Fixtures und teilweise Mocks.
+SQLite-Transaktions- und Prozessabbruchtests verwenden echte lokale SQLite.
+Das sind keine Emulator- oder Liveprüfungen externer Datenbanken. MariaDB-,
+Supabase- und Firestore-Adapter sowie Migration/Rückmigration fehlen weiterhin;
+dafür gibt es weder bestandene Mock-, Emulator- noch Live-Abnahmen.
+
+Native Bedienung und tatsächliche lokale Modellläufe werden getrennt in
+[CORE-ACCEPTANCE.md](CORE-ACCEPTANCE.md) eingeordnet. Die folgenden Werte
+beschreiben den früheren Kandidatenstand.
+
+## Frühere Kandidatenprüfung
 
 Am 15. November 2026 auf der kuratierten öffentlichen Quellkopie bestanden:
 
