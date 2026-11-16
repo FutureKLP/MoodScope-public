@@ -13,6 +13,24 @@ def test_plain_text_has_no_invented_timestamps():
     assert parse_lrc('hello\nworld',100) == []
 
 
+@pytest.mark.parametrize('text,expected',[
+    ('[00:01][tag[nested]words', 'words'),
+    ('[00:01]words[unclosed', 'words[unclosed'),
+    ('[00:01]words]after[tag]end', 'words]afterend'),
+])
+def test_lrc_tag_removal_preserves_nested_and_unclosed_tag_behavior(text,expected):
+    assert parse_lrc(text,10)[0]['text']==expected
+
+
+def test_unclosed_lrc_tags_complete_within_bounded_subprocess():
+    import subprocess
+    import sys
+    from pathlib import Path
+    # Valid request-sized input previously spent seconds retrying every '['.
+    program="from backend.core import parse_lrc; text='['*190000; rows=parse_lrc('[00:01]'+text,10); assert rows[0]['text']==text"
+    subprocess.run([sys.executable,'-c',program],cwd=Path(__file__).resolve().parents[1],check=True,timeout=8,capture_output=True)
+
+
 def test_empty_timed_lines_stop_lyrics_during_instrumental_breaks():
     rows=parse_lrc('[00:01]hello\n[00:03]\n[00:07]world\n[00:09]',12)
     assert [(r['start'],r['end']) for r in rows]==[(1,3),(7,9)]

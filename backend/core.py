@@ -31,13 +31,26 @@ def analysis_grid(duration: float, hop: float = 5.) -> list[dict]:
     return rows
 
 
+def _lrc_words(line):
+    """Remove bracketed tags in one pass, preserving an unclosed final tag."""
+    parts=[];cursor=0
+    while True:
+        opening=line.find('[',cursor)
+        if opening<0:break
+        closing=line.find(']',opening+1)
+        if closing<0:break
+        parts.append(line[cursor:opening]);cursor=closing+1
+    parts.append(line[cursor:])
+    return ''.join(parts).strip()
+
+
 def parse_lrc(text: str, duration: float) -> list[dict]:
     offset_match = re.search(r"\[offset:([+-]?\d+)\]", text, re.I)
     offset = int(offset_match[1]) / 1000 if offset_match else 0
     rows = []
     for line in text.splitlines():
         stamps = list(re.finditer(r"\[(\d+):(\d{2})(?:[.:](\d{1,3}))?\]", line))
-        words = re.sub(r"\[[^\]]*\]", "", line).strip()
+        words = _lrc_words(line)
         for stamp in stamps:
             fraction = float('0.' + stamp[3]) if stamp[3] else 0
             start = max(0., int(stamp[1]) * 60 + int(stamp[2]) + fraction + offset)
