@@ -23,3 +23,8 @@ Kein neuer vollständiger Advisory-Abgleich in dieser Quellvorbereitung.
 Historisch dokumentierte Rust-Restpunkte: glib 0.18.5 und proc-macro-error 1.0.4
 im GTK/Linux-Zweig. Keine Linux-Sicherheitsfreigabe. Externe Downloadwerkzeuge
 und FFmpeg benötigen gesonderte Pflege und Prüfung. [OSV](https://osv.dev/).
+
+LRC-Tags und Katalogzusätze werden ohne wiederholtes Durchsuchen ungepaarter
+Klammern entfernt. Regressionen prüfen große fehlerhafte Eingaben in begrenzten
+Unterprozessen sowie den Erhalt von Zeitstempeln, unvollständigen Tags und
+Aufnahmebezeichnungen. Die vorhandenen API-Eingabelimits bleiben zusätzlich aktiv.

@@ -36,10 +36,20 @@ def quote(text):return '"'+re.sub(r'["\\\x00-\x1f]',' ',text).strip()+'"'
 
 
 def clean_query(artist,title):
-    artist=re.sub(r'\s*-\s*Topic$','',artist,flags=re.I).strip()
-    title=re.sub(r'[\[(](?:official|lyrics?|audio|video|hd|hq|visuali[sz]er)[^\])]*[\])]',' ',title,flags=re.I)
-    title=re.sub(r'\s+(?:official\s+(?:music\s+)?video|official\s+audio)\s*$','',title,flags=re.I)
+    artist=artist.strip()
+    prefix,separator,suffix=artist.rpartition('-')
+    if separator and suffix.strip().casefold()=='topic':artist=prefix.strip()
+    # Scan disjoint spans ending at a closing bracket. Failed openers must not
+    # repeatedly search the remaining title for a closing bracket.
+    parts=[];cursor=0
+    for closing in re.finditer(r'[\])]',title):
+        fragment=title[cursor:closing.start()]
+        annotation=re.search(r'[\[(](?:official|lyrics?|audio|video|hd|hq|visuali[sz]er)',fragment,flags=re.I)
+        parts.append(fragment[:annotation.start()]+' ' if annotation else fragment+closing[0])
+        cursor=closing.end()
+    parts.append(title[cursor:]);title=''.join(parts)
     title=' '.join(title.split())
+    title=re.sub(r' (?:official (?:music )?video|official audio)$','',title,flags=re.I)
     if not artist and ' - ' in title:
         left,right=title.split(' - ',1)
         if left.strip() and right.strip():artist,title=left.strip(),right.strip()

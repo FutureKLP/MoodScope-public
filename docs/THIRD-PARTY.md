@@ -1,6 +1,6 @@
 # Lizenzen und Veröffentlichungsumfang
 
-Prüfstand: 15. November 2026. Veröffentlicht werden MoodScope-Quellen,
+Prüfstand: 16. November 2026. Veröffentlicht werden MoodScope-Quellen,
 Build-/Setupdateien, Lockdateien, Tests und technische Dokumentation.
 Der Anwendungscode trägt die [MIT-Lizenz](../LICENSE). Abhängigkeiten und Modelle
 behalten ihre eigenen Bedingungen. Diese Quellvorbereitung ändert keine

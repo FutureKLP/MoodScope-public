@@ -1,4 +1,30 @@
 from backend import research
+import pytest
+
+
+@pytest.mark.parametrize('artist,title,expected',[
+    ('Artist - Topic','Song [Official Audio]',('Artist','Song')),
+    ('Artist-  tOpIc  ','Song (HD (unclosed)',('Artist','Song')),
+    ('Artist','Song (Remix)',('Artist','Song (Remix)')),
+    ('Artist','Song (hd unclosed',('Artist','Song (hd unclosed')),
+    ('Artist','Song [other] (Official) [lyrics]',('Artist','Song [other]')),
+    ('','Artist - Song Official  Music\tVideo',('Artist','Song')),
+])
+def test_catalogue_cleanup_preserves_recording_names(artist,title,expected):
+    assert research.clean_query(artist,title)==expected
+
+
+def test_catalogue_cleanup_handles_large_malformed_metadata_in_bounded_subprocess():
+    import subprocess
+    import sys
+    from pathlib import Path
+    program="""from backend.research import clean_query
+n=100000
+assert clean_query('x'+' '*n+'!', 'title')==('x'+' '*n+'!', 'title')
+assert clean_query('', '(hd'*n)==('', '(hd'*n)
+assert clean_query('', 'x'+' '*n+'!')==('', 'x !')
+"""
+    subprocess.run([sys.executable,'-c',program],cwd=Path(__file__).resolve().parents[1],check=True,timeout=8,capture_output=True)
 
 
 def test_duration_ranking_never_auto_matches_a_different_version():
