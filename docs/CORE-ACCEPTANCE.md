@@ -35,6 +35,9 @@ Deutsch/Englisch, Originalmix-Wiedergabe bis zum Abschnittsende und der mit der
 Atmosphäre gestaltete Neustartdialog wurden nativ geprüft. App und Dienst
 starteten anschließend neu; englische Sprache und Atmosphäreneinstellung blieben
 erhalten. Dies deckt nicht die gesamte Profil-/Song-/Modell-/Dialogfehlermatrix ab.
+Nach dem Neustart stimmen Tracks und Metadaten der isolierten SQLite mit der
+kopierten Ausgangsbibliothek überein; sechs gespeicherte Ergebnisse bleiben
+vorhanden und die Datenbankintegrität ist in Ordnung.
 
 Wiederholte tatsächliche Music2Emo-Läufe mit bestehenden lokalen Gewichten
 bestanden auf CPU, GPU und erneut CPU. Workerlogs wurden lokal erhalten.
@@ -55,7 +58,8 @@ Die folgenden offenen Kriterien gelten mit diesen begrenzten Ergänzungen weiter
 3. Sporadischen Music2Emo-Prüfdienstfehler bei Wiederholung mit erhaltenem
    Workerlog aufklären. Erfolgreiche Wiederholungen sind keine Ursachenklärung.
 4. Längere Wiedergabe-/Mix-/Speicherprüfung und verfügbare Zielplattformen
-   getrennt abnehmen. Windows 10, Linux und Installer bleiben unbestätigt.
+   getrennt abnehmen. Windows 10, Linux und Installation bleiben unbestätigt;
+   ein erfolgreicher Windows-NSIS-Paketbuild ist keine Installationsabnahme.
 5. Grenzen von Worterkennung, Deutungswahrheit, Sängertrennung und zeitlichen
    Emotionsverläufen erhalten. Modellschätzungen sind keine bestätigten Fakten.
 

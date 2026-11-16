@@ -39,7 +39,12 @@ abgebrochen; die isolierte Wiederholung außerhalb bestand.
 Die Windows-Releasekompilierung mit eingebetteter Oberfläche bestand über
 `npm run tauri build -- --no-bundle` mit offline geschaltetem Cargo.
 Die Vite-Größenwarnung bei 501,48 kB und der Rust-Hardlink-Kopierfallback
-bleiben bestehen. Kein Installer oder anderer Zielplattformbuild in diesem Lauf.
+bleiben bestehen. Zusätzlich bestand der Windows-NSIS-Paketbuild über
+`npm run tauri build -- --bundles nsis --ci`. Der erste Paketversuch scheiterte
+am Netzwerkzugriff auf das fehlende NSIS-Werkzeug; die Wiederholung mit Zugriff
+auf die offiziellen Werkzeuge und deren Tauri-Hashprüfung bestand. Der Installer
+wurde nicht ausgeführt oder veröffentlicht. Keine Installations-/Deinstallations-
+oder andere Zielplattformabnahme daraus ableiten.
 Der englische Katalog enthält 990 Einträge; die zusätzliche Quelltextprüfung
 fand keine fehlende deutsche Zeichenkette unter den erfassten Übersetzungsaufrufen.
 
