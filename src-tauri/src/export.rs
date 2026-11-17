@@ -25,6 +25,13 @@ fn suggested_name(filename: &str) -> String {
     if base.to_lowercase().ends_with(".wav") { base.into() } else { format!("{base}.wav") }
 }
 
+// Keep cancellation ahead of every download and destination side effect.
+fn after_save_selection<T>(chosen: Option<T>, export: impl FnOnce(T) -> Result<(), String>) -> Result<bool, String> {
+    let Some(chosen) = chosen else { return Ok(false); };
+    export(chosen)?;
+    Ok(true)
+}
+
 fn persist_wave_export(mut source: impl Read, path: &std::path::Path) -> Result<(), String> {
     let parent = path.parent().ok_or("export-destination")?;
     let mut header = [0_u8; 12];
@@ -88,21 +95,45 @@ pub async fn save_wave_export(app: tauri::AppHandle, track_id: String, model: St
     tauri::async_runtime::spawn_blocking(move || {
         let title = if language == "en" { "Export WAV" } else { "WAV exportieren" };
         let chosen = app.dialog().file().set_title(title).add_filter("WAV", &["wav"]).set_file_name(suggested_name(&filename)).blocking_save_file();
-        let Some(chosen) = chosen else { return Ok(false); };
-        let path = chosen.into_path().map_err(|_| "export-destination")?;
-        if !path.extension().is_some_and(|s| s.to_string_lossy().eq_ignore_ascii_case("wav")) { return Err("export-extension".into()); }
-        let client = reqwest::blocking::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(180)).build().map_err(|_| "export-download")?;
-        let response = client.get(url).send().map_err(|_| "export-download")?.error_for_status().map_err(|_| "export-download")?;
-        if response.content_length().is_some_and(|size| size > MAX_BYTES) { return Err("export-size".into()); }
-        // Keep the selected destination intact if transfer fails or the app exits.
-        persist_wave_export(response, &path)?;
-        Ok(true)
+        after_save_selection(chosen, |chosen| {
+            let path = chosen.into_path().map_err(|_| "export-destination")?;
+            if !path.extension().is_some_and(|s| s.to_string_lossy().eq_ignore_ascii_case("wav")) { return Err("export-extension".into()); }
+            let client = reqwest::blocking::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(180)).build().map_err(|_| "export-download")?;
+            let response = client.get(url).send().map_err(|_| "export-download")?.error_for_status().map_err(|_| "export-download")?;
+            if response.content_length().is_some_and(|size| size > MAX_BYTES) { return Err("export-size".into()); }
+            // Keep the selected destination intact if transfer fails or the app exits.
+            persist_wave_export(response, &path)?;
+            Ok(())
+        })
     }).await.map_err(|_| "export-failed".to_string())?
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cancelled_dialog_never_enters_export_or_changes_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let existing = dir.path().join("existing.wav");
+        std::fs::write(&existing, b"existing destination").unwrap();
+        for _ in 0..10 {
+            assert_eq!(after_save_selection(None::<std::path::PathBuf>, |_| {
+                std::fs::write(&existing, b"overwritten").unwrap();
+                panic!("cancel must not start export");
+            }), Ok(false));
+        }
+        assert_eq!(std::fs::read(&existing).unwrap(), b"existing destination");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+    }
+    #[test]
+    fn confirmed_selection_exports_once_and_propagates_failure() {
+        let mut calls = 0;
+        assert_eq!(after_save_selection(Some("selected.wav"), |path| {
+            assert_eq!(path, "selected.wav"); calls += 1; Ok(())
+        }), Ok(true));
+        assert_eq!(calls, 1);
+        assert_eq!(after_save_selection(Some("selected.wav"), |_| Err("export-download".into())), Err("export-download".into()));
+    }
     #[test]
     fn only_managed_loopback_exports_are_allowed() {
         let id = "a".repeat(64);

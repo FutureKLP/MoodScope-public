@@ -27,6 +27,35 @@ benötigt. Node 22.16.0 ist die hier verwendete Version. Ein Windows/CUDA-
 Paketsnapshot ist kein universeller Plattformlock. Offline-Rust benötigt
 bereits vorhandene Pakete. Native Kompilierung ist keine Bedienabnahme.
 
+## Gezielte Windows-Exportphase am 17. November 2026
+
+Neu ausgeführt: vollständige vorhandene Backendsuite mit 371 Tests (35,77 s),
+136 Frontendtests in 26 Dateien (17,21 s), sechs Rusttests offline mit Lockfile
+und Windows-Releasebuild einschließlich TypeScript/Vite. Danach vier neue
+Schutztests für den Desktop-Testhalter gezielt bestanden (0,16 s) und drei
+separate Node-Tests des Dialogdrivers bestanden. Keine zweite vollständige
+Backendsuite nach Ergänzung der vier Testhaltertests behauptet.
+
+```powershell
+node --test tests/windows_dialog_driver.test.mjs
+python -m pytest tests/test_windows_desktop_testing.py -q
+```
+
+Rust-Cancel-Gate und Frontend-IPC-Verträge werden getrennt vom echten
+Windows-Dialog geprüft. Der native Lauf deckte die synthetische A-J-Matrix
+bei 96 DPI ab, einschließlich Dateinamenabbruch, vorhandener Zieldatei,
+bestätigtem Export, Wiederholungen und Neustart. Andere DPI-Stufen wurden
+nicht ausgeführt. Fehlgeschlagene Accessibility-Klicks wurden als
+Automationsfehler erhalten und nicht als Cancel-Erfolge gezählt.
+[Reproduzierbares Verfahren und Grenzen](WINDOWS-DESKTOP-TESTING.md).
+
+Produktive SQLite während der nativen Phase bytegleich, synthetische Quelle
+unverändert, isolierte SQLite-Integrität ok. Die Testhaltervorbereitung und
+Backendsuite benötigten für lokale Testsockets eine Ausführung außerhalb der
+Sandbox; der hängende erste Vorbereitungslauf wurde beendet. Bekannte
+Vite-Chunkwarnung und Rust-Hardlink-Kopierfallback bleiben bestehen. Kein
+erneuter NSIS-Build, Installerlauf oder anderer Plattformtest in dieser Phase.
+
 ## Wiederholungsprüfung am 16. November 2026
 
 Auf dem öffentlichen Entwicklungsstand mit begrenzter LRC-/Katalogbereinigung

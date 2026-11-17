@@ -28,6 +28,7 @@ jobs:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
       - run: npm ci
       - run: npm test
+      - run: node --test tests/windows_dialog_driver.test.mjs
       - run: npm run build
   native-check:
     strategy:
