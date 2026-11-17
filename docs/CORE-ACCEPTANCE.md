@@ -18,6 +18,31 @@ bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
 
 ## Noch erforderliche Abnahmen
 
+### Windows-Exportprüfung am 17. November 2026
+
+Die gezielte Phase-1-Prüfung hat keinen Anwendungsfehler beim Abbruch des
+Speicherdialogs nachgewiesen. Die 16 × 16 stammen von einem separaten sichtbaren
+`Tao Thread Event Target` mit leerem Clientbereich. Das Hauptfenster war normal
+groß und hatte 96 DPI. Ein als Cancel adressierter Accessibility-Indexklick
+aktivierte tatsächlich Speichern; bei bestehendem Ziel erschien die
+Überschreibbestätigung. Diese Eingabefehler erklären die im neuen Lauf erzeugten
+synthetischen WAVs. Die historische Sequenz lässt sich ohne damaligen
+Eingabetrace nicht rückwirkend vollständig beweisen.
+
+Mit frischen, bildgebundenen Dialogeingaben bestanden Escape, Cancel-Schaltfläche,
+Dateinameneingabe mit Abbruch, Erhalt einer vorhandenen Zieldatei, wiederholte
+Abbrüche und bestätigter Export vor und nach App-/Dienstneustart. Beide bestätigten
+Exporte sind gültige Stereo-WAVs mit 48 kHz, zwei Sekunden und identischem
+Quellhash. Produktive SQLite bytegleich, isolierte SQLite intakt, eigene
+Prüfprozesse beendet. Ausschließlich synthetische Exportfixtures; keine neue
+tatsächliche Musik- oder Modellqualitätsabnahme.
+
+Entscheidung: **Kein Anwendungsfehler nachgewiesen, Automationsproblem behoben**
+durch den dokumentierten Eingabeweg. Der Werkzeugfehler selbst ist nicht gepatcht.
+Andere DPI-Stufen und längere Ressourcenläufe bleiben unbestätigt. Die breitere
+Kernfreigabe und das Datenbank-Gate bleiben unverändert offen.
+[Verfahren, vollständige Testmatrix und Grenzen](WINDOWS-DESKTOP-TESTING.md).
+
 ### Nachprüfung am 16. November 2026
 
 Die native Windows-App wurde mit neu gebauter Oberfläche und einer isolierten
@@ -50,9 +75,9 @@ sind nicht implementiert. Dafür wurden keine Emulatoren, Mocks oder Liveziele
 als erfolgreiche Anwendungstests ausgegeben; keine externe Verbindung geöffnet.
 Die folgenden offenen Kriterien gelten mit diesen begrenzten Ergänzungen weiter.
 
-1. Nativen WAV-Exportabbruch mit eindeutigem Ziel und ohne konkurrierende
-   Eingaben reproduzieren. Eine zusätzliche WAV bei einem früheren Abbruchversuch
-   bleibt ungeklärt; kein bestandener Abbruchnachweis daraus ableiten.
+1. Den nun belegten Windows-Dialogablauf bei weiteren DPI-Konfigurationen und
+   in längeren Läufen prüfen. Der frühere unklare Versuch bleibt historisch;
+   die neue synthetische Abnahme ist oben getrennt dokumentiert.
 2. Native Local/API/Local-, Song-/Modellwechsel-, Dialogfehler- und gemeinsame
    App-/Dienstneustartmatrix bei zuverlässigem Fensterzugriff vervollständigen.
 3. Sporadischen Music2Emo-Prüfdienstfehler bei Wiederholung mit erhaltenem

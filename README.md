@@ -6,6 +6,9 @@ und [offene Kernabnahmen](docs/CORE-ACCEPTANCE.md). Keine vollständige Kern-,
 Plattform- oder Qualitätsfreigabe; externe Datenbanken bleiben gesperrt.
 [Drittanbieter und Modelllizenzen](docs/THIRD-PARTY.md).
 
+Die isolierte synthetische Windows-Dialogprüfung ist unter
+[Windows-Desktop-Tests](docs/WINDOWS-DESKTOP-TESTING.md) beschrieben.
+
 Anbieterprofile, Passwortfelder und Aufgabenzuordnung sind in beiden Betriebsmodi
 unter **Modelle & API** erreichbar. Jede der fünf KI-Aufgaben kann lokal bleiben
 oder ein passendes Profil verwenden. Der API-Modus ist anbieterübergreifend;
