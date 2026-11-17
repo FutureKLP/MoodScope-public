@@ -93,6 +93,7 @@ def prepare():
               'production_databases': production_databases(), 'exports': files(area / 'exports')}
     (area / 'workspace.json').write_text(json.dumps(marker, indent=2))
     print(area, flush=True)
+    return area
 
 
 def environment(area):
@@ -129,7 +130,8 @@ def run(area, binary):
                         library.raise_for_status()
                         tracks = library.json()['tracks']
                         _, marker = workspace(area)
-                        if [t['id'] for t in tracks] != [marker['track_id']]:
+                        expected = marker.get('library_track_ids', [marker['track_id']])
+                        if sorted(t['id'] for t in tracks) != sorted(expected):
                             raise RuntimeError('Unexpected backend library; refusing native launch')
                         break
                 except httpx.TransportError:

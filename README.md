@@ -9,6 +9,12 @@ Plattform- oder Qualitätsfreigabe; externe Datenbanken bleiben gesperrt.
 Die isolierte synthetische Windows-Dialogprüfung ist unter
 [Windows-Desktop-Tests](docs/WINDOWS-DESKTOP-TESTING.md) beschrieben.
 
+Die [native Phase-2A-Teilabnahme](docs/PHASE2A-ACCEPTANCE.md) prüft Bibliothek,
+Player und gespeicherte Lyrics mit synthetischen Daten. Native Dateiimporte
+bleiben wegen der WebView2-Dialogautomation offen. Fehlende oder beschädigte
+verwaltete Audiokopien erhalten im Player einen Wiederimport-Hinweis; gespeicherte
+Daten bleiben erhalten.
+
 Anbieterprofile, Passwortfelder und Aufgabenzuordnung sind in beiden Betriebsmodi
 unter **Modelle & API** erreichbar. Jede der fünf KI-Aufgaben kann lokal bleiben
 oder ein passendes Profil verwenden. Der API-Modus ist anbieterübergreifend;

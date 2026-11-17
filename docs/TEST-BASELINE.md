@@ -27,6 +27,24 @@ benötigt. Node 22.16.0 ist die hier verwendete Version. Ein Windows/CUDA-
 Paketsnapshot ist kein universeller Plattformlock. Offline-Rust benötigt
 bereits vorhandene Pakete. Native Kompilierung ist keine Bedienabnahme.
 
+## Phase 2A am 17. November 2026
+
+Vollständig erneut bestanden: 378 Backendtests (40,98 s), 142 Frontendtests in
+27 Dateien (17,06 s), drei separate Node-Drivertests, TypeScript/Vite und nativer
+Windows-Releasebuild ohne Bundle. Sechs neue Frontendregressionen betreffen
+Wiederimport, LRC-Editorübernahme und Wiedergabefehler; drei neue Backendtests
+sichern den Testhalter einschließlich echter SQLite-Zeilenvergleiche.
+Ein erster Snapshot-Test scheiterte an Tupel-/JSON-Listenvergleich; korrigiert.
+Die echte Desktopprüfung deckte anschließend einen falschen Spaltennamen im
+neuen Testhalter auf; korrigiert und Test auf echtes Anwendungsschema umgestellt.
+Erste neue Frontendtests benötigten die DOM-Umgebung und eine vorhandene
+Assertionform; der oben genannte finale Gesamtlauf besteht.
+
+Windows-Neubau erfolgreich, bestehende Chunkwarnung bei 502,18 kB. Kein erneuter
+separater Rusttest, Installer- oder anderer Plattformlauf. Die synthetische native
+Teilabnahme und ihre verbleibenden Importblocker sind getrennt in
+[PHASE2A-ACCEPTANCE.md](PHASE2A-ACCEPTANCE.md) dokumentiert.
+
 ## Gezielte Windows-Exportphase am 17. November 2026
 
 Neu ausgeführt: vollständige vorhandene Backendsuite mit 371 Tests (35,77 s),

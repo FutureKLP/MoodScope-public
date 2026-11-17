@@ -1,5 +1,10 @@
 # Native Windows-Exportprüfung
 
+Die ergänzende Bibliotheks-/Player-/Lyrics-Teilabnahme steht in
+[PHASE2A-ACCEPTANCE.md](PHASE2A-ACCEPTANCE.md). Der dort beobachtete WebView2-
+Öffnendialog hat eine andere Prozessbindung als der hier geprüfte Tauri-
+Speicherdialog; die erfolgreiche Phase-1-Abnahme gilt nicht automatisch dafür.
+
 ## Voraussetzungen und Abgrenzung
 
 Interaktive, entsperrte Windows-Sitzung, WebView2, eingerichtete Python- und

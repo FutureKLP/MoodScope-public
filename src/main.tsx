@@ -1,5 +1,6 @@
 import {RoutingState,TASKS as ROUTING_TASKS} from './ProviderRouting';
 import {silentTransport} from './audioTransport';
+import {playbackFailure} from './playbackFailure';
 import {ErrorNotice} from './ErrorNotice';
 import {DeviceSettings} from './DeviceSettings';
 import {PromptManager} from './PromptManager';
@@ -131,6 +132,12 @@ export function App(){
   useEffect(()=>()=>{if(liveClock.current)URL.revokeObjectURL(liveClock.current.url)},[]);
   function playMedia(element:HTMLAudioElement){const epoch=mediaEpoch.current,attempt=++playAttempt.current;setPlaying(true);void element.play().catch(e=>{if(audio.current!==element||epoch!==mediaEpoch.current||attempt!==playAttempt.current)return;setPlaying(false);if(e?.name!=='AbortError')setError(tr('Wiedergabe bitte erneut starten.'))})}
   function togglePlayback(){const element=audio.current;if(!element)return;if(element.paused)playMedia(element);else{playAttempt.current++;element.pause();setPlaying(false)}}
+  function reportPlaybackFailure(element:HTMLAudioElement){
+    if(element!==audio.current||!track)return;
+    const epoch=mediaEpoch.current,attempt=playAttempt.current,url=element.currentSrc||element.src;
+    setPlaying(false);setError(tr('Audio-Wiedergabe fehlgeschlagen'));
+    void playbackFailure(url).then(message=>{if(mounted.current&&audio.current===element&&mediaEpoch.current===epoch&&playAttempt.current===attempt&&(element.currentSrc||element.src)===url)setError(message)});
+  }
 
   function changeSource(url:string,label:string,position?:number){
     const element=audio.current,wasPlaying=!!element&&!element.paused&&!element.ended;
@@ -259,7 +266,7 @@ export function App(){
       onLoadedMetadata={e=>{const element=e.currentTarget;if(element!==audio.current)return;element.volume=volume.current;const pending=playbackRestore.current;if(!pending)return;if(pending.epoch!==undefined&&pending.epoch!==mediaEpoch.current)return;if(pending.url&&element.src!==pending.url)return;playbackRestore.current=null;element.currentTime=Math.min(pending.time,Number.isFinite(element.duration)?element.duration:pending.time);if(pending.playing)playMedia(element)}}
       onPlay={e=>{if(e.currentTarget===audio.current)setPlaying(!e.currentTarget.paused)}} onPlaying={e=>{if(e.currentTarget===audio.current)setPlaying(!e.currentTarget.paused)}}
       onPause={e=>{if(e.currentTarget===audio.current)setPlaying(!e.currentTarget.paused)}} onEmptied={e=>{if(e.currentTarget===audio.current)setPlaying(!e.currentTarget.paused)}} onAbort={e=>{if(e.currentTarget===audio.current)setPlaying(!e.currentTarget.paused)}}
-      onEnded={()=>setPlaying(false)} onError={e=>{if(e.currentTarget===audio.current&&track){setPlaying(false);setError(tr("Audio-Wiedergabe fehlgeschlagen"))}}}/>
+      onEnded={()=>setPlaying(false)} onError={e=>reportPlaybackFailure(e.currentTarget)}/>
 
   </PlaybackTheme>
 }

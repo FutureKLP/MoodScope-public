@@ -18,6 +18,19 @@ bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
 
 ## Noch erforderliche Abnahmen
 
+### Phase 2A am 17. November 2026
+
+Native Bibliothek, gespeicherte Songs, Player/Pause/Seeking, A/B-Rücksprung,
+gemeinsame Kurvenposition, Lyrics-Zeilensprünge und vollständiger App-/Dienst-
+neustart mit synthetischen Fixtures geprüft. Ein generischer Medienfehler bei
+fehlenden/beschädigten verwalteten Kopien wurde um den vorhandenen übersetzten
+Wiederimport-Hinweis ergänzt und im neuen Windows-Build nachgeprüft.
+Audioimport, Wiederimport, beschädigter Quellimport und LRC-Dateibestätigung
+bleiben nativ durch die nicht angebotene WebView2-Dialogfensterbindung blockiert.
+Vorbereiteter HTTP-Fixtureaufbau zählt nicht als native Importabnahme.
+**Teilabnahme, keine vollständige Phase-2A-Freigabe.**
+[Vollständige Matrix, Reproduktion und Grenzen](PHASE2A-ACCEPTANCE.md).
+
 ### Windows-Exportprüfung am 17. November 2026
 
 Die gezielte Phase-1-Prüfung hat keinen Anwendungsfehler beim Abbruch des
