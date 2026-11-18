@@ -9,6 +9,12 @@ Plattform- oder Qualitätsfreigabe; externe Datenbanken bleiben gesperrt.
 Die isolierte synthetische Windows-Dialogprüfung ist unter
 [Windows-Desktop-Tests](docs/WINDOWS-DESKTOP-TESTING.md) beschrieben.
 
+Die [native Phase-2A-Teilabnahme](docs/PHASE2A-ACCEPTANCE.md) prüft Bibliothek,
+Player und gespeicherte Lyrics mit synthetischen Daten. Native Dateiimporte
+bleiben wegen der WebView2-Dialogautomation offen. Fehlende oder beschädigte
+verwaltete Audiokopien erhalten im Player einen Wiederimport-Hinweis; gespeicherte
+Daten bleiben erhalten.
+
 Anbieterprofile, Passwortfelder und Aufgabenzuordnung sind in beiden Betriebsmodi
 unter **Modelle & API** erreichbar. Jede der fünf KI-Aufgaben kann lokal bleiben
 oder ein passendes Profil verwenden. Der API-Modus ist anbieterübergreifend;
@@ -66,6 +72,11 @@ Unter **Songdetails** läuft die Suche automatisch über MusicBrainz, Apple iTun
 - Die vorhandenen Emotionsbalken folgen fließend der Wiedergabe; der Rechenweg darunter zeigt die gespeicherten Abschnittswerte. Musikalische Hinweise und persönliche Gefühlsreaktionen werden erläutert. [Forschungsgrundlage](docs/MUSIC-PSYCHOLOGY.md).
 - Im Atmosphärenmodus prägt die führende Audio-Kategorie die Grundfarbe; kleinere Farbanteile mischen sich dezent darunter. Textfarben bleiben im Hintergrund zurückhaltend. Die Farbmischung verändert keine Analysewerte.
 - Lokale Emotionskurve v7: konstanter Analysepegel je Kontext, keine festen Emotionszuschläge durch musikalische Merkmale und keine zusätzliche Dreipunktglättung. Original-RMS und Wiedergabe bleiben erhalten. Bestehende Analysen verwenden weiterhin ihre gespeicherte Methode; Neu analysieren verwendet v7.
+
+Die Desktop-App öffnet für Audio- und LRC-Dateien einen nativen Windows-Dateidialog.
+Im Browser bleiben die üblichen Dateiauswahldialoge erhalten. Ein abgebrochener
+Dateidialog verändert weder Bibliothek noch Lyrics. Eine ausgewählte LRC-Datei
+erscheint zunächst im Editor; die reguläre Analyse aktualisiert die Zeilenanzeige.
 
 ### Bewertungsmodell der Audio-/Lyrics-Kurve
 

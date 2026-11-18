@@ -1,4 +1,11 @@
-# Native Windows-Exportprüfung
+# Native Windows-Dialogprüfung
+
+Die ergänzende Bibliotheks-/Player-/Lyrics-Abnahme steht in
+[PHASE2A-ACCEPTANCE.md](PHASE2A-ACCEPTANCE.md). Phase 2A.2 schließt die bisherigen
+Importblocker im synthetischen Windows-Prüfumfang. Der ursprüngliche HTML-
+Öffnendialog gehört zu einem WebView2-Kindprozess; er war sichtbar, aber nicht
+als eigenständiges Automationsziel angeboten. Die Desktop-App verwendet nun
+parentgebundene Picker desselben Tauri-Prozesses. Der Browserpfad bleibt erhalten.
 
 ## Voraussetzungen und Abgrenzung
 
@@ -133,6 +140,51 @@ Bildschirmkoordinaten gespeichert. Die verwendete Dialogregion war im Prüflauf
 Tokens, Hilfsgeometrie, Pfade außerhalb des Exportordners und automatische
 Wiederholungen fehlgeschlagener Eingaben. Er wartet begrenzt auf Fensterzustände
 und auf Dialogschluss, statt feste lange Wartezeiten einzusetzen.
+
+## Native Audio-/LRC-Importe ab Phase 2A.2
+
+Die lesende Geometriediagnose erfasst jetzt auch Kindprozesse des eigenen
+Testprogramms und deren Prozessnamen. Damit ließ sich der alte HTML-Dialog
+von Tauri- und Hilfsfenstern unterscheiden: Klasse `#32770`, normaler Client,
+96 DPI, Vordergrund und Owner zum Hauptfenster, aber andere Prozessidentität.
+Die interne Filterung der Fensterliste im Werkzeug wurde nicht verändert.
+
+`driver.observe('audio')` und `driver.observe('lyrics')` binden an die exakten
+Titel `Audio importieren` / `Import audio` bzw. `LRC importieren` / `Import LRC`.
+Ist der Picker nur im Parentbaum sichtbar, verlangt die Bindung einen eindeutig
+passenden Dialogknoten und ein deaktiviertes Hauptfenster desselben Prozesses.
+Identische doppelte Baumdarstellungen zählen einmal; fremde, mehrdeutige und
+unbekannte Modale werden nicht bedient. Frische Bilder und getrennte Aktionen
+bleiben erforderlich. Koordinaten nie aus früheren Bildschirmgrößen übernehmen.
+
+Import-Dateinamensfelder ID `1148` dürfen nicht per numerischem Index gesetzt
+werden: im tatsächlichen Lauf meldete der Werkzeugcache hierfür eine falsche
+Zielbindung. `setFilename` bleibt ausdrücklich auf den zuvor geprüften WAV-
+Speicherdialog beschränkt. Im Importpicker eine sichtbar geprüfte Datei mit
+bildgebundenem Klick auswählen oder das sichtbare Dateinamensfeld fokussieren
+und wörtlich einen absoluten Windows-Pfad mit Backslashes eingeben. Vor Open
+neuen Baum und neues Bild erfassen, ausgewählte Datei und isolierten Ordner
+prüfen; erst dann die sichtbare Open-Schaltfläche bildgebunden betätigen.
+Keine numerischen Accessibility-Klicks und keine blinden Wiederholungen.
+
+Audio: MP3/WAV/FLAC bis 250 MiB; Upload wird zur vorhandenen lokalen API gestreamt.
+LRC/TXT: höchstens 1 MiB und 200.000 Zeichen, UTF-8 mit Ersetzung und optionalem
+BOM wie beim bisherigen Browserlesen. Native Cancel liefert `null`, endet vor
+Dateizugriff/HTTP und löst keinen HTML-Ersatzdialog aus. Fehler verwenden die
+vorhandenen lokalisierten API-Meldungen oder einen übersetzten Importhinweis.
+LRC-Auswahl übernimmt den Text in den Editor; erst die reguläre Analyse erzeugt
+daraus die neue gespeicherte Zeilenanzeige. Auswahl und Verarbeitung getrennt prüfen.
+
+Der Importlauf verwendet `scripts.windows_library_testing prepare`; dieser legt
+die synthetischen Quellen samt ausdrücklich verfassten Anzeige-Caches bereits an.
+Für die neue LRC-Navigation eine abweichende lokale Fixture vor dem Start erzeugen
+und in das lokale Quellenhashmanifest aufnehmen. Beide 60-Sekunden-Audios nativ
+importieren, fehlende/beschädigte Kopien ausschließlich im eigenen Testdatensatz
+präparieren, nativ reparieren und komplette SQLite-Zeilen vergleichen. Audio-Cancel
+und LRC-Escape dürfen Bibliothek und Editor nicht verändern. Danach vollständigen
+App-/Dienstneustart und gespeicherte neu importierte Lyrics prüfen. Keine HTTP-
+Seedimports als native Abnahme zählen. Fallskripte, Bilder, Ownerdiagnosen und
+Hashmanifeste bleiben ignoriert lokal; die bereinigte Matrix nennt die Ergebnisse.
 
 ## Prüffälle und Nachweise
 
