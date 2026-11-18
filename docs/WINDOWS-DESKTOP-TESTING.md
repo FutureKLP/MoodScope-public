@@ -7,6 +7,9 @@ Importblocker im synthetischen Windows-Prüfumfang. Der ursprüngliche HTML-
 als eigenständiges Automationsziel angeboten. Die Desktop-App verwendet nun
 parentgebundene Picker desselben Tauri-Prozesses. Der Browserpfad bleibt erhalten.
 
+Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 ## Voraussetzungen und Abgrenzung
 
 Interaktive, entsperrte Windows-Sitzung, WebView2, eingerichtete Python- und

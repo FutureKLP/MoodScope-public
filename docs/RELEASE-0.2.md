@@ -1,5 +1,8 @@
 # Entwicklungsversion 0.2
 
+Historischer Bericht für Version 0.2. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 ## Neue Bereiche
 
 - Verlauf: synchronisierte Audio- und Textvalenz, Player und Biggest Split.

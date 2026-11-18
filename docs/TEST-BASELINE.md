@@ -1,5 +1,8 @@
 # Reproduzierbare Testbaseline
 
+Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 Die automatisierte Prüfung ist von tatsächlichen Musik- und nativen
 Bedienabnahmen getrennt. Tests nutzen deterministische, synthetische Fixtures.
 Produktive Daten, Modelle, Musik, Lyrics und Prüfausgaben bleiben ausgeschlossen.
