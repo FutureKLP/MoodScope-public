@@ -216,8 +216,10 @@ def geometry(area):
     import ctypes as c
     from ctypes import wintypes as w
     import platform
+    import psutil
     user = c.WinDLL('user32', use_last_error=True)
     process = json.loads((area / 'evidence' / 'processes.json').read_text())
+    family = {process['native'], *(p.pid for p in psutil.Process(process['native']).children(recursive=True))}
     user.GetForegroundWindow.restype = w.HWND
     user.GetWindow.argtypes = [w.HWND, w.UINT]
     user.GetWindow.restype = w.HWND
@@ -238,14 +240,14 @@ def geometry(area):
     def visit(handle, _):
         pid = w.DWORD()
         user.GetWindowThreadProcessId(handle, c.byref(pid))
-        if pid.value != process['native']: return True
+        if pid.value not in family: return True
         title, kind = c.create_unicode_buffer(512), c.create_unicode_buffer(256)
         user.GetWindowTextW(handle, title, 512)
         user.GetClassNameW(handle, kind, 256)
         rect, client = w.RECT(), w.RECT()
         user.GetWindowRect(handle, c.byref(rect))
         user.GetClientRect(handle, c.byref(client))
-        windows.append({'handle': handle, 'pid': pid.value, 'title': title.value, 'class': kind.value,
+        windows.append({'handle': handle, 'pid': pid.value, 'process_name': psutil.Process(pid.value).name(), 'title': title.value, 'class': kind.value,
             'owner': user.GetWindow(handle, 4), 'visible': bool(user.IsWindowVisible(handle)),
             'minimized': bool(user.IsIconic(handle)), 'foreground': handle == foreground,
             'dpi': user.GetDpiForWindow(handle), 'window_rect': [rect.left, rect.top, rect.right, rect.bottom],
