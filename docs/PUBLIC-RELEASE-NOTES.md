@@ -1,5 +1,8 @@
 # Kernverbesserungen für 0.3
 
+Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 - Anbieteraufgaben, zielgebundene Zustimmung und stabile Profilsnapshots.
 - Journalisierte Bibliothekslöschung, Reparatur durch Wiederimport und
   gekapselte SQLite-Transaktionen.

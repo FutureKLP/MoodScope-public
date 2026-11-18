@@ -96,8 +96,10 @@ trainierte Valenz-/Aktivierungsmodelle. Die MTG-Gewichte stehen unter
 CC BY-NC-SA 4.0, mit separat angebotener kommerzieller Lizenz. Eine spaetere
 Produktintegration muss daher Modellbedingungen und Laufzeit gemeinsam behandeln.
 
-[Continuous Music Emotion Recognition](https://github.com/SantiagoCotrini/continuous-music-emotion-recognition)
-ist fachlich passend, beschreibt jedoch einen Trainings-/Kreuzvalidierungsablauf.
+Die historische Referenz **Continuous Music Emotion Recognition**
+(`SantiagoCotrini/continuous-music-emotion-recognition`) ist am 18. November 2026
+nicht mehr öffentlich erreichbar (HTTP 404; Link entfernt, Referenz erhalten).
+Die damalige Sichtung beschrieb einen fachlich passenden Trainings-/Kreuzvalidierungsablauf.
 Ein sofort einsetzbarer, hier verifizierter Inferenzcheckpoint liegt nicht vor.
 Die README-Aussage zur Generalisierung ersetzt keine unabhaengige Pruefung.
 
