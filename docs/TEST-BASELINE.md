@@ -27,6 +27,31 @@ benötigt. Node 22.16.0 ist die hier verwendete Version. Ein Windows/CUDA-
 Paketsnapshot ist kein universeller Plattformlock. Offline-Rust benötigt
 bereits vorhandene Pakete. Native Kompilierung ist keine Bedienabnahme.
 
+## Phase 2A.2: native Importnachprüfung, Abschluss am 18. November 2026
+
+Am 17. November neu bestanden: 378 Backendtests (34,82 s), 146 Frontendtests in
+28 Dateien (26,39 s), neun Rusttests offline mit Lockfile, fünf Node-Drivertests,
+TypeScript/Vite und Windows-Releasebuild ohne Bundle. Vier neue Frontendtests
+prüfen native Importentscheidung, Cancel, LRC und Fehler; drei neue Rusttests
+prüfen die Abbruchgrenze, begrenztes Lesen und sichere Multipart-Dateinamen.
+Zwei zusätzliche Drivertests sichern die Parentbindung, doppelt dargestellte
+Baumknoten sowie Ablehnung fremder/mehrdeutiger Modale und indizierter Import-Edits.
+Die vorhandenen echten SQLite-Integrationsregressionen für Reparatur, Wiederimport
+und Datenerhalt bleiben erfolgreich. Ein lokaler Skriptaufruf benötigte den
+Projektpfad im PYTHONPATH; nach Korrektur bestanden die Fallvergleiche.
+
+Die Desktopmatrix schließt alle vier zuvor blockierten nativen Importfälle und
+beide Abbruchpfade, lokale Verarbeitung tatsächlich importierter LRC sowie
+App-/Dienstneustart ein. SQLite-Zeilen-/Audiohashvergleich gleich, Originalbestand
+und produktive SQLite unverändert. Native Desktopnachweise sind von Tests und
+vorbereiteten Anzeige-Fixtures getrennt. [Abnahme](PHASE2A-ACCEPTANCE.md).
+
+Bekannte Vite-Chunkwarnung bei 503,34 kB bleibt; kein Installer-, anderer DPI-,
+Langzeit- oder Plattformlauf. Der am 18. November eingelesene Main `1717ffd` hat
+denselben Quellbaum wie der geprüfte Phase-1-Head; seine lokale Integration
+ändert den getesteten Anwendungscode nicht. Kein erneuter CI-Lauf dieser lokalen
+Phase behauptet. Die folgenden Abschnitte sind historische Prüfstände.
+
 ## Phase 2A am 17. November 2026
 
 Vollständig erneut bestanden: 378 Backendtests (40,98 s), 142 Frontendtests in
