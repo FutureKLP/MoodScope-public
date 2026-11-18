@@ -36,6 +36,7 @@
 - [Kernabnahme](CORE-ACCEPTANCE.md) – Kriterien und historische Nachprüfungen.
 - [Phase 1: Windows-WAV-Dialoge](WINDOWS-DESKTOP-TESTING.md).
 - [Phase 2A: Bibliothek, Player, Lyrics](PHASE2A-ACCEPTANCE.md) – lokaler Branch, definierter synthetischer Umfang.
+- [Phase 2B: KI, Modelle, Atmosphäre und API](PHASE2B-ACCEPTANCE.md) – Teilabnahme und offene native Kriterien.
 - [Performancebaseline](PERFORMANCE-BASELINE.md) – historische synthetische Messungen; keine Musikabnahme.
 
 ## Release und Veröffentlichung

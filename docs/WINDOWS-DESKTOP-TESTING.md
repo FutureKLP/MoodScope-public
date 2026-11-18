@@ -51,7 +51,11 @@ Projektbinary angeben. `run` verweigert einen bereits belegten Port 8765,
 startet einen eigenen Loopback-Dienst und prüft die isolierte Track-ID vor
 Appstart. `MOODSCOPE_DATA` und `WEBVIEW2_USER_DATA_FOLDER` zeigen auf eigene
 Unterordner. Anbieterprofile und Zustimmung der produktiven Bibliothek werden
-nicht übernommen. Modell-Hub-Zugriffe sind offline geschaltet.
+nicht übernommen. Modell-Hub-Zugriffe sind offline geschaltet. Seit Phase 2B setzt der Halter
+zusätzlich `MOODSCOPE_DEVICE=cpu` und `CUDA_VISIBLE_DEVICES=-1`: eine leere
+CUDA-Sichtbarkeitsvariable allein hat im geprüften Prozessmix keinen
+zuverlässigen CPU-Modus erzwungen. GPU-Inferenz wird separat mit ausdrücklich
+sichtbarer Karte geprüft.
 
 Die Test-App über Alt+F4 schließen; der Halter beendet seine eigenen Prozesse.
 Alternativ in einer zweiten Shell eine leere Datei `$area/stop` anlegen.

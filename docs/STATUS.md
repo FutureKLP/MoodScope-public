@@ -11,8 +11,11 @@ weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsve
 Die Phase-2A-Änderungen sind noch nicht öffentlich in Main integriert.
 Ihr erhaltener lokaler Branch ist `codex/phase2a-native-library-player-lyrics`:
 `9b7e4f3` (Importpicker), `9d44a4a` (Main-Integration), `c539444` (Abnahme).
-Diese Dokumentationsorganisation basiert separat auf öffentlichem Main und
-übernimmt keine unveröffentlichten Anwendungsänderungen.
+Phase 2A ist separat als [PR #12](https://github.com/FutureKLP/MoodScope-public/pull/12)
+auf `codex/phase2a-public-review` veröffentlicht (`5d459f0`), noch nicht gemergt.
+Die vier CI-Jobs dieses PRs sind erfolgreich. [PR #11](https://github.com/FutureKLP/MoodScope-public/pull/11)
+bleibt separat offen. Der lokale Phase-2B-Branch `codex/phase2b-native-ai`
+integriert beide öffentlichen Quell-/Dokumentationslinien ohne private Vorfahren.
 Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
 ## Entwicklungsphasen
@@ -26,9 +29,13 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   Alle zuvor blockierten Importfälle geschlossen. Dies gilt für den lokalen
   Phase-2A-Branch, nicht als Behauptung über den öffentlichen Main.
   [27-Fälle-Abnahme](PHASE2A-ACCEPTANCE.md).
-- **Phase 2B – KI, Modelle, Atmosphäre und API:** nächste Entwicklungssitzung;
-  breitere Local/API/Local-, Modell-/Songwechsel-, Fehler- und Neustartmatrix
-  sowie Music2Emo-Fehlerursache prüfen.
+- **Phase 2B – KI, Modelle, Atmosphäre und API:** teilweise bestanden.
+  Echte Offline-Inferenz und kontrollierte API-Verträge, native Modellauswahl,
+  Local/API/Local, Sprache, Atmosphäre sowie App-/Dienstneustart geprüft.
+  Fehlende Audiomodelldateien werden verständlicher erklärt; der native Testhalter
+  erzwingt CPU nun ausdrücklich. Vollständige native Anbieterbearbeitung,
+  Reduced Motion und unterbrochene Farb-/Auftragswechsel bleiben offen.
+  [Vollständige Matrix und Grenzen](PHASE2B-ACCEPTANCE.md).
 - **Phase 2C – Hörstudio und Gesamtregression:** geplant.
 - **Phase 3 – Langzeitbetrieb und Performance:** geplant.
 - **Phase 4 – Installer und Plattformabnahme:** geplant.
@@ -37,8 +44,10 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
 ## Weiter offene Grenzen
 
-Der sporadische Music2Emo-Prüfdienstfehler ist trotz erfolgreicher Wiederholungen
-nicht ursächlich aufgeklärt. Langzeitbetrieb, weitere DPI-Stufen, Mehrmonitorbetrieb,
+Ein Music2Emo-Prüfdienstfehler wurde mit Workerlog reproduziert: CUDA-Ziel
+bei fehlender sichtbarer Worker-GPU. Der Testhalter setzt nun explizit CPU.
+Wiederholungen und Abbruch/Wiederaufnahme bestehen. Die historische Störung
+ohne Workerlog ist dadurch nicht abschließend zugeordnet. Langzeitbetrieb, weitere DPI-Stufen, Mehrmonitorbetrieb,
 Windows 10 und Linux benötigen eigene Abnahmen. Der erfolgreiche NSIS-Paketbuild
 bestätigt keine Installation, Deinstallation oder eigenständige Backendverteilung.
 Installer weiterhin nicht vollständig abgenommen.

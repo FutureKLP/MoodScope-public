@@ -156,3 +156,18 @@ Keine neue tatsächliche Musikprüfung, Modellinferenz, native Bedienabnahme,
 Installer-, Linux-, Windows-10- oder vollständige Advisoryprüfung in diesem Lauf.
 Ein erfolgreicher entfernter CI-Lauf wird nicht behauptet. Abnahmegrenzen bleiben
 in [CORE-ACCEPTANCE.md](CORE-ACCEPTANCE.md) erhalten.
+## Phase 2B am 18. November 2026
+
+381 Backendtests (36,21 s), 146 Frontendtests in 28 Dateien (17,15 s),
+neun Rusttests locked/offline und fünf Node-Drivertests bestanden. TypeScript/Vite
+und Windows-Releasebuild ohne Bundle erfolgreich; bekannte Chunkwarnung bleibt.
+Die erste Buildwiederholung traf eine noch laufende EXE; nach Beendigung erfolgreich.
+Aktuelle Python-3.13-Projektumgebung verwenden: der ältere Python-3.10-Testhalterlauf
+scheiterte an sechs `hashlib.file_digest`-Aufrufen, die Wiederholung bestand.
+
+Neue Regressionen prüfen fehlende CLAP-Prozessor-/Gewichtsdateien ohne halbe
+Engineaktivierung und ausdrücklichen CPU-Modus des Desktop-Testhalters.
+Tatsächliche Offline-Inferenz, kontrollierte lokale API-Fehler, Dienstabbruch,
+Neustart und native Bedienung sind getrennt in [Phase 2B](PHASE2B-ACCEPTANCE.md)
+ausgewiesen. Die native Gesamtmatrix bleibt teilweise offen; keine vollständige
+Kernfreigabe. Keine neuen echten Anbieter-, Installer- oder anderen Plattformtests.

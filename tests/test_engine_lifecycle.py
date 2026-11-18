@@ -4,6 +4,23 @@ import pytest
 from backend.models import Engines
 
 
+@pytest.mark.parametrize('stage', ['processor', 'weights'])
+def test_missing_clap_files_explain_recovery_without_partial_engine(tmp_path, monkeypatch, stage):
+    import transformers
+    engine = Engines()
+    engine.data = tmp_path
+    monkeypatch.setattr(engine, 'device', lambda *args: 'cpu')
+    def missing(*args, **kwargs):
+        raise OSError('loader internals must not become the user message')
+    monkeypatch.setattr(transformers.ClapProcessor, 'from_pretrained',
+                        missing if stage == 'processor' else lambda *args, **kwargs: object())
+    monkeypatch.setattr(transformers.ClapModel, 'from_pretrained', missing)
+    with pytest.raises(ValueError, match='Installation prüfen') as error:
+        engine.audio(np.zeros(48000), 48000, lambda *args: None)
+    assert 'loader internals' not in str(error.value)
+    assert engine.processor is None and engine.audio_model is None
+
+
 @pytest.mark.parametrize('invalid',[False,True])
 def test_clap_rejects_nonfinite_predictions_and_preserves_valid_formula(tmp_path,monkeypatch,invalid):
     import torch

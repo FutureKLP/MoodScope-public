@@ -6,6 +6,17 @@ import pytest
 from scripts import windows_desktop_testing as desktop
 
 
+def test_desktop_cpu_is_explicit_even_when_parent_requests_gpu(tmp_path, monkeypatch):
+    monkeypatch.setenv('MOODSCOPE_DEVICE', 'cuda:0')
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', '0')
+    environment = desktop.environment(tmp_path)
+    assert environment['MOODSCOPE_DEVICE'] == 'cpu'
+    assert environment['CUDA_VISIBLE_DEVICES'] == '-1'
+    assert environment['HF_HUB_OFFLINE'] == environment['TRANSFORMERS_OFFLINE'] == '1'
+    assert environment['MOODSCOPE_DATA'] == str(tmp_path / 'data')
+    assert environment['WEBVIEW2_USER_DATA_FOLDER'] == str(tmp_path / 'webview')
+
+
 def make_workspace(tmp_path, monkeypatch):
     monkeypatch.setattr(desktop, 'ROOT', tmp_path)
     area = tmp_path / '.tools' / 'desktop-fixture'
