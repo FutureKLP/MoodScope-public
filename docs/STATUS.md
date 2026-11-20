@@ -17,8 +17,9 @@ Die vier CI-Jobs dieses PRs sind erfolgreich. [PR #11](https://github.com/Future
 bleibt separat offen. Der lokale Phase-2B-Branch `codex/phase2b-native-ai`
 integriert beide öffentlichen Quell-/Dokumentationslinien ohne private Vorfahren.
 [PR #13](https://github.com/FutureKLP/MoodScope-public/pull/13) bleibt ein Draft
-gegen den Phase-2A-Reviewbranch von PR #12. Die Stabilisierung 2B.3 baut auf dem
-erneut verifizierten öffentlichen Phase-2B-Head `b6b2c88` auf. PR #11 und #12 sind weiterhin offen;
+gegen den Phase-2A-Reviewbranch von PR #12. Die native Nachabnahme 2B.4 prüft den
+erneut verifizierten öffentlichen Phase-2B-Head `9d11c67`. Dessen vier Windows-/
+Ubuntu-Test- und Native-Buildjobs sind erfolgreich. PR #11 und #12 sind weiterhin offen;
 Main wurde nicht gemergt oder überschrieben.
 Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
@@ -47,8 +48,13 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   Prozesssperren und automatische Crashbereinigung beim Dienststart sowie die
   Invalidierung sichtbarer Zustimmung bei Verbindungs-/Sitzungswechsel.
   Echter isolierter Music2Emo-Crash-/Neustartlauf mit automatischem Cleanup und
-  erfolgreicher erneuter Inferenz bestanden. Die neue zwölfteilige native Bedienfolge
-  ist wegen fehlerhafter Testwerkzeuggeometrie nicht vollständig nachgewiesen.
+  erfolgreicher erneuter Inferenz bestanden. Nachabnahme 2B.4: Automations-Eingangstest
+  mit frischer Hauptfenster-/Bildbindung und reversiblem Reiterwechsel bestanden;
+  anschließend alle zwölf Schritte der nativen Crash-/Einwilligungsfolge bestanden.
+  Native Music2Emo-Auslösung, sichtbarer Dienstfehler, automatisches Cleanup,
+  erfolgreiche erneute Offline-Inferenz und Checkbox-Rücksetzung nach Dienstneustart
+  nachgewiesen. Nativer Transfer ohne neue Zustimmung verweigert, null zusätzliche
+  Anbieteraufrufe; neue Zustimmung ermöglicht genau einen synthetischen Loopback-Aufruf.
   [Vollständige Matrix und Grenzen](PHASE2B-ACCEPTANCE.md).
 - **Phase 2C – Hörstudio und Gesamtregression:** geplant.
 - **Phase 3 – Langzeitbetrieb und Performance:** geplant.
@@ -58,8 +64,11 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
 ## Weiter offene Grenzen
 
-Aktuelle Regression: 396 Backend-, 156 Frontend-, 9 Rust- und 5 Node-Tests
-bestanden; TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich.
+Vollständige lokale Regression aus 2B.3: 396 Backend-, 156 Frontend-, 9 Rust- und
+5 Node-Tests bestanden; TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich.
+In 2B.4 zusätzlich gezielt 63 Backend- und 51 Frontendtests bestanden. Anwendungscode
+unverändert; kein neuer vollständiger lokaler Suite-/Buildlauf. Remote-CI des geprüften
+Quellheads mit beiden Windows-/Ubuntu-Testjobs und beiden nativen Builds erfolgreich.
 Die Korrekturen aus 2B.2 bleiben erhalten. Neu: nur eindeutig eigene inaktive
 Music2Emo-Bereiche bereinigen und Zustimmung nach Verbindungs-/Sitzungswechsel
 verwerfen; Routingversion vor erlaubtem Transfer erneut prüfen. Rein lokale Aufträge
@@ -71,7 +80,13 @@ Bereichs nach hartem Dienstende. Aktive oder nicht zuordenbare Bereiche bleiben
 erhalten; alte Bereiche ohne Besitzmarker werden nicht nachträglich übernommen.
 Veraltete und fehlende API-Zustimmung werden am tatsächlichen Dienst ohne
 Loopback-Anbieteraufruf abgewiesen; neue Zustimmung erfolgreich mit synthetischen
-Daten geprüft. Der native Checkbox-Sichtnachweis nach Dienstneustart bleibt offen.
+Daten geprüft. Der native Checkbox-Sichtnachweis nach Dienstneustart und die
+zwölfteilige Folge sind in 2B.4 geschlossen. Geometriefehler nicht erneut aufgetreten;
+die interne Ursache einer historischen veralteten Bildbindung bleibt unbeweisbar.
+Ein separates 16-Pixel-Tao-Hilfsfenster ist nachgewiesen und wurde ausgeschlossen.
+Beide verwendeten Originale, übernommene WAV-Kopien und produktive SQLite unverändert;
+beide SQLite intakt, keine verwaisten Cachebesitzer/Workerbereiche, eigene Testprozesse
+beendet und Testports frei. Frühere Abnahmegrenzen bleiben erhalten.
 Keine echten Cloudschlüssel/-aufrufe, neuen Gewichte oder Änderungen produktiver Datenbanken.
 
 Ein Music2Emo-Prüfdienstfehler wurde mit Workerlog reproduziert: CUDA-Ziel

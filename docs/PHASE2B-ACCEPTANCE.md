@@ -563,3 +563,126 @@ Cachebesitzer. Keine eigenen Workerbereiche übrig; eigene App, Dienst und Anbie
 beendet, geprüfte Loopbackports frei. Rohbelege und Musik bleiben ignoriert lokal.
 Weitere Phase-2B-Grenzen, insbesondere zweites echtes Textemotionsmodell, vollständige
 native Kreuzmatrix, Langzeit-, Plattform-, Installer- und Qualitätsabnahme, bleiben offen.
+
+## Nachabnahme 2B.4 vom 20. November 2026
+
+**Die zwölfteilige native Crash-/Einwilligungsfolge ist bestanden. Phase 2B bleibt
+wegen der übrigen offenen Kriterien teilweise bestanden; PR #13 bleibt Draft.**
+Die historischen Nachweise und Fehlversuche aus 2B.1–2B.3 bleiben erhalten.
+Keine Anwendungskorrektur, neue Gewichte oder allgemeine Designänderung erforderlich.
+
+### Automations-Eingangstest und Geometrie
+
+Vor der Testfolge wurde ausschließlich ein harmloser Reiterwechsel geprüft.
+Der vorhandene Windows-Releasebuild lief mit eigener SQLite-Datenkopie, eigenem
+WebView-Profil und eigenem CPU-/Offline-Testdienst. Prozess, ausführbare Datei und
+eindeutiges Hauptfenster mit Titel `MoodScope 0.3` wurden zugeordnet. Win32 meldete
+Klasse `Tauri Window`, sichtbar, im Vordergrund, nicht minimiert, 96 DPI;
+Fensterrechteck `[104,61,1560,1080]`, Clientrechteck `[0,0,1440,980]`.
+Das separate sichtbare `Tao Thread Event Target` mit 16 × 16 und leerem Client
+wurde ausdrücklich ausgeschlossen.
+
+Computer Use lieferte für das frisch gebundene Hauptfenster eine große Region
+von 1442 × 1012 mit Ursprung `[111,61]`. Sie bildet den sichtbaren Fensterrahmen
+einschließlich Titelleiste ab; sie ist nicht mit dem Clientrechteck gleichzusetzen.
+Bildgebundene Klicks wechselten sichtbar Song-Analyse → Modelle & API → Song-Analyse.
+Danach funktionierten native Klicks, Scrollen und Tastaturnavigation während der
+gesamten Folge. Kein Geometriefehler in diesem Lauf und kein blindes Wiederholen
+fehlgeschlagener Koordinatenaktionen.
+
+Das Hilfsfenster erklärt nachweislich die vorhandene 16-Pixel-Geometrie, beweist
+aber nicht die interne Ursache jedes historischen Werkzeugfehlers. Eine veraltete
+Bildbindung im 2B.3-Werkzeug ist ohne damaligen internen Trace nicht beweisbar.
+Die aktuelle API verwendet dieselbe Bildkennung innerhalb neuer Beobachtungen;
+das allein belegt keine veraltete Aufnahme. Eingaben nutzten jeweils den frisch
+beobachteten Fenster-/Bildzustand. Kein Werkzeugpatch und kein MoodScope-
+Anwendungsfehler aus der früheren Meldung abgeleitet.
+
+### Zwölfteilige native Folge
+
+1. **Bestanden · N/W.** Isolierte SQLite, WebView und eigener Loopback-Testdienst;
+   vorhandener Releasebuild zum unveränderten Quellstand `9d11c67` gestartet.
+2. **Bestanden · N/W.** Vorhandenen quellbenannten 0–90-Sekunden-Musiktestausschnitt
+   aus der isolierten Bibliothek geöffnet und `Music2Emo berechnen und verwenden`
+   tatsächlich nativ angeklickt. Der POST stammt aus der App, nicht aus dem Halter.
+3. **Bestanden · N/W.** Auftragsbanner, Ladephase, Fortschrittsbalken und gesperrte
+   Berechnungsaktionen sichtbar. Vorhandene gespeicherte Werte bleiben als bisherige
+   Analyse erkennbar; der laufende Auftrag erhält keine neue Erfolgsmeldung.
+4. **Bestanden · H/W.** Nur den eigenen Testdienst während des nativ gestarteten
+   Auftrags hart beendet. Zugehörige Worker endeten selbständig; ein eigener
+   markierter Arbeitsbereich blieb bis zum Neustart erhalten.
+5. **Bestanden · N/W.** Im Desktopfenster erschien der verständliche Hinweis auf
+   den nicht erreichbaren lokalen Dienst mit manueller Wiederholungsanweisung und
+   Datenerhalt. Kein erfolgreicher Abschluss des abgebrochenen Auftrags behauptet.
+6. **Bestanden · H/W.** Eigenen Testdienst bei weiter geöffnetem Client neu gestartet.
+7. **Bestanden · H/W.** Tatsächlicher Dienststartup entfernte den eigenen inaktiven
+   Bereich automatisch. Kein Cleanup-Aufruf oder Entfernen durch den Halter.
+   Track-, Cache- und Besitzerzeilen vor Crash und nach Neustart identisch.
+8. **Bestanden · N/W und I/W.** Erneut nativ dieselbe Music2Emo-Aktion ausgelöst;
+   echte Offline-CPU-Inferenz mit vorhandenen Gewichten, fortschreitende Berechnung,
+   Abschluss `Musikvergleich fertig`, neuer abgeschlossener Job mit Ergebniszeilen.
+   Keine Arbeitsbereichsreste; erst der erfolgreiche Neulauf aktualisiert den Cache.
+9. **Bestanden · N/W und H/M.** Synthetischen Zwei-Sekunden-Track nativ geöffnet,
+   API-Modus gewählt und ausdrückliche Sitzungseinwilligung bedient. Vorbereitendes
+   HTTP-Fixturerouting beschränkt ausschließlich Audio auf den synthetischen
+   Loopback-Anbieter; übrige Aufgaben lokal. Dieses Routing ist kein nativer
+   Profilanlage-Nachweis. Zusätzlicher nativer Kontrollauftrag erfolgreich,
+   genau ein Anbieteraufruf vor dem Neustart, ohne Authentifizierungsheader.
+10. **Bestanden · N/W und H/W.** Dienst erneut beendet und gestartet, Client blieb
+    geöffnet. Checkbox sichtbar leer; zuvor zustimmungsabhängig freigegebene Aktion
+    wieder gesperrt. Profil-/Aufgabenzusammenfassung kehrte ohne Zustimmung zurück.
+11. **Bestanden · N/W und H/M.** Ohne erneute Zustimmung `Song neu analysieren`
+    nativ ausgelöst. Sichtbare Meldung `Zustimmung zur Übertragung an die
+    zugeordneten Anbieter fehlt.`, HTTP 422; **null zusätzliche Anbieteraufrufe**.
+    Vorhandene synthetische Analyse blieb erhalten, kein falscher Neuerfolg.
+12. **Bestanden · N/W und H/M.** Neue Zustimmung nativ gesetzt und Neuanalyse
+    angeklickt. `Analyse abgeschlossen`, tatsächlicher erfolgreicher synthetischer
+    Loopback-Auftrag; **genau ein zusätzlicher Aufruf**, insgesamt zwei bewusste
+    Kontrollaufträge. Keine unbeabsichtigte Transferwiederholung.
+
+Die Checkbox war im bestehenden Layout sehr klein. Der Accessibility-Baum gab
+ihren Schaltzustand nicht ausdrücklich aus und meldete Fokus teilweise nur am
+Dokument. Einzelne unmittelbare Bild-/Textaufnahmen erfassten unterschiedliche
+Renderzeitpunkte. Unklare Einzelaktionen wurden nicht als Zustimmungsnachweis
+gewertet. Frische Beobachtungen, sichtbarer Haken/Leerzustand, Tastaturfokus,
+zustimmungsabhängige Aktionsfreigabe und der tatsächliche Verweigerungs-/Erfolgspfad
+bilden gemeinsam den Nachweis. Keine zweite allgemeine Layoutabnahme daraus ableiten.
+
+### Regressionen, CI und Datenabschluss
+
+Neu ausgeführt: **63 Backendtests** in `test_worker_workspace.py`,
+`test_expression_compare.py` und `test_provider_routing.py` bestanden (8,54 s).
+Sie prüfen unter anderem aktive/fremde/beschädigte/verlinkte Bereiche, echte
+Prozesssperren, Abbruch/Timeout, ungültige Ergebnisse, Cache- und Zustimmungsschutz.
+**51 Frontendtests** in `App.test.tsx`, `ExpressionComparison.test.tsx` und
+`api.test.ts` bestanden (14,36 s). Kein neuer vollständiger lokaler Suite-, Rust-,
+Web-/Native-Build- oder Installerlauf; Anwendungscode unverändert. Die historischen
+396/156/9/5-Nachweise aus 2B.3 werden nicht als neue Läufe ausgegeben.
+
+Erneut verifiziert: #11 offen auf `ff585f5`, #12 offen auf `5d459f0`, #13 Draft
+gegen #12 auf `9d11c67`. Für diesen Quellhead sind beide Windows-/Ubuntu-Testjobs
+und beide nativen Buildjobs erfolgreich:
+[CI-Lauf 44752831047](https://github.com/FutureKLP/MoodScope-public/actions/runs/44752831047).
+Kein automatischer Merge oder Force-Push.
+
+Erhaltene Halterfehler: alte Python-Umgebung ohne `hashlib.file_digest`; danach
+Sandbox-Dienststart ohne erreichbaren Healthzustand. Isolierter Start außerhalb
+der Sandbox erfolgreich. Win32-/Prozessdiagnose benötigte dieselbe Prozesssicht;
+die Sandbox meldete sonst einen scheinbar fehlenden Prozess. Ein erster lesender
+SQL-Diagnoseaufruf hatte fehlerhafte Shellquotierung. Der erste Abschlussfilter
+zählte seine eigenen Prüfshells mit; korrigierter Filter und tatsächlicher
+Prozessabschluss bestätigt. Keine dieser Beobachtungen ist ein Appfehler.
+
+Abschluss: beide zuvor verwendeten Originale, alle übernommenen WAV-Kopien und
+produktive SQLite bytegleich; kein erneutes Hashen des gesamten Musikbestands
+behauptet. Produktive und isolierte SQLite `integrity_check=ok`, drei erwartete
+Testtracks, keine verwaisten Cachebesitzer oder Workerbereiche. Eigene App,
+Dienste, Anbieter und Worker beendet, beide Testports frei. Tatsächliche Musik
+blieb ausschließlich lokal; Anbieterproben ausschließlich synthetisch auf Loopback.
+Keine echten Schlüssel, Testlinks oder Downloads. Rohbilder, Texte, Prozessdaten,
+Analysen und Identitäten bleiben ignoriert lokal.
+
+Die 2B.3-Lücke der nativen Crash-/Einwilligungsfolge ist geschlossen. Zweites echtes
+Textemotionsmodell, vollständige native Kreuzmatrix, Langzeit-, weitere DPI-/
+Plattform-, Installer- und Qualitätsabnahmen bleiben offen. Keine vollständige
+Phase-2B- oder Kernfreigabe und keine externe Datenbankphase.
