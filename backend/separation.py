@@ -129,7 +129,14 @@ def _mix(data,identity,model,sources,gains):
     if len(weights)!=len(sources) or any(not math.isfinite(v) or not 0<=v<=1 for v in weights):raise ValueError('Spurpegel müssen zwischen 0 und 1 liegen.')
     chosen=sorted(zip(sources,weights))
     root=folder(data,identity,model)
-    if len(chosen)==1 and chosen[0][1]==1:return root/(chosen[0][0]+'.wav')
+    if len(chosen)==1 and chosen[0][1]==1:
+        source=root/(chosen[0][0]+'.wav')
+        # Cached activity describes energy, not the validity of today's samples.
+        # The direct solo path must enforce the same finite-data gate as a mix.
+        with sf.SoundFile(source) as audio:
+            for block in audio.blocks(blocksize=65536,dtype='float32'):
+                if not np.isfinite(block).all():raise ValueError('Ungültige Audiodaten im Quellenmix.')
+        return source
     versions=[(s,(root/(s+'.wav')).stat().st_size,(root/(s+'.wav')).stat().st_mtime_ns) for s,_ in chosen]
     fingerprint=hashlib.sha256(('peak-safe-v4:'+json.dumps([chosen,versions])).encode()).hexdigest()[:24]
     destination=root/('mix-'+fingerprint+'.wav')
