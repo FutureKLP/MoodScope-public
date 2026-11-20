@@ -1,11 +1,23 @@
 # Kernabnahme und Freigabegrenzen
 
+Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 ## Entscheidung
 
 Die Anwendung bleibt eine Entwicklungsversion. Die Veröffentlichung geprüfter
 Quellverbesserungen bedeutet keine vollständige Kern-, Plattform- oder
 Qualitätsfreigabe. Die externe Datenbankphase ist weiterhin gesperrt; SQLite
 bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
+
+## Phase 2B am 18. November 2026
+
+Teilweise bestanden: echte Offline- und kontrollierte Loopback-Anbietertests,
+native Auswahl und Local/API/Local sowie Neustart-/Datenintegrität geprüft.
+Reproduzierter Music2Emo-Gerätekonflikt im Testhalter korrigiert; historische
+Ursache ohne damaligen Workerlog bleibt unbestätigt. Native Reduced-Motion-,
+unterbrochene Übergangs- und vollständige Profil-/Auftragsmatrix noch offen.
+[Vollständige Matrix](PHASE2B-ACCEPTANCE.md). Keine vollständige Kernfreigabe.
 
 ## Abgesicherte Bereiche
 

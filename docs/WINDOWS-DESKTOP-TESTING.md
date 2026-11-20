@@ -7,6 +7,9 @@ Importblocker im synthetischen Windows-Prüfumfang. Der ursprüngliche HTML-
 als eigenständiges Automationsziel angeboten. Die Desktop-App verwendet nun
 parentgebundene Picker desselben Tauri-Prozesses. Der Browserpfad bleibt erhalten.
 
+Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 ## Voraussetzungen und Abgrenzung
 
 Interaktive, entsperrte Windows-Sitzung, WebView2, eingerichtete Python- und
@@ -48,7 +51,11 @@ Projektbinary angeben. `run` verweigert einen bereits belegten Port 8765,
 startet einen eigenen Loopback-Dienst und prüft die isolierte Track-ID vor
 Appstart. `MOODSCOPE_DATA` und `WEBVIEW2_USER_DATA_FOLDER` zeigen auf eigene
 Unterordner. Anbieterprofile und Zustimmung der produktiven Bibliothek werden
-nicht übernommen. Modell-Hub-Zugriffe sind offline geschaltet.
+nicht übernommen. Modell-Hub-Zugriffe sind offline geschaltet. Seit Phase 2B setzt der Halter
+zusätzlich `MOODSCOPE_DEVICE=cpu` und `CUDA_VISIBLE_DEVICES=-1`: eine leere
+CUDA-Sichtbarkeitsvariable allein hat im geprüften Prozessmix keinen
+zuverlässigen CPU-Modus erzwungen. GPU-Inferenz wird separat mit ausdrücklich
+sichtbarer Karte geprüft.
 
 Die Test-App über Alt+F4 schließen; der Halter beendet seine eigenen Prozesse.
 Alternativ in einer zweiten Shell eine leere Datei `$area/stop` anlegen.
@@ -250,3 +257,17 @@ Keine neue NSIS-/Installations-, Linux-, Windows-10-, Langzeit-, Musikqualitäts
 oder vollständige Kernabnahme. Keine neue Anbieter- oder Datenbankphase.
 Rohlogs und Screenshots können lokale Pfade enthalten und bleiben ausschließlich
 im ignorierten Arbeitsbereich. Nur bereinigte Nachweise veröffentlichen.
+
+## Geometriegrenze bei der Stabilisierung 2B.3
+
+Am 20. November 2026 startete der aktuelle Windows-Releaseclient im eigenen
+WebView-Profil mit isolierter Datenkopie. Die Oberfläche war im ersten Screenshot
+vollständig sichtbar. Nachfolgende native Werkzeugaufrufe lieferten nur 16 × 16 Pixel
+oder `coordinate input geometry is unavailable`. Fensterbindung, Aktivierung,
+Indexklick, alternative native Steuerung und Tastaturversuch ergaben keine
+nachgewiesene Bedienung. Keine Aktion aus einem unveränderten Bild als Erfolg zählen.
+
+Die zwölfteilige Crash-/Zustimmungsfolge muss mit funktionierender nativer Steuerung
+nachgeholt werden. Tatsächliche Dienstprozess-, Inferenz- und Loopback-Vertragstests
+sind davon getrennt erfolgreich und in [Phase 2B.3](PHASE2B-ACCEPTANCE.md#nachabnahme-2b3-vom-20-november-2026)
+dokumentiert. Ein HTTP-Start oder Reacttest gilt weiterhin nicht als nativer Klick.

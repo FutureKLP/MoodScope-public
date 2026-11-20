@@ -69,6 +69,7 @@ def test_cancellation_terminates_worker_and_removes_only_scratch(tmp_path,monkey
         expression_compare.analyse(original,tmp_path,'cpu',lambda *args:None)
     assert stopped and original.read_bytes()==b'authored source'
     assert not list(tmp_path.glob('expression-*'))
+    assert not list((tmp_path/expression_compare.worker_workspace.ROOT_NAME).glob('job-*'))
 
 
 def test_timeout_kills_resistant_worker_and_removes_scratch(tmp_path,monkeypatch):
@@ -91,6 +92,7 @@ def test_timeout_kills_resistant_worker_and_removes_scratch(tmp_path,monkeypatch
         expression_compare.analyse(original,tmp_path,'cpu',lambda *args:None)
     assert stopped==['terminate','kill'] and original.read_bytes()==b'authored source'
     assert not list(tmp_path.glob('expression-*'))
+    assert not list((tmp_path/expression_compare.worker_workspace.ROOT_NAME).glob('job-*'))
 
 
 @pytest.mark.parametrize('changes',[{'valence':float('nan')},{'arousal':2},{'start':-.1},{'end':2},{'tags':{'joy':float('inf')}}])
