@@ -1,11 +1,17 @@
 # Phase 2B: KI, Modelle, Atmosphäre und API
 
-Datierter Nachweis vom 18. November 2026. Aktueller Status: [STATUS.md](STATUS.md).
+Datierte Erstabnahme vom 18. November 2026 mit Nachabnahme 2B.2 vom
+20. November 2026. Aktueller Status: [STATUS.md](STATUS.md).
 
 **Entscheidung: teilweise bestanden.** Native Bedienung, echte lokale Inferenz,
 kontrollierte Anbieterverträge und Regressionen sind getrennt ausgewiesen.
 Offene native Kriterien sind keine bestandenen Tests. Keine Kern-, Modellqualitäts-,
 Langzeit-, Installer- oder weitere Plattformfreigabe.
+
+Die folgenden 52 Fälle A01–F08 bewahren den Stand und die Fehlversuche der
+Erstabnahme. Die [Nachabnahme 2B.2](#nachabnahme-2b2-vom-20-november-2026)
+aktualisiert die bezeichneten Fälle mit zusätzlichen nativen Nachweisen.
+Historische Aussagen über offene native Prüfungen gelten nur für den damaligen Lauf.
 
 ## Git und Abhängigkeiten
 
@@ -307,3 +313,142 @@ verwaisten Cachebesitzer nach abgeschlossenem Fixtureaufbau. Eigene native App
 und Dienste beendet; abschließender Prozesssnapshot leer. Die vorhandene
 Exportzieldatei blieb unverändert. 140 relative Dokumentationslinks in 29
 Markdown-Dateien geprüft, kein Link-/Ankerfehler.
+
+## Nachabnahme 2B.2 vom 20. November 2026
+
+**Entscheidung weiterhin teilweise bestanden.** N/W bezeichnet hier die echte
+Windows-App mit isolierter SQLite, WebView2 und CPU-Prüfdienst. Für lokale
+Inferenz und Wiedergabe wurden zwei quellbenannte 90-Sekunden-Ausschnitte aus
+dem erlaubten lokalen Musikbestand verwendet. Originale blieben unverändert.
+Ihr vorbereitender HTTP-Import ist kein neuer nativer Importnachweis.
+API-Tests verwendeten ausschließlich die separate synthetische Quelle und
+einen kontrollierten Loopback-Anbieter; keine Übertragung echter Musik an Anbieter.
+Vorbereitete leere Anzeige-Caches zählen nicht als Inferenz.
+
+### Ergänzende Fälle und Fortschreibung der 52-Fälle-Matrix
+
+- **N01 → E01, E11 · bestanden · N/W.** Profil im Formular angelegt, Endpunkt
+  und Modell geändert, gespeichert und wieder gelesen; zusätzliches Testprofil
+  mit nativer Bestätigung gelöscht. Bibliothek blieb erhalten. Ein früher
+  indexbasierter Bedienfehler erzeugte ein Duplikat statt einer Bearbeitung;
+  dieser Fehlversuch zählt nicht als Erfolg. Wiederholung mit frischem Bildbezug bestanden.
+- **N02 → E02 · bestanden · N/W und H/M.** Audio- und Textaufgabe dem Testprofil
+  zugewiesen und gespeichert. Tatsächliche Aufträge erreichten dessen ausgewähltes
+  Modell. Übrige voreingestellte Cloudziele wurden nicht aufgerufen.
+- **N03 → E03, E10 · bestanden · N/W und H/M.** Ohne Einwilligung wurde der Auftrag
+  verständlich verweigert und kein Anbieter-POST erzeugt. Nach ausdrücklicher
+  Freigabe liefen Audio und Text erfolgreich. Nach Widerruf erneut verweigert,
+  Anzahl der Anbieteraufrufe unverändert. Keine reale Musik in diesen API-Proben.
+- **N04 → E05, E06, E11, D07 · bestanden nach Korrektur · N/W und R/T.**
+  Kontrollierte HTTP-401-/503-Antworten nativ ausgelöst. Zusätzlich ein absichtlich
+  abgelehnter Sitzungswert mit tatsächlich gesetztem Authentifizierungsheader
+  geprüft. Fehlende Übersetzungsfragmente korrigiert; finaler 401-Hinweis und
+  laufender DE-/EN-Sprachwechsel einschließlich Fehler-ID nativ geprüft.
+  Backendregressionen decken beide Statuscodes ab. Keine echten Cloudschlüssel,
+  keine echte Kontingent-/Cloudabnahme und kein vollständiger 180-Sekunden-Timeoutlauf.
+- **N05 → E08, E09 · bestanden im beschriebenen Umfang · N/W und H/M.**
+  Nur den eigenen Dienst bei offener App neu gestartet. Ein alter Einwilligungsstand
+  konnte zunächst noch angehakt aussehen; der Start wurde jedoch wegen geänderter
+  Aufgabenzuordnung mit HTTP 422 abgewiesen, ohne Anbietertransfer. Nach Prüfung
+  der Ziele und erneuter Einwilligung Erfolg. Kein automatischer visueller Reset
+  vor dem Start behauptet. Der Test-Sitzungsschlüssel war abschließend nicht persistiert.
+- **N06 → B01, B05, F01, F02, F03 · bestanden im geprüften Ablauf · N/W und I/W.**
+  Echte Music2Emo-Inferenz gestartet. Währenddessen Moduswechsel, Öffnen anderer
+  Songs, Modellwahl sowie persistierende Profil-/Routing-/Geräteaktionen nativ
+  gesperrt. Keine neue Songidentität oder Zuordnung wirksam. Nach Abschluss/Abbruch
+  wieder bedienbar. Editierbare Formularentwürfe waren keine gespeicherten Änderungen.
+- **N07 → B04, F06 · bestanden für regulären Abbruch · N/W und I/W.**
+  Echten Music2Emo-Auftrag nach sichtbarem Fortschritt nativ abgebrochen;
+  Status abgebrochen, kein Ergebnis, Workerbereich aufgeräumt und Folgeauftrag möglich.
+  Das ersetzt keine Abnahme jedes Zeitpunkts im Auftrag.
+- **N08 → B07, B08, F04, F05 · bestanden für geprüfte Störung · N/W, I/W und H/M.**
+  Eigenen Dienst während echter lokaler Analyse beendet und neu gestartet.
+  Vollständige Tabellen für Tracks, Cache und Besitzer vor/nach Restart identisch,
+  SQLite intakt. Im finalen Build verständlicher DE-/EN-Diensthinweis statt
+  rohem Fetchfehler; erneute native Analyse erfolgreich. Music2Emo ebenfalls
+  nach Störung erfolgreich wiederholt. Ungültige Anbieterantwort nativ geprüft:
+  kein Teilcache, altes vollständiges Ergebnis erhalten, anschließender API-Erfolg.
+  Harte Prozessabbrüche hinterließen zwei isolierte Workerbereiche. Der Halter
+  sicherte sie als Beleg und entfernte sie; automatische Crashbereinigung bleibt offen.
+- **N09 → A06, A08, F07 · bestanden · N/W, I/W und R/T.** Nicht installiertes
+  CLAP Fusion offline ausgewählt und Analyse nativ gestartet: verständlicher
+  Installations-/Wechselhinweis auf Deutsch und Englisch, keine Downloads oder
+  Änderungen produktiver Gewichte. Alte Analysen erhalten. Nach Auswahl des
+  installierten kompakten CLAP echte native Analyse erfolgreich. Atomare
+  Aktivierung von Prozessor und Modell zusätzlich regressionsgeprüft.
+- **N10 → D01, D02, D03, D05, D08, D09 · bestanden im Stichprobenumfang · N/W.**
+  Tatsächliche Musik abgespielt, pausiert und zehn Sekunden weitergesprungen;
+  lokaler Modellwechsel zwischen vorhandenen Ergebnissen, Songwechsel und
+  Local/API/Local nativ geprüft. Zeitreihen erfassen den sichtbaren Aufbau
+  von neutral zu lokaler Farbe sowie Modell-/Songübergänge. Seek während
+  laufender Wiedergabe unterbrach den fortlaufend neu angesteuerten Farbverlauf
+  ohne beobachteten neutralen Reset. Nach Neustart neutral ohne ausgewählten Song.
+  DE-/EN-Oberflächen geprüft. Keine Aussage über Emotionsrichtigkeit.
+- **N11 → D04, D06, D07 · bestanden im Stichprobenumfang · N/W.** Neue native
+  Sitzung mit WebView2-Präferenz für reduzierte Bewegung; `matchMedia` bestätigte
+  den Zustand. Echte Wiedergabe, Modellwechsel, Pause und Local/API/Local mit
+  verweigerter Übertragung geprüft. Sichtbare ruhige Zustände und lesende
+  Laufzeitdiagnose: dekorative Animationen und Übergänge aus. Kein globaler
+  Windows-Eingriff; kein Beweis sämtlicher Betriebssystem-/DPI-Konfigurationen.
+- **N12 → A03 · echte Zwei-Modell-Inferenz weiterhin blockiert; R/T bestanden.**
+  Nur XLM-EMO fachlich passend lokal installiert. Qwen bleibt Interpretationsmodell;
+  keine zusätzlichen Gewichte geladen. Kontrollierte A/B/A-Pipeline prüft
+  tatsächlichen Auswahlpfad, Entladen, neue Quelle und unterschiedliche Ergebnisse.
+  Leere Testmodellordner und Doubles sind ausdrücklich kein zweites reales Modell.
+- **N13 → F08 · teilweise bestanden · N/W.** Die oben genannten nativen Abläufe
+  ergänzen die bisherige Kreuzmatrix. Eine vollständige kartesische Kombination
+  aller Songs, Modelle, Modi, Fehler und Bewegungspräferenzen ist nicht ausgeführt.
+  Keine vollständige Kernfreigabe.
+
+### Zeitliche Belege und Messgrenzen
+
+45 native Bildstichproben mit tatsächlichen Zeitstempeln lokal gesichert.
+Dichte Folgen für lokale Rückkehr, Wiedergabe, Seek, Modell- und Songwechsel
+reichen ungefähr von 0,2 bis 2,3 Sekunden nach der Aktion; reduzierte Wiedergabe
+bis etwa 3,1 Sekunden. Farbproben einer freien Hintergrundregion bestätigen
+zusammen mit den Bildern fortlaufende Änderungen ohne beobachteten Neutralreset
+beim Seek. Lesende Laufzeitdiagnose bestätigt während Wiedergabe laufende,
+neu angesteuerte Farbübergänge. Keine Bildraten- oder lückenlose Einzelbildmessung.
+
+Der erste Versuch eines schnellen Local/API/Local-Wechsels lag wegen
+Werkzeuglatenz rund sieben Sekunden auseinander. Er belegt keinen unterbrochenen
+Zwei-Sekunden-Übergang. Der gültige Unterbrechungsnachweis ist die Seek-Folge
+während tatsächlicher Wiedergabe. Einzelne schnelle Bildaufnahmen enthielten
+unvollständig erfasste Schrift; daraus folgt weder ein bestätigter Darstellungsfehler
+noch eine Garantie perfekter Einzelbilder. Rohbilder, Lyrics und Messdateien bleiben lokal.
+
+### Korrekturen, Regression und Datenabschluss
+
+Ergänzte DE-/EN-Fragmente für Anbieterfehler und deren Rückübersetzung bei
+laufendem Sprachwechsel. Verbindungsfehler zum lokalen Dienst zeigen einen
+verständlichen Hinweis mit manueller Wiederholung; kein automatischer Retry.
+Explizite Abbruchsignale und `AbortError` bleiben erhalten. Drei neue Backendfälle,
+ein neuer Sprachtest und zwei neue Frontend-Netzwerkfälle ergänzen die Regression.
+
+- Backend: **384 bestanden**, 31,97 Sekunden.
+- Frontend: **149 bestanden in 29 Dateien**, 17,44 Sekunden.
+- Rust: **9 bestanden**, locked/offline. Node-Dialogdriver: **5 bestanden**.
+- TypeScript/Vite und finaler Windows-Releasebuild ohne Bundle: bestanden.
+  Bestehende Chunk-/Hardlink-Fallbackwarnungen; kein neuer Installerlauf.
+
+Fehlversuche bleiben erhalten: Sandbox-Socket-/Teststarts mussten außerhalb
+der Sandbox wiederholt werden; erster Sprachtest benötigte die jsdom-Umgebung;
+ein erster Abbruchtest zeigte den ungeeigneten `instanceof Error`-Vergleich für
+DOMException. Korrigierte finale Läufe bestanden. Eine Bildauswertung scheiterte
+zunächst am fehlenden Pillow der aktuellen Umgebung und wurde mit vorhandener
+Pillow-Umgebung wiederholt. Diese Halterfehler sind keine Appfehler.
+
+Abschließender Vergleich: beide tatsächlich benutzten Originale und produktive
+SQLite unverändert; produktive und isolierte SQLite `integrity_check=ok`, keine
+verwaisten Cachebesitzer. Kein Anspruch auf erneutes Hashen des ganzen Musikbestands.
+Eigene App, Dienst, Worker und Anbieter beendet; geprüfte Loopbackports frei.
+Regulärer Abbruch automatisch bereinigt; harte Abbruchbereiche nach Belegsicherung
+vom Halter entfernt. Musik, Ausschnitte, Analysen, Testschlüssel und Rohbelege
+bleiben ignoriert lokal. Keine Links genutzt, keine Downloads, keine echten Schlüssel.
+
+Git-Abgleich: Main `1717ffd`, #11 `ff585f5` und #12 `5d459f0` unverändert offen;
+#13 bleibt Draft gegen #12. Beide offenen Quellen sind bereits Vorfahren des
+Phase-2B-Branches. Keine automatischen Main-Merges, keine private Abstammung,
+keine Änderung der Dokumentationsstruktur. Weitere Grenzen aus der Erstabnahme
+gelten fort: echte zweite Textmodell-Inferenz, Langzeitbetrieb, weitere DPI/
+Plattformen, vollständige Timeoutdauer, Installation und Musikqualitätsabnahme.

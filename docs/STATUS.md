@@ -1,6 +1,6 @@
 # Aktueller Entwicklungs- und Abnahmestand
 
-Stand: 18. November 2026. Dies ist die einzige aktuelle Statusübersicht.
+Stand: 20. November 2026. Dies ist die einzige aktuelle Statusübersicht.
 Prüfberichte halten datierte Nachweise fest; frühere Sitzungsstände sind keine
 weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsversion.
 
@@ -16,6 +16,10 @@ auf `codex/phase2a-public-review` veröffentlicht (`5d459f0`), noch nicht gemerg
 Die vier CI-Jobs dieses PRs sind erfolgreich. [PR #11](https://github.com/FutureKLP/MoodScope-public/pull/11)
 bleibt separat offen. Der lokale Phase-2B-Branch `codex/phase2b-native-ai`
 integriert beide öffentlichen Quell-/Dokumentationslinien ohne private Vorfahren.
+[PR #13](https://github.com/FutureKLP/MoodScope-public/pull/13) bleibt ein Draft
+gegen den Phase-2A-Reviewbranch von PR #12. Die Nachabnahme 2B.2 baut auf dessen
+bisherigem Head `af3b762` auf. PR #11 und #12 sind weiterhin offen;
+Main wurde nicht gemergt oder überschrieben.
 Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
 ## Entwicklungsphasen
@@ -32,9 +36,15 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 - **Phase 2B – KI, Modelle, Atmosphäre und API:** teilweise bestanden.
   Echte Offline-Inferenz und kontrollierte API-Verträge, native Modellauswahl,
   Local/API/Local, Sprache, Atmosphäre sowie App-/Dienstneustart geprüft.
-  Fehlende Audiomodelldateien werden verständlicher erklärt; der native Testhalter
-  erzwingt CPU nun ausdrücklich. Vollständige native Anbieterbearbeitung,
-  Reduced Motion und unterbrochene Farb-/Auftragswechsel bleiben offen.
+  Nachabnahme 2B.2: native Profilanlage, Bearbeitung, Löschung, Routing,
+  Einwilligung, kontrollierte Anbieterfehler und Dienstwiederherstellung geprüft.
+  Echte lokale Musikaufträge, Sperren, Abbruch und Wiederholung bestanden;
+  fehlende CLAP-Dateien nativ auf Deutsch und Englisch mit Wiederherstellung geprüft.
+  Zeitstichproben belegen sichtbare Farbverläufe bei Wiedergabe, Seek, Song- und
+  Modellwechsel; Reduced Motion wurde in einer eigenen nativen Sitzung geprüft.
+  Ein zweites echtes Textemotionsmodell fehlt weiterhin. Die vollständige
+  Kreuzmatrix und automatische Scratchbereinigung nach hartem Prozessende
+  sind damit nicht vollständig abgenommen.
   [Vollständige Matrix und Grenzen](PHASE2B-ACCEPTANCE.md).
 - **Phase 2C – Hörstudio und Gesamtregression:** geplant.
 - **Phase 3 – Langzeitbetrieb und Performance:** geplant.
@@ -43,6 +53,18 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 - **Externe Datenbanken:** bis zur dokumentierten Kernfreigabe gesperrt. SQLite bleibt Standard.
 
 ## Weiter offene Grenzen
+
+Aktuelle Regression: 384 Backend-, 149 Frontend-, 9 Rust- und 5 Node-Tests
+bestanden; TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich.
+Zwei begrenzte Fehlerkorrekturen: vollständige DE-/EN-Anbieterfehlermeldungen
+einschließlich Sprachwechsel sowie ein verständlicher DE-/EN-Hinweis bei
+unterbrochener Verbindung zum lokalen Dienst. Kein automatischer Retry.
+
+Der native Abbruch räumt seinen Workerbereich auf. Erzwungenes Beenden des
+Prüfdienstes hinterließ dagegen zwei isolierte Workerbereiche; der Testhalter
+sicherte die Belege und entfernte diese anschließend. Das ist kein Nachweis
+automatischer Crashbereinigung. Keine echten Cloudschlüssel oder Anbieteraufrufe,
+keine neuen Gewichte und keine Änderungen an produktiven Datenbanken.
 
 Ein Music2Emo-Prüfdienstfehler wurde mit Workerlog reproduziert: CUDA-Ziel
 bei fehlender sichtbarer Worker-GPU. Der Testhalter setzt nun explizit CPU.

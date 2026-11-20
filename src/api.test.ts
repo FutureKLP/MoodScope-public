@@ -18,3 +18,18 @@ it('reports non-JSON server failures and structured validation without echoing s
 it('uses a separate connection pool only for loopback HTTP services',()=>{
  expect(controlOrigin('http://127.0.0.1:8765')).toBe('http://localhost:8765');expect(controlOrigin('http://localhost:8765')).toBe('http://127.0.0.1:8765');expect(controlOrigin('https://example.invalid')).toBe('https://example.invalid');
 });
+
+it('explains a service interruption in both languages without retrying the request',async()=>{
+ const fetcher=vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+ vi.stubGlobal('fetch',fetcher);
+ await expect(api('/jobs/fixture')).rejects.toMatchObject({status:0,message:'Lokaler Dienst nicht erreichbar oder Zeitlimit überschritten. Dienststatus prüfen und erneut versuchen. Gespeicherte Analysen bleiben erhalten.'});
+ setLanguage('en');
+ await expect(api('/jobs/fixture')).rejects.toMatchObject({status:0,message:'The local service is unreachable or the request timed out. Check the service status before trying again. Saved analyses are preserved.'});
+ expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it('preserves deliberate request cancellation instead of reporting a service failure',async()=>{
+ const failure=new DOMException('Authored cancellation','AbortError');
+ vi.stubGlobal('fetch',vi.fn().mockRejectedValue(failure));
+ await expect(api('/library')).rejects.toBe(failure);
+});
