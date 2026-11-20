@@ -541,8 +541,10 @@ Insbesondere kein nativer Sichtnachweis der zurückgesetzten Checkbox behauptet.
 
 ### Regression und kontrollierter Abschluss
 
-396 Backendtests bestanden (57,40 s); vollständige Frontendsuite mit 154 Tests
-bestanden (26,35 s), zusätzlicher englischer Checkboxfall separat geprüft.
+396 Backendtests bestanden (57,40 s); finale vollständige Frontendsuite mit 156 Tests
+bestanden (18,14 s), einschließlich englischer Checkbox und lokaler Analyse bei
+ungültigem Anbieterstatus. Die neue Transferprüfung setzt ausdrückliche Zustimmung
+voraus und blockiert keine rein lokalen Aufträge wegen einer fehlerhaften Zuordnung.
 Neun Rusttests locked/offline und fünf Node-Dialogdrivertests bestanden.
 TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich. Bekannte
 Vite-Chunkwarnung bleibt; kein Installerlauf.

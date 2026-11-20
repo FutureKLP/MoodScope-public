@@ -58,12 +58,12 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
 ## Weiter offene Grenzen
 
-Aktuelle Regression: 396 Backendtests, vollständige Frontendsuite mit 154 Tests
-und zusätzlich separat geprüfter englischer Checkboxfall, 9 Rust- und 5 Node-Tests
+Aktuelle Regression: 396 Backend-, 156 Frontend-, 9 Rust- und 5 Node-Tests
 bestanden; TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich.
 Die Korrekturen aus 2B.2 bleiben erhalten. Neu: nur eindeutig eigene inaktive
 Music2Emo-Bereiche bereinigen und Zustimmung nach Verbindungs-/Sitzungswechsel
-verwerfen; Routingversion vor Transfer erneut prüfen. Kein automatischer Transferretry.
+verwerfen; Routingversion vor erlaubtem Transfer erneut prüfen. Rein lokale Aufträge
+bleiben unabhängig vom Anbieterstatus. Kein automatischer Transferretry.
 
 Der frühere 2B.2-Lauf hinterließ zwei vom Halter entfernte Crashbereiche.
 Der neue 2B.3-Dienstlauf belegt automatische Bereinigung eines markierten eigenen

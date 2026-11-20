@@ -221,9 +221,9 @@ export function App(){
     if(request===trackRequest.current)await runAnalysis(t,importedLyrics);
   }
   async function runJob(path:string,body:unknown={}){
-    if(body&&typeof body==='object'&&'upload_consent' in body){
+    if(body&&typeof body==='object'&&'upload_consent' in body&&body.upload_consent){
       const current=await api('/provider-routes');acceptRouting(current);
-      if(body.upload_consent&&(!('routing_version' in body)||body.routing_version!==current.version)){
+      if(!('routing_version' in body)||body.routing_version!==current.version){
         setConsent(false);throw Error(tr('Aufgabenzuordnung geändert. Ziele prüfen und der Übertragung erneut zustimmen.'));
       }
     }

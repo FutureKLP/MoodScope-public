@@ -174,9 +174,10 @@ Kernfreigabe. Keine neuen echten Anbieter-, Installer- oder anderen Plattformtes
 
 ## Phase 2B.3 am 20. November 2026
 
-396 Backendtests bestanden (57,40 s), vollständige Frontendsuite mit 154 Tests
-(26,35 s), anschließend ergänzter englischer Checkboxfall im 39-Fälle-App-Lauf
-bestanden (13,63 s). Neun Rusttests locked/offline, fünf Node-Dialogdrivertests,
+396 Backendtests bestanden (57,40 s), finale vollständige Frontendsuite mit 156 Tests
+(18,14 s), einschließlich englischer Checkbox und lokaler Analyse bei ungültigem
+Anbieterstatus. Der vorherige vollständige 154-Fälle-Lauf und der zusätzliche
+39-Fälle-App-Lauf sind als Zwischenprüfungen erhalten. Neun Rusttests locked/offline, fünf Node-Dialogdrivertests,
 TypeScript/Vite und native Windows-Releasekompilierung ohne Bundle erfolgreich.
 Bekannte Chunkwarnung bleibt; kein Installer-/Plattformtest.
 

@@ -58,6 +58,17 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it('keeps local analysis independent of an unavailable provider-routing status',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>String(input).endsWith('/provider-routes')?
+      new Response(JSON.stringify({detail:'Invalid routing fixture'}),{status:422}):original(input,init)));
+    const view=render(<App/>);
+    await userEvent.upload(view.container.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText('Gespeicherte Analyse geladen; keine erneute KI-Inferenz.');
+    await userEvent.click(screen.getByRole('button',{name:'Neu analysieren'}));
+    await waitFor(()=>expect(requests.some(r=>r.path.endsWith('/analyze'))).toBe(true));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('revokes visible English transfer consent after reconnecting to a new session',async()=>{
     setLanguage('en');const original=vi.mocked(fetch).getMockImplementation()!;let version='session-a';
     vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>String(input).endsWith('/provider-routes')?
