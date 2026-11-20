@@ -397,15 +397,57 @@ neue vollständige D01–D16-Abnahme. Local/API-Schutzregressionen bestanden; ke
 Cloudtransfer oder neuer Anbieterauftrag ausgeführt.
 
 Verwendetes Original, produktive SQLite, vorhandene Modellgewichte und verwaltete
-Testaudios unverändert. Beide isolierten SQLite-Datenbanken und produktive SQLite
+Testaudios unverändert. Drei isolierte SQLite-Datenbanken und produktive SQLite
 intakt; keine verwaisten Cachebesitzer. Track-, Cache-, Besitzerzeilen, verwaltete
 Audios und Stemhashes über den vollständigen nativen Neustart identisch.
 Eigene Dienste/App/Worker beendet; Testports frei. Keine temporären Mix-WAVs
 oder eigenen aktiven Workerbereiche. Keine unbekannten Verzeichnisse gelöscht.
 
-Geschlossen sind die gezielten H/I-Demucs-Fehler-/Crash-/Cacheerhaltfälle und die
-oben abgegrenzten N/W-Ressourcenstichproben. Offen bleiben insbesondere native
-Demucs-Fehlerdialoge bei Fehlgewichten/hartem Dienstverlust, die vollständige
+### Ergänzende native Demucs-Fehlerfolge
+
+Nach dem Dokumentationscheckpoint `e73fcd2` wurden die beiden verbliebenen nativen
+Demucs-Fehlerdialoge gezielt nachgeprüft. Eigener weiterer Releaseclient, kopierte
+isolierte Testbibliothek und downloadgesperrter Prüfdienst; bestehende vollständige
+Stems und vorbereitete Anzeige-Caches separat erhalten. Erneuter Eingangstest mit
+frischer Fenster-/Bildbindung, 96 DPI und sichtbarem Bibliothekswechsel bestanden.
+
+1. **Bestanden · N/H/I:** Sechsgruppenmodell nativ gewählt und gestartet; der
+   Testloader sucht in der eigenen leeren Modellwurzel. Tatsächlicher
+   FileNotFoundError, sichtbare Meldung zur fehlgeschlagenen Quellentrennung mit
+   Modell-/Speicher-/Installationshinweis und Fehler-ID. Kein Download und kein
+   fertiger Sechsgruppen-Cache. Nach Freigabe der vorhandenen Gewichte erneuter
+   nativer Start: echte Sechsgruppen-Trennung erfolgreich in 7,22 s.
+2. **Fehlversuch, kein aktiver Crashnachweis:** Der zunächst geplante harte
+   Dienstabbruch erfolgte erst nach diesem erfolgreichen Sechsgruppenauftrag.
+   Er zählt ausschließlich als Dienstende nach Abschluss; Cache bleibt erhalten.
+3. **Bestanden · N/H/I:** Nach Neustart vorhandenes Fine-tuned-Ensemble nativ
+   gewählt und gestartet. Sichtbarer Trennfortschritt bei 15 %; unmittelbar vor
+   hartem Ende bestätigt der Dienst nochmals status=running. Nur eigene
+   Dienstfamilie beendet; Client blieb geöffnet. Sichtbare verständliche Meldung:
+   Dienst nicht erreichbar, Dienststatus prüfen/erneut versuchen, gespeicherte
+   Analysen bleiben erhalten. Kein fertiger Fine-tuned-Cache nach Neustart.
+   Vollständige Vier-/Sechsgruppen-Caches vor/nach Crash hashgleich.
+4. **Bestanden · N/H/I:** Ohne Appneustart erneut nativ getrennt. Tatsächlicher
+   Fine-tuned-Neulauf erfolgreich in 26,02 s, cached=false; gespeicherte Spuren
+   und verwendetes Modell sichtbar. Keine automatische Jobwiederholung.
+
+Zwischenzeitlich lieferte die Automation nur die 16×16-Hilfsregion. Neue
+Fensterauswahl plus Aktivierung stellte die große Region wieder her; keine
+Eingaben aus den kleinen/veralteten Bildern. Die interne Werkzeugursache bleibt
+offen. Unlesbare/beschädigte Gewichte wurden weiterhin auf H/I-Ebene geprüft,
+nicht zusätzlich in jedem nativen Dialog und jeder Sprache.
+
+Abschluss dieser Folge: ursprüngliche Track-/Cache-/Besitzerzeilen unverändert,
+vorhandene vollständige Stems hashgleich; zusätzliche vollständige Sechsgruppen-
+und Fine-tuned-Ausgaben ausschließlich lokal. Alle vier geprüften SQLite intakt,
+keine verwaisten Besitzer. Original, Gewichte und produktive Daten unverändert,
+eigene Prozesse beendet, Testports frei. Kein neuer Anwendungscode; die oben
+genannten Regressionen/Builds prüfen denselben Quellstand. Keine erneute volle
+Suite nach dieser rein nativen Zusatzfolge behauptet.
+
+Geschlossen sind die gezielten H/I-Demucs-Fehler-/Crash-/Cacheerhaltfälle, die
+native Fehlgewichts-/Dienstverlust-/Wiederholungsfolge und die oben abgegrenzten
+N/W-Ressourcenstichproben. Offen bleiben die vollständige
 wiederholte native Ressourcen-/Seeking-/Lyrics-Kreuzmatrix und tatsächliche
 Audioausgabemessung. Weitere Plattform-/DPI-, Installer-, Langzeit- und
 Qualitätsgrenzen gelten fort. **Keine vollständige Phase-2C- oder Kernfreigabe.**

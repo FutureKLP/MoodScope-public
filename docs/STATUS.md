@@ -73,8 +73,11 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   Live-Contexts nach Original-/Songwechsel geschlossen, alle 18 Nodes getrennt;
   160 Zeitstichproben zeigen vier Looprücksprünge. Neue Ressourcenproben und
   vollständiger App-/Dienstneustart mit identischen SQLite-/Audio-/Stemständen
-  bestanden. Fehlgewichts-/Crashdialoge, vollständige native Wiederholungsmatrix
-  und tatsächliche Audioausgabemessung bleiben offen. Keine Leckfreiheit behauptet.
+  bestanden. Ergänzend native Fehlgewichtsmeldung, sichtbarer Fine-tuned-Auftrag,
+  harter Dienstverlust und erfolgreiche native Wiederholung nach Dienstneustart
+  geprüft; vorhandene Vier-/Sechsgruppen-Caches erhalten. Vollständige native
+  Wiederholungsmatrix und tatsächliche Audioausgabemessung bleiben offen.
+  Keine Leckfreiheit behauptet.
   [Vollständige Matrix und Grenzen](PHASE2C-ACCEPTANCE.md).
 - **Phase 3 – Langzeitbetrieb und Performance:** geplant.
 - **Phase 4 – Installer und Plattformabnahme:** geplant.
