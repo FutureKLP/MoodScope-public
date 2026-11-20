@@ -1,5 +1,8 @@
 # Entwicklungsstand 0.3
 
+Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 Anbieteraufgaben binden Zustimmung, Ziel, Modell und Sitzungsschlüssel an einen
 geprüften Jobstand. Profile und lokale Modelle bleiben gespeichert; Schlüssel
 und Zustimmung werden nach Backendneustart erneut benötigt. Deutsch und Englisch

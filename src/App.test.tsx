@@ -5,6 +5,7 @@ import {act,cleanup,render,screen,waitFor,fireEvent,within} from '@testing-libra
 import userEvent from '@testing-library/user-event';
 import {App} from './main';
 import {setLanguage} from './i18n';
+import * as mediaFailure from './playbackFailure';
 
 const track={id:'test-song',name:'Authored test.wav',title:'Authored test',artist:'Test',duration:12};
 const notes={interpretation:'',instruments:'',personnel:'',genre:'',bpm:null};
@@ -57,6 +58,97 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it('keeps local analysis independent of an unavailable provider-routing status',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>String(input).endsWith('/provider-routes')?
+      new Response(JSON.stringify({detail:'Invalid routing fixture'}),{status:422}):original(input,init)));
+    const view=render(<App/>);
+    await userEvent.upload(view.container.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText('Gespeicherte Analyse geladen; keine erneute KI-Inferenz.');
+    await userEvent.click(screen.getByRole('button',{name:'Neu analysieren'}));
+    await waitFor(()=>expect(requests.some(r=>r.path.endsWith('/analyze'))).toBe(true));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+  it('revokes visible English transfer consent after reconnecting to a new session',async()=>{
+    setLanguage('en');const original=vi.mocked(fetch).getMockImplementation()!;let version='session-a';
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>String(input).endsWith('/provider-routes')?
+      new Response(JSON.stringify({routes:{},targets:{},version})):original(input,init)));
+    render(<App/>);await userEvent.selectOptions(screen.getByLabelText('Analysis mode'),'cloud');
+    const checkbox=screen.getByRole('checkbox',{name:'For this session, I allow the described transfers to the assigned providers or servers.'}) as HTMLInputElement;
+    await userEvent.click(checkbox);expect(checkbox.checked).toBe(true);
+    version='session-b';fireEvent(window,new Event('focus'));
+    await waitFor(()=>expect(checkbox.checked).toBe(false));
+    expect(requests.some(r=>r.path.endsWith('/analyze')||r.path.endsWith('/interpret'))).toBe(false);
+  });
+  it.each(['restart','offline','routing'])('visibly revokes consent after %s and requires a fresh grant',async(change)=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;
+    let version='session-a',offline=false;
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{
+      if(String(input).endsWith('/provider-routes')){
+        if(offline)throw new TypeError('offline fixture');
+        return new Response(JSON.stringify({routes:{},targets:{},version}));
+      }
+      return original(input,init);
+    }));
+    render(<App/>);
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
+    const checkbox=()=>screen.getByRole('checkbox',{name:'Ich erlaube für diese Sitzung die beschriebenen Übertragungen an die zugeordneten Anbieter oder Server.'}) as HTMLInputElement;
+    await userEvent.click(checkbox());expect(checkbox().checked).toBe(true);
+    if(change==='offline')offline=true;else version=change==='restart'?'session-b':'changed-target';
+    fireEvent(window,new Event('focus'));
+    await waitFor(()=>expect(checkbox().checked).toBe(false));
+    offline=false;fireEvent(window,new Event('focus'));
+    await waitFor(()=>expect(checkbox().checked).toBe(false));
+    await userEvent.click(checkbox());expect(checkbox().checked).toBe(true);
+    expect(requests.some(r=>r.path.endsWith('/analyze')||r.path.endsWith('/interpret'))).toBe(false);
+  });
+  it('checks the current consent version before submitting a transfer job',async()=>{
+    const original=vi.mocked(fetch).getMockImplementation()!;let version='session-a';
+    vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>String(input).endsWith('/provider-routes')?
+      new Response(JSON.stringify({routes:{},targets:{},version})):original(input,init)));
+    const view=render(<App/>);
+    await userEvent.upload(view.container.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText('Gespeicherte Analyse geladen; keine erneute KI-Inferenz.');
+    await userEvent.selectOptions(screen.getByLabelText('Analysemodus'),'cloud');
+    const checkbox=screen.getByRole('checkbox',{name:'Ich erlaube für diese Sitzung die beschriebenen Übertragungen an die zugeordneten Anbieter oder Server.'}) as HTMLInputElement;
+    await userEvent.click(checkbox);version='session-b';
+    await userEvent.click(screen.getByRole('button',{name:'Neu analysieren'}));
+    await screen.findByRole('alert');expect(checkbox.checked).toBe(false);
+    expect(requests.some(r=>r.path.endsWith('/analyze'))).toBe(false);
+  });
+  it('accepts repeated selection of the same audio file and loads the saved analysis without another job',async()=>{
+    const {container}=render(<App/>),input=container.querySelector('input[type=file]') as HTMLInputElement;
+    const file=new File(['fixture'],'same.wav',{type:'audio/wav'});
+    await userEvent.upload(input,file);
+    await screen.findByText('Gespeicherte Analyse geladen; keine erneute KI-Inferenz.');
+    await userEvent.upload(input,file);
+    await waitFor(()=>expect(requests.filter(r=>r.path==='/tracks')).toHaveLength(2));
+    await waitFor(()=>expect(screen.getByRole('button',{name:'+ Song importieren'}).hasAttribute('disabled')).toBe(false));
+    expect(requests.filter(r=>r.path.startsWith('/tracks/test-song/analysis'))).toHaveLength(2);
+    expect(requests.some(r=>r.path.endsWith('/analyze'))).toBe(false);
+  });
+  it('loads LRC text with fractional timestamps into the editor without running analysis',async()=>{
+    const {container}=render(<App/>);
+    const text='[00:10.25]Authored fractional timestamp\n[00:25.00]Authored next line';
+    const file=new File([text],'authored.lrc',{type:'text/plain'});
+    Object.defineProperty(file,'text',{value:async()=>text});
+    await userEvent.upload(container.querySelector('input[accept=".lrc,.txt"]') as HTMLInputElement,file);
+    await waitFor(()=>expect((container.querySelector('textarea') as HTMLTextAreaElement).value).toBe(text));
+    expect(requests.some(r=>r.path.endsWith('/analyze'))).toBe(false);
+  });
+  it('discards delayed playback diagnostics after reopening a saved song',async()=>{
+    let finish!:(message:string)=>void;
+    vi.spyOn(mediaFailure,'playbackFailure').mockImplementation(()=>new Promise(resolve=>{finish=resolve}));
+    const {container}=render(<App/>);
+    await userEvent.upload(container.querySelector('input[type=file]') as HTMLInputElement,new File(['fixture'],'test.wav',{type:'audio/wav'}));
+    await screen.findByText('Gespeicherte Analyse geladen; keine erneute KI-Inferenz.');
+    fireEvent.error(container.querySelector('audio')!);
+    expect((await screen.findByRole('alert')).textContent).toContain('Audio-Wiedergabe fehlgeschlagen');
+    await userEvent.click(screen.getByRole('button',{name:'Bibliothek'}));
+    await userEvent.click(await screen.findByRole('button',{name:'Öffnen'}));
+    await act(async()=>finish('Delayed obsolete diagnostic'));
+    expect(screen.queryByText('Delayed obsolete diagnostic')).toBeNull();
+  });
   it('applies the visible Whisper model when transcription is routed locally in API mode',async()=>{
     const original=vi.mocked(fetch).getMockImplementation()!;
     vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>{

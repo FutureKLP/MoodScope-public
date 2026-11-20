@@ -84,3 +84,13 @@ def test_open_failure_releases_previously_opened_stems(tmp_path,monkeypatch):
     with pytest.raises(OSError):separation.mix(tmp_path,'test','htdemucs',['vocals','drums'])
     assert len(opened)==1 and opened[0].closed
     assert not list(root.glob('*.tmp.wav'))
+
+
+@pytest.mark.parametrize('invalid',[np.nan,np.inf,-np.inf])
+def test_solo_mix_rejects_nonfinite_samples_even_with_cached_activity(tmp_path,invalid):
+    root=separation.folder(tmp_path,'test','htdemucs');root.mkdir(parents=True)
+    samples=np.zeros((480,2),dtype='float32');samples[200,0]=invalid
+    sf.write(root/'vocals.wav',samples,48000,subtype='FLOAT')
+    (root/'manifest.json').write_text(json.dumps({'sources':['vocals'],'sample_rate':48000,'activity':{'vocals':1}}))
+    with pytest.raises(ValueError,match='Ungültige Audiodaten'):
+        separation.mix(tmp_path,'test','htdemucs',['vocals'])

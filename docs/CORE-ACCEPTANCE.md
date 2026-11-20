@@ -1,11 +1,36 @@
 # Kernabnahme und Freigabegrenzen
 
+Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 ## Entscheidung
 
 Die Anwendung bleibt eine Entwicklungsversion. Die Veröffentlichung geprüfter
 Quellverbesserungen bedeutet keine vollständige Kern-, Plattform- oder
 Qualitätsfreigabe. Die externe Datenbankphase ist weiterhin gesperrt; SQLite
 bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
+
+## Phase 2C am 20. November 2026
+
+Teilweise bestanden: echte native Demucs-Trennung mit Abbruch/Neulauf, Live-Mix,
+gemeinsamer Loop, numerisch geprüfte native Exporte und sichere Dialogabbrüche.
+Ein Solo-Schnellpfad lieferte nicht endliche Float-Samples ungeprüft aus;
+blockweise Prüfung ergänzt und nativ mit erhaltenem vorhandenen Exportziel bestätigt.
+Kombinierter Ablauf einschließlich echter lokaler Analyse, kontrollierter Loopback-API,
+Widerruf und App-/Dienstneustart mit unveränderten SQLite-/Audio-/Stemständen geprüft.
+32 Player-/Kurvenpaare: maximal 23,3 ms Anzeigeunterschied, keine Ausgabelatenzmessung.
+Fehlgewichte, harter Demucs-Dienstfehler und vollständige native Audio-Ressourcen-/
+Seeking-/Ausgabesynchronisationsmatrix offen. Phase 2B bleibt teilweise bestanden.
+[Vollständige Phase-2C-Matrix](PHASE2C-ACCEPTANCE.md). Keine Kernfreigabe.
+
+## Phase 2B am 18. November 2026
+
+Teilweise bestanden: echte Offline- und kontrollierte Loopback-Anbietertests,
+native Auswahl und Local/API/Local sowie Neustart-/Datenintegrität geprüft.
+Reproduzierter Music2Emo-Gerätekonflikt im Testhalter korrigiert; historische
+Ursache ohne damaligen Workerlog bleibt unbestätigt. Native Reduced-Motion-,
+unterbrochene Übergangs- und vollständige Profil-/Auftragsmatrix noch offen.
+[Vollständige Matrix](PHASE2B-ACCEPTANCE.md). Keine vollständige Kernfreigabe.
 
 ## Abgesicherte Bereiche
 
@@ -17,6 +42,31 @@ bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
 - Deutsch/Englisch, gemeinsame Palette und reduzierte Bewegung.
 
 ## Noch erforderliche Abnahmen
+
+### Phase 2A und Phase 2A.2 am 17./18. November 2026
+
+**Phase 2A im festgelegten synthetischen Windows-Prüfumfang vollständig bestanden.**
+Die zunächst blockierten Audio-, Wieder-, Fehlquell- und LRC-Dateiimporte wurden
+mit dem neu gebauten Windows-Programm tatsächlich nativ ausgeführt. Der bestehende
+Tauri-Dialog ist nun explizit an das Hauptfenster gebunden; bildgebundene Eingaben
+vermeiden die nachgewiesene WebView2-Prozess- und Accessibility-Indexgrenze.
+Browserimporte verwenden weiterhin die bisherigen HTML-Dateiinputs.
+
+Beide Reparaturfälle erhalten Trackidentität, Analyse und Notiz; ungültige Quellen
+zeigen den Dekodierhinweis ohne SQLite-Änderung. Audio-/LRC-Abbruch, neu importierte
+Lyrics mit 10,25-s-Navigation in Player und Kurve sowie vollständiger App-/Dienst-
+neustart mit unveränderten Bibliothekszeilen und Audiohashes bestanden. Frühere
+Wiedergabe-, Seeking-, Songwechsel- und A/B-Nachweise bleiben getrennt erhalten.
+Originalbestand, synthetische Quellen und produktive SQLite unverändert; eigene
+Prüfprozesse beendet. Nur synthetische Signale und verfasste Texte; keine neue
+Musikqualitätsabnahme. Eine lokale Verarbeitung der importierten LRC wurde über
+die UI ausgeführt, danach aus gespeichertem Ergebnis wieder geöffnet.
+
+Desktoptests am 17., Abschluss am 18. November. PR #10 war beim Testbeginn offen,
+ist beim Abschlussabgleich bereits gemergt; tatsächlicher Main `1717ffd` in den
+Entwicklungsbranch übernommen. Kein automatischer öffentlicher Main-Merge.
+Die breitere Kernfreigabe und das externe Datenbank-Gate bleiben offen.
+[Vollständige 27-Fälle-Matrix, historische Fehler und Grenzen](PHASE2A-ACCEPTANCE.md).
 
 ### Windows-Exportprüfung am 17. November 2026
 
