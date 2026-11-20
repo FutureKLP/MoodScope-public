@@ -171,3 +171,29 @@ Tatsächliche Offline-Inferenz, kontrollierte lokale API-Fehler, Dienstabbruch,
 Neustart und native Bedienung sind getrennt in [Phase 2B](PHASE2B-ACCEPTANCE.md)
 ausgewiesen. Die native Gesamtmatrix bleibt teilweise offen; keine vollständige
 Kernfreigabe. Keine neuen echten Anbieter-, Installer- oder anderen Plattformtests.
+
+## Phase 2B.3 am 20. November 2026
+
+396 Backendtests bestanden (57,40 s), vollständige Frontendsuite mit 154 Tests
+(26,35 s), anschließend ergänzter englischer Checkboxfall im 39-Fälle-App-Lauf
+bestanden (13,63 s). Neun Rusttests locked/offline, fünf Node-Dialogdrivertests,
+TypeScript/Vite und native Windows-Releasekompilierung ohne Bundle erfolgreich.
+Bekannte Chunkwarnung bleibt; kein Installer-/Plattformtest.
+
+Neue Regressionen: normale und unterbrochene Workerlebensdauer, echter Prozesskill,
+aktive Workersperre, FastAPI-Startup-Recovery, ungültige Besitzmarker und verlinkte
+Dateien; sichtbare Zustimmung nach Sitzungs-/Routing-/Verbindungswechsel, erneute
+Versionsprüfung vor Transfer sowie Dienstinstanzheader und Listenerbereinigung.
+Keine Modellinferenz in diesen deterministischen Regressionen.
+
+Der erste Backend-Gesamtlauf hatte 391 Erfolge und einen Langpfadfehler aufgrund
+des zu langen Testhalter-Tempverzeichnisses. Wiederholung mit kurzem isoliertem
+`--basetemp` bestand; abschließender Lauf nach ergänzten Regressionen wie oben.
+Die Prozessregressionen benötigen lokale Prozess-/Socketrechte; ein anfänglicher
+Sandboxlauf blieb ohne Fortschritt. Fehlerhafte erste Windows-Fixtures und die
+korrigierte Prozesszuordnung des realen Testhalters bleiben als Fehlversuche erhalten.
+
+Echter Music2Emo-Crash-/Neustartlauf und Loopback-API-Prüfung bestanden getrennt
+von den Regressionen. Native App gestartet und sichtbar; Bedienfolge wegen
+Testwerkzeug-Geometriefehler unvollständig. Exakte Einordnung, Datenabschluss und
+offene Kriterien: [Phase 2B.3](PHASE2B-ACCEPTANCE.md#nachabnahme-2b3-vom-20-november-2026).

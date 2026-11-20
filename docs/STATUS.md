@@ -17,8 +17,8 @@ Die vier CI-Jobs dieses PRs sind erfolgreich. [PR #11](https://github.com/Future
 bleibt separat offen. Der lokale Phase-2B-Branch `codex/phase2b-native-ai`
 integriert beide öffentlichen Quell-/Dokumentationslinien ohne private Vorfahren.
 [PR #13](https://github.com/FutureKLP/MoodScope-public/pull/13) bleibt ein Draft
-gegen den Phase-2A-Reviewbranch von PR #12. Die Nachabnahme 2B.2 baut auf dessen
-bisherigem Head `af3b762` auf. PR #11 und #12 sind weiterhin offen;
+gegen den Phase-2A-Reviewbranch von PR #12. Die Stabilisierung 2B.3 baut auf dem
+erneut verifizierten öffentlichen Phase-2B-Head `b6b2c88` auf. PR #11 und #12 sind weiterhin offen;
 Main wurde nicht gemergt oder überschrieben.
 Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
@@ -43,8 +43,12 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   Zeitstichproben belegen sichtbare Farbverläufe bei Wiedergabe, Seek, Song- und
   Modellwechsel; Reduced Motion wurde in einer eigenen nativen Sitzung geprüft.
   Ein zweites echtes Textemotionsmodell fehlt weiterhin. Die vollständige
-  Kreuzmatrix und automatische Scratchbereinigung nach hartem Prozessende
-  sind damit nicht vollständig abgenommen.
+  Kreuzmatrix bleibt offen. Stabilisierung 2B.3 ergänzt eigene Workerbesitzmarker,
+  Prozesssperren und automatische Crashbereinigung beim Dienststart sowie die
+  Invalidierung sichtbarer Zustimmung bei Verbindungs-/Sitzungswechsel.
+  Echter isolierter Music2Emo-Crash-/Neustartlauf mit automatischem Cleanup und
+  erfolgreicher erneuter Inferenz bestanden. Die neue zwölfteilige native Bedienfolge
+  ist wegen fehlerhafter Testwerkzeuggeometrie nicht vollständig nachgewiesen.
   [Vollständige Matrix und Grenzen](PHASE2B-ACCEPTANCE.md).
 - **Phase 2C – Hörstudio und Gesamtregression:** geplant.
 - **Phase 3 – Langzeitbetrieb und Performance:** geplant.
@@ -54,17 +58,21 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
 ## Weiter offene Grenzen
 
-Aktuelle Regression: 384 Backend-, 149 Frontend-, 9 Rust- und 5 Node-Tests
+Aktuelle Regression: 396 Backendtests, vollständige Frontendsuite mit 154 Tests
+und zusätzlich separat geprüfter englischer Checkboxfall, 9 Rust- und 5 Node-Tests
 bestanden; TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich.
-Zwei begrenzte Fehlerkorrekturen: vollständige DE-/EN-Anbieterfehlermeldungen
-einschließlich Sprachwechsel sowie ein verständlicher DE-/EN-Hinweis bei
-unterbrochener Verbindung zum lokalen Dienst. Kein automatischer Retry.
+Die Korrekturen aus 2B.2 bleiben erhalten. Neu: nur eindeutig eigene inaktive
+Music2Emo-Bereiche bereinigen und Zustimmung nach Verbindungs-/Sitzungswechsel
+verwerfen; Routingversion vor Transfer erneut prüfen. Kein automatischer Transferretry.
 
-Der native Abbruch räumt seinen Workerbereich auf. Erzwungenes Beenden des
-Prüfdienstes hinterließ dagegen zwei isolierte Workerbereiche; der Testhalter
-sicherte die Belege und entfernte diese anschließend. Das ist kein Nachweis
-automatischer Crashbereinigung. Keine echten Cloudschlüssel oder Anbieteraufrufe,
-keine neuen Gewichte und keine Änderungen an produktiven Datenbanken.
+Der frühere 2B.2-Lauf hinterließ zwei vom Halter entfernte Crashbereiche.
+Der neue 2B.3-Dienstlauf belegt automatische Bereinigung eines markierten eigenen
+Bereichs nach hartem Dienstende. Aktive oder nicht zuordenbare Bereiche bleiben
+erhalten; alte Bereiche ohne Besitzmarker werden nicht nachträglich übernommen.
+Veraltete und fehlende API-Zustimmung werden am tatsächlichen Dienst ohne
+Loopback-Anbieteraufruf abgewiesen; neue Zustimmung erfolgreich mit synthetischen
+Daten geprüft. Der native Checkbox-Sichtnachweis nach Dienstneustart bleibt offen.
+Keine echten Cloudschlüssel/-aufrufe, neuen Gewichte oder Änderungen produktiver Datenbanken.
 
 Ein Music2Emo-Prüfdienstfehler wurde mit Workerlog reproduziert: CUDA-Ziel
 bei fehlender sichtbarer Worker-GPU. Der Testhalter setzt nun explizit CPU.

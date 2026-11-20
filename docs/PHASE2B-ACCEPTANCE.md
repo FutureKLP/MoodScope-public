@@ -1,7 +1,8 @@
 # Phase 2B: KI, Modelle, Atmosphäre und API
 
 Datierte Erstabnahme vom 18. November 2026 mit Nachabnahme 2B.2 vom
-20. November 2026. Aktueller Status: [STATUS.md](STATUS.md).
+20. November 2026 und gezielter Stabilisierung 2B.3 am selben Tag.
+Aktueller Status: [STATUS.md](STATUS.md).
 
 **Entscheidung: teilweise bestanden.** Native Bedienung, echte lokale Inferenz,
 kontrollierte Anbieterverträge und Regressionen sind getrennt ausgewiesen.
@@ -452,3 +453,111 @@ Phase-2B-Branches. Keine automatischen Main-Merges, keine private Abstammung,
 keine Änderung der Dokumentationsstruktur. Weitere Grenzen aus der Erstabnahme
 gelten fort: echte zweite Textmodell-Inferenz, Langzeitbetrieb, weitere DPI/
 Plattformen, vollständige Timeoutdauer, Installation und Musikqualitätsabnahme.
+
+## Nachabnahme 2B.3 vom 20. November 2026
+
+**Entscheidung: die beiden Risiken sind implementiert und automatisiert abgesichert;
+die ausdrücklich geforderte native Bedienfolge ist nicht vollständig nachgewiesen.
+Phase 2B bleibt teilweise bestanden und PR #13 Draft.** Frühere Nachweise bleiben
+historisch erhalten; weder die Dienstprüfung noch Reacttests ersetzen die native Folge.
+
+Öffentlicher Abgleich zu Beginn: Main `1717ffd`, #11 offen auf `ff585f5`, #12 offen
+auf `5d459f0`, #13 Draft gegen #12 auf `b6b2c88`. Sauberer bestehender Phase-2B-Branch;
+keine private Abstammung übernommen, kein Main-Merge und kein Force-Push.
+
+### Workerreste: Ursache und Korrektur
+
+`TemporaryDirectory` konnte bei hartem Dienstende seine Abschlussbereinigung nicht
+ausführen. Ein isolierter Worker war bislang nicht durch eine über den Crash hinaus
+prüfbare Besitz-/Aktivitätssperre geschützt. Neue Bereiche tragen eigene Marker und
+getrennte Eltern-/Workersperren. Der Worker prüft das Elternende unabhängig von der
+Dienst-Abbruchschleife. Startup und periodische Wiederprüfung entfernen nur eindeutig
+eigene, nicht mehr aktive Bereiche. Die Grenzen und konservativen Ausschlüsse stehen
+in [DATA-INTEGRITY.md](DATA-INTEGRITY.md#music2emo-worker-nach-prozessabbruch).
+
+- **W01 · bestanden · R/T.** Normaler Abschluss und Ausnahme bereinigen den eigenen
+  Bereich; regulärer Abbruch und Timeout behalten die vorhandene Terminate-/Killfolge.
+  Ursprungsdatei bleibt bytegleich. Regressionen prüfen ausdrücklich die neue Wurzel.
+- **W02 · bestanden · R/T.** Tatsächlicher isolierter Elternprozess hart beendet;
+  ein noch aktiver zweiter Prozess hält die Workersperre. Kein Löschen. Nach dessen
+  Ende bereinigt der tatsächliche FastAPI-Lifespan beim erneuten Start automatisch.
+- **W03 · bestanden · R/T.** Falsche/beschädigte Marker, fehlende Sperre, unbekannter
+  Ordner und verlinkte Datei bleiben erhalten. Ungültige Wurzelmarker verhindern
+  weder den Dienststartup noch führen sie zum Löschen fremder Inhalte.
+- **W04 · bestanden · H/W und I/W.** Echte lokale Music2Emo-CPU-Inferenz mit einem
+  vorhandenen, quellbenannten 0–90-Sekunden-Musikausschnitt gestartet. Nur der eigene
+  Prüfdienst wurde hart beendet. Beide zugehörigen Windows-Pythonprozesse endeten;
+  ein markierter Arbeitsbereich blieb bis zum Neustart erhalten. Der neu gestartete
+  Dienst entfernte ihn selbständig. Kein manueller Cleanup-Aufruf des Testhalters.
+  Alte Job-ID danach unbekannt; erneute echte Analyse erfolgreich, kein Bereichsrest.
+  Track-, Cache- und Besitzerzeilen vor/nach Crash identisch; erst erfolgreicher
+  Neulauf ändert den Testcache erwartungsgemäß. Kein Modellqualitätsnachweis.
+
+H/W bezeichnet hier tatsächliche isolierte Windows-Dienstprozesse mit HTTP-Steuerung,
+I/W echte Offline-Inferenz. Die native App war parallel geöffnet; die Analyseaktion
+wurde in diesem Lauf über HTTP ausgelöst und zählt nicht als nativer Klicknachweis.
+Originale und vorhandene Ausschnitte wurden nicht geändert; keine Links oder Downloads.
+
+### Sichtbare Zustimmung: Ursache und Korrektur
+
+Die Backend-Routingversion enthält bereits eine flüchtige Sitzungskennung und lehnt
+veraltete Zustimmung ab. Die Oberfläche aktualisierte diese Version bislang nur bei
+einzelnen Modus-/Einstellungsaktionen. Ein reiner Dienstneustart ließ daher eine alte
+Checkbox sichtbar angehakt. Jetzt werden Dienstinstanzwechsel über Antwortheader,
+Verbindungsfehler, Fokuswechsel und eine lokale Routingabfrage alle zwei Sekunden
+berücksichtigt. Verlorene Zustimmung wird nicht beim Wiederverbinden hergestellt.
+Die ausdrückliche Textserverzustimmung wird durch die ungültige Routingversion
+ebenfalls zurückgesetzt. Vor Übertragungsaufträgen wird die aktuelle Version erneut
+gelesen; bei Abweichung wird kein Transferauftrag abgeschickt. Die Backendprüfung
+bleibt die letzte Sperre gegen Neustarts zwischen dieser Abfrage und Jobannahme.
+Keine automatische Wiederholung eines Transfers oder Anbieteraufrufs.
+
+- **E2B3-01 · bestanden · R/T.** Sichtbare Checkbox nach Sitzungswechsel, geänderter
+  Zuordnung und Offline-/Wiederverbindung leer; neue ausdrückliche Zustimmung möglich.
+  Vor einem Transfer entdeckter Versionswechsel verwirft die alte Zustimmung ohne
+  Job-POST. Deutsch und Englisch geprüft; App-Remount-, Provider- und Aufgabenwechsel-
+  Regressionen bleiben erhalten. Dienstheaderwechsel und Abmeldung des Listeners geprüft.
+- **E2B3-02 · bestanden · H/W.** Veraltete Version und fehlende Zustimmung jeweils
+  HTTP 422, unveränderter Loopback-Aufrufzähler. Neue gültige Zustimmung führt zum
+  erfolgreichen synthetischen Anbieterauftrag. Kein echtes API-Schlüsselmaterial;
+  ausschließlich synthetischer Zwei-Sekunden-Track an den lokalen Loopback-Anbieter.
+
+### Native Windows-Folge und verbleibende Lücke
+
+Aktueller Windows-Releasebuild mit eigener Datenkopie, eigenem WebView-Profil und
+eigenem Dienst gestartet; deutsche Oberfläche sichtbar und zugänglich ausgelesen.
+Der erste Screenshot zeigt die vollständige App. Danach lieferte das Werkzeug
+16 × 16 Pixel bzw. `coordinate input geometry is unavailable`. Erneute Fensterbindung,
+Aktivierung, Indexklick, alternative native Steuerung und Tastaturversuch erbrachten
+keinen beobachteten Zustandswechsel. Das ist eine Testwerkzeuggrenze, kein bestätigter
+Appfehler und kein bestandener Klick.
+
+Die geforderte zwölfteilige native Folge ist deshalb offen: Analyse nativ starten,
+Fehlermeldung beim Crash beobachten, nativ erneut analysieren sowie Zustimmung vor/
+nach Dienstneustart sichtbar bedienen und den verweigerten/erneut erlaubten Transfer
+nativ auslösen. Dienstende, Neustart, automatische Bereinigung, erfolgreiche erneute
+Inferenz und API-Verweigerung/-Erfolg sind separat wie oben tatsächlich geprüft.
+Insbesondere kein nativer Sichtnachweis der zurückgesetzten Checkbox behauptet.
+
+### Regression und kontrollierter Abschluss
+
+396 Backendtests bestanden (57,40 s); vollständige Frontendsuite mit 154 Tests
+bestanden (26,35 s), zusätzlicher englischer Checkboxfall separat geprüft.
+Neun Rusttests locked/offline und fünf Node-Dialogdrivertests bestanden.
+TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich. Bekannte
+Vite-Chunkwarnung bleibt; kein Installerlauf.
+
+Erhaltene Fehlversuche: erster Sandbox-Backendlauf ohne Fortschritt, erster Gesamtlauf
+391 bestanden/ein Langpfadfehler durch zu langen Temp-Pfad des Halters; kurze isolierte
+Wiederholung erfolgreich. Zwei anfängliche neue Prozessregressionen benötigten eine
+Windows-kompatible Fixture und Behandlung eines Prozessende-Rennens. Die ersten beiden
+echten Inferenzversuche erreichten keinen geplanten Crash, weil die Prozesssuche erst
+Pfadschreibweisen und dann den Windows-Pythonstarter nicht korrekt berücksichtigte.
+Sie zählen nicht als Crasherfolg. Der korrigierte dritte Lauf ist W04.
+
+Abschluss: zwei verwendete Originale, verwaltete Audiokopien und produktive SQLite
+unverändert; produktive und isolierte SQLite `integrity_check=ok`, keine verwaisten
+Cachebesitzer. Keine eigenen Workerbereiche übrig; eigene App, Dienst und Anbieter
+beendet, geprüfte Loopbackports frei. Rohbelege und Musik bleiben ignoriert lokal.
+Weitere Phase-2B-Grenzen, insbesondere zweites echtes Textemotionsmodell, vollständige
+native Kreuzmatrix, Langzeit-, Plattform-, Installer- und Qualitätsabnahme, bleiben offen.

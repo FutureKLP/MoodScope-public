@@ -22,7 +22,7 @@ import React, {useEffect, useLayoutEffect, useMemo, useRef, useState, memo} from
 import {createRoot} from 'react-dom/client';
 import {Analysis, Point, Track, clock, activeLine,toLrc,trackInitials} from './types';
 import './style.css';
-import {API,api,json,ApiError} from './api';
+import {API,api,json,ApiError,onServiceInvalidated} from './api';
 import {Workspace} from './Workspace';
 import {SourceStudio,OnlineFacts,DiagnosticPanel,SourceMetadata} from './SongTools';
 import {ProviderSettings} from './Providers';
@@ -86,7 +86,7 @@ export function App(){
   useEffect(()=>{try{localStorage.setItem('moodscope-atmosphere',String(ambient))}catch{}},[ambient]);
   const [track,setTrack]=useState<Track|null>(null),[result,setResult]=useState<Analysis|null>(null);
   const [routing,setRouting]=useState<RoutingState|null>(null);const routeVersion=useRef('');
-  function acceptRouting(value:RoutingState){if(!value?.version)return;if(routeVersion.current&&routeVersion.current!==value.version)setConsent(false);routeVersion.current=value.version;setRouting(value)}
+  function acceptRouting(value:RoutingState){if(!value?.version)return;if(routeVersion.current&&routeVersion.current!==value.version)setConsent(false);routeVersion.current=value.version;setRouting(previous=>previous?.version===value.version?previous:value)}
   const modeRequest=useRef(0);const modeAnalyses=useRef(new Map<string,Analysis>());
   const [preferExpression,setPreferExpression]=useState(()=>{try{return localStorage.getItem('moodscope-audio-curve-model')!=='clap'}catch{return true}});
   const [expression,setExpression]=useState<{trackId:string;rows:ExpressionRow[]}|null>(null);
@@ -100,6 +100,15 @@ export function App(){
   const [view,setView]=useState('timeline'),[mode,setMode]=useState<'local'|'cloud'>('local'),[consent,setConsent]=useState(false),[link,setLink]=useState('');
   const settingsView=view==='settings'||view==='prompts';
   useEffect(()=>{let live=true;void api('/provider-routes').then(value=>{if(live)acceptRouting(value)}).catch(()=>{});return()=>{live=false}},[mode,settingsView]);
+  useEffect(()=>{
+    let live=true,pending=false;
+    const invalidate=()=>{if(live){setConsent(false);setRouting(null)}};
+    const unsubscribe=onServiceInvalidated(invalidate);
+    const refresh=async()=>{if(pending)return;pending=true;try{const value=await api('/provider-routes',{signal:AbortSignal.timeout(2500)});if(live)acceptRouting(value)}catch{invalidate()}finally{pending=false}};
+    const timer=window.setInterval(()=>void refresh(),2000);
+    const focus=()=>void refresh();window.addEventListener('focus',focus);
+    return()=>{live=false;unsubscribe();window.clearInterval(timer);window.removeEventListener('focus',focus)};
+  },[]);
   const headerRef=useRef<HTMLDivElement>(null),heroRef=useRef<HTMLDivElement>(null);
   useLayoutEffect(()=>{
     const header=headerRef.current,hero=heroRef.current;if(!header||!hero)return;
@@ -212,6 +221,12 @@ export function App(){
     if(request===trackRequest.current)await runAnalysis(t,importedLyrics);
   }
   async function runJob(path:string,body:unknown={}){
+    if(body&&typeof body==='object'&&'upload_consent' in body){
+      const current=await api('/provider-routes');acceptRouting(current);
+      if(body.upload_consent&&(!('routing_version' in body)||body.routing_version!==current.version)){
+        setConsent(false);throw Error(tr('Aufgabenzuordnung geändert. Ziele prüfen und der Übertragung erneut zustimmen.'));
+      }
+    }
     setProgress(0);const {job_id}=await api(path,json(body));setActiveJob(job_id);setCancelRequested(false);const deadline=Date.now()+30*60*1000;
     try{while(mounted.current&&Date.now()<deadline){const job=await api(`/jobs/${job_id}`);setMessage(job.message);setProgress(job.progress);if(job.status==='cancelled'){const error=new Error(job.message);error.name='JobCancelled';throw error}if(job.status==='error')throw Error(job.message);if(job.status==='done')return job.result;await new Promise(r=>setTimeout(r,900))}
       throw Error(tr('Auftrag noch nicht abgeschlossen. Backend-Status prüfen; keine Ersatzwerte wurden erzeugt.'));

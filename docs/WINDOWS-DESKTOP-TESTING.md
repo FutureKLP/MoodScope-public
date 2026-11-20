@@ -257,3 +257,17 @@ Keine neue NSIS-/Installations-, Linux-, Windows-10-, Langzeit-, Musikqualitäts
 oder vollständige Kernabnahme. Keine neue Anbieter- oder Datenbankphase.
 Rohlogs und Screenshots können lokale Pfade enthalten und bleiben ausschließlich
 im ignorierten Arbeitsbereich. Nur bereinigte Nachweise veröffentlichen.
+
+## Geometriegrenze bei der Stabilisierung 2B.3
+
+Am 20. November 2026 startete der aktuelle Windows-Releaseclient im eigenen
+WebView-Profil mit isolierter Datenkopie. Die Oberfläche war im ersten Screenshot
+vollständig sichtbar. Nachfolgende native Werkzeugaufrufe lieferten nur 16 × 16 Pixel
+oder `coordinate input geometry is unavailable`. Fensterbindung, Aktivierung,
+Indexklick, alternative native Steuerung und Tastaturversuch ergaben keine
+nachgewiesene Bedienung. Keine Aktion aus einem unveränderten Bild als Erfolg zählen.
+
+Die zwölfteilige Crash-/Zustimmungsfolge muss mit funktionierender nativer Steuerung
+nachgeholt werden. Tatsächliche Dienstprozess-, Inferenz- und Loopback-Vertragstests
+sind davon getrennt erfolgreich und in [Phase 2B.3](PHASE2B-ACCEPTANCE.md#nachabnahme-2b3-vom-20-november-2026)
+dokumentiert. Ein HTTP-Start oder Reacttest gilt weiterhin nicht als nativer Klick.

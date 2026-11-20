@@ -5,10 +5,9 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import tempfile
 import time
 import math
-from . import cancellation
+from . import cancellation, worker_workspace
 
 ROOT=Path(__file__).resolve().parents[1]
 WEIGHTS=ROOT/'models/music2emo'
@@ -50,14 +49,14 @@ def fingerprint():
 
 def analyse(audio,data,device,progress):
     if not ready():raise RuntimeError('Music2Emo-Vergleich ist nicht lokal eingerichtet.')
-    with tempfile.TemporaryDirectory(prefix='expression-',dir=data) as directory:
+    with worker_workspace.workspace(data) as directory:
         output=Path(directory)
         with (output/'worker.log').open('wb') as log:
             # The optional research adapter is verified with the base environment;
             # the service may independently use the newer transcription runtime.
             base_python=ROOT/'.venv'/('Scripts/python.exe' if os.name=='nt' else 'bin/python')
             interpreter=str(base_python) if base_python.is_file() else sys.executable
-            process=subprocess.Popen([interpreter,'-m','scripts.music2emo_curve','--audio',str(audio),
+            process=subprocess.Popen([interpreter,'-m','backend.expression_worker',str(output),'scripts.music2emo_curve','--audio',str(audio),
                 '--weights',str(WEIGHTS),'--output',str(output),'--device',device],cwd=ROOT,
                 stdout=log,stderr=log,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
             started=time.monotonic()

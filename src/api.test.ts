@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import {afterEach,it,expect,vi} from 'vitest';
-import {api,ApiError,CONTROL_API,controlOrigin} from './api';
+import {api,ApiError,CONTROL_API,controlOrigin,onServiceInvalidated} from './api';
 import {setLanguage} from './i18n';
 afterEach(()=>{vi.unstubAllGlobals();setLanguage('de')});
 it('preserves caller headers, payload and cancellation while selecting the active locale',async()=>{
@@ -32,4 +32,14 @@ it('preserves deliberate request cancellation instead of reporting a service fai
  const failure=new DOMException('Authored cancellation','AbortError');
  vi.stubGlobal('fetch',vi.fn().mockRejectedValue(failure));
  await expect(api('/library')).rejects.toBe(failure);
+});
+
+it('invalidates grants on a new service instance and connection failure, and unsubscribes',async()=>{
+ const listener=vi.fn(),unsubscribe=onServiceInvalidated(listener);
+ const reply=(instance:string)=>new Response('{}',{headers:{'X-MoodScope-Instance':instance}});
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValueOnce(reply('instance-one')).mockResolvedValueOnce(reply('instance-one')).mockResolvedValueOnce(reply('instance-two')).mockRejectedValue(new TypeError('offline')));
+ await api('/library');listener.mockClear();await api('/library');expect(listener).not.toHaveBeenCalled();
+ await api('/library');expect(listener).toHaveBeenCalledTimes(1);
+ await expect(api('/library')).rejects.toMatchObject({status:0});expect(listener).toHaveBeenCalledTimes(2);
+ unsubscribe();await expect(api('/library')).rejects.toMatchObject({status:0});expect(listener).toHaveBeenCalledTimes(2);
 });
