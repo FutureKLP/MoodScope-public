@@ -66,8 +66,15 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   native Fehlerprobe erhält selbst das zum Überschreiben bestätigte Ziel.
   Lokale Analyse, synthetischer Loopback-Auftrag, Widerruf und vollständiger
   App-/Dienstneustart mit identischen SQLite-Zeilen und Audio-/Stemhashes bestanden.
-  Fehlgewichtsfall, harter Demucs-Dienstfehler und vollständige native Audio-
-  Ressourcen-/Seeking-/Ausgabesynchronisationsmatrix bleiben offen.
+  Nachabnahme 2C.2: isolierte Demucs-Fehlgewichts-/Abbruch-/Crashmatrix und
+  erfolgreicher echter Neulauf bestanden; vorhandener vollständiger Cache bleibt
+  auch beim Crash einer zweiten Trennung hashgleich. Keine eigenen Tempdateien
+  nachgewiesen, daher keine zusätzliche Bereinigung. Zwei instrumentierte native
+  Live-Contexts nach Original-/Songwechsel geschlossen, alle 18 Nodes getrennt;
+  160 Zeitstichproben zeigen vier Looprücksprünge. Neue Ressourcenproben und
+  vollständiger App-/Dienstneustart mit identischen SQLite-/Audio-/Stemständen
+  bestanden. Fehlgewichts-/Crashdialoge, vollständige native Wiederholungsmatrix
+  und tatsächliche Audioausgabemessung bleiben offen. Keine Leckfreiheit behauptet.
   [Vollständige Matrix und Grenzen](PHASE2C-ACCEPTANCE.md).
 - **Phase 3 – Langzeitbetrieb und Performance:** geplant.
 - **Phase 4 – Installer und Plattformabnahme:** geplant.
@@ -85,6 +92,16 @@ Keine automatischen Main-Merges. Neue lokale Prüfung nach Solo-Korrektur:
 399 Backend-, 156 Frontend-, neun Rust- und fünf Node-Tests bestanden;
 TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich.
 Die kurze Ressourcenprobe ersetzt keine Phase-3-Leckprüfung.
+
+Nachabnahme 2C.2 arbeitet weiter auf demselben Phase-2C-Branch von `c9d238c`;
+[PR #14](https://github.com/FutureKLP/MoodScope-public/pull/14) bleibt Draft gegen
+den tatsächlichen #13-Head `b3e4b9c`. Dessen gestapelte Basis bleibt #12.
+Der bisherige #14-CI-Lauf `44804376634` ist mit allen vier Jobs erfolgreich.
+Neu lokal: 399 Backend-, 156 Frontend-, neun Rust- und fünf Node-Tests,
+TypeScript/Vite und Windows-Releasebuild ohne Bundle bestanden. Anwendungscode
+unverändert; ergänzt sind gezielte Nachweise. Im neuen Musikausschnittslauf
+kein zuverlässiger Aufnahmeweg für tatsächliche Ausgangsmessung nachgewiesen.
+Details und historische Nachweise: [Phase 2C.2](PHASE2C-ACCEPTANCE.md#nachabnahme-2c2-vom-20-november-2026).
 
 Vollständige lokale Regression aus 2B.3: 396 Backend-, 156 Frontend-, 9 Rust- und
 5 Node-Tests bestanden; TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich.

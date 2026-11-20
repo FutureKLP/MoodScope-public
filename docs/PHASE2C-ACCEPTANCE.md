@@ -7,6 +7,10 @@ Audio-Ressourcen-, Ausgabelatenz-, Fehler- und Plattformmatrix ist nicht geschlo
 Phase 2B bleibt teilweise bestanden; keine allgemeine Kern- oder Releasefreigabe.
 Aktueller Überblick: [STATUS.md](STATUS.md).
 
+Die Nachabnahme **2C.2** am Ende dieses Dokuments ergänzt Demucs-Crashnachweise
+und instrumentierte native Audiostichproben. Die folgenden Erstnachweise bleiben
+historisch erhalten; Phase 2C bleibt teilweise bestanden.
+
 ## Git und Integration
 
 Nach Fetch und GitHub-Abgleich bleibt Main auf
@@ -243,3 +247,165 @@ Offen bleiben insbesondere A11, der harte Demucs-Dienstfehlerpfad aus A12,
 vollständige native Seeking-/Ausgabesynchronisations- und Audio-Ressourcenmessungen,
 längere Wiederholungen, weitere DPI/Plattformen, Installer und Musikqualität.
 Phase 2B bleibt unabhängig von diesen Fortschritten teilweise bestanden.
+
+## Nachabnahme 2C.2 vom 20. November 2026
+
+**Entscheidung: weiterhin teilweise bestanden; PR #14 bleibt Draft.**
+Kein neuer Anwendungsfehler bestätigt und kein Anwendungscode geändert.
+Die Erweiterung besteht aus gezielten Nachweisen und präzisierten Freigabegrenzen.
+Rohbelege, Musikausschnitte, Identitäten und lokale Prüftreiber bleiben ignoriert.
+
+### Git, Eingangstest und Prüfumfang
+
+Ausgangsbranch `codex/phase2c-studio-regression`, sauber auf `c9d238c`.
+Erneuter Remote-/Connectorabgleich: Main `1717ffd`, #11 `ff585f5` und #12
+`5d459f0` offen; #13 Draft auf `b3e4b9c` gegen #12; #14 Draft auf `c9d238c`
+gegen #13. Kein Main-Merge, Force-Push oder privater Vorfahr übernommen.
+Der bisherige [CI-Lauf 44804376634](https://github.com/FutureKLP/MoodScope-public/actions/runs/44804376634)
+ist abgeschlossen: beide Windows-/Ubuntu-Testjobs und beide Native-Buildjobs
+erfolgreich. #14 hat keine Reviews und keine Reviewthreads. Das ersetzt kein Review.
+
+Vor weiteren UI-Tests: eindeutiges Tauri-Hauptfenster anhand Prozess und Titel,
+Win32-Geometrie und 96 DPI gelesen, separates 16×16-Tao-Hilfsfenster ausgeschlossen,
+frische große Screenshotregion gebunden, Hörstudio-Reiter gewählt und sichtbarer
+Wechsel bestätigt. Später meldete ein Scrollaufruf erneut 16×16-Grenzen.
+Keine blinde Wiederholung: Fenster neu ausgewählt, große Region neu erfasst und
+die sichtbare Scrollleiste bildgebunden bedient. Keine numerischen Indexklicks.
+Der Werkzeugfehler bleibt ungepatcht; eine vollständige native Abnahme folgt daraus nicht.
+
+Neue tatsächliche Musikprüfung ausschließlich mit quellbenannten lokalen
+Zwölf- und Zehn-Sekunden-Ausschnitten aus dem erlaubten Testmusikbestand.
+Originale und vorhandene Gewichte nur gelesen. Die native Bibliothek wurde über
+HTTP vorbereitet; dies ist kein neuer nativer Importnachweis. Ein separat markierter
+leerer Analysecache verhinderte automatische Hauptanalyse. Die automatisch gestartete
+Music2Emo-Vergleichsinferenz ist davon getrennt tatsächlich lokal abgeschlossen.
+Die Zwei-Sekunden-Exportfixture blieb separat und wurde hier nicht abgespielt.
+Keine neuen Links, Modelldownloads, Cloudtransfers oder globalen Audioänderungen.
+
+### Demucs-Fehler- und Crashmatrix
+
+H/I bezeichnet tatsächliche isolierte Windows-Dienste und Offline-Inferenz;
+R die separat erneut ausgeführten deterministischen Regressionen.
+Der Prüfdienst sperrt Checkpointdownloads ausdrücklich. Fehlgewichtsfälle zeigen
+auf eigene isolierte Modellwurzeln; produktive Gewichte werden nicht umbenannt.
+
+| Fall | Ergebnis und Ebene | Grenze |
+|---|---|---|
+| Fehlende Gewichte | Fehler vor Inferenz, kein fertiger Stemcache · H/I | Lokale Downloadverweigerung des Prüfdiensts; kein nativer Fehlerdialog |
+| Unlesbare Gewichte | Checkpointpfad als Verzeichnis erzeugt tatsächlichen Windows-PermissionError, kein Cache · H/I | Kein Eingriff in produktive ACLs |
+| Beschädigte Gewichte | Tatsächliche Demucs-Prüfsumme verwirft eigene beschädigte Datei · H/I | Kein deserialisiertes Fremdmodell |
+| Ungültiges Trennmodell | HTTP 422 vor Jobannahme · H | Native Auswahl bietet nur erlaubte Modelle |
+| Abbruch vor Modellstart | Status cancelled bei Fortschritt 0, kein Ergebnis oder fertiger Cache · H | Separat von Abbruch während Inferenz |
+| Abbruch während Berechnung | Echter CPU-Lauf nach Fortschritt 15 abgebrochen, cancelled ohne Cache · H/I | Kooperativ; Modellschritt kann auslaufen |
+| Hartes Dienstende | Eigene Dienstfamilie während laufender Trennung beendet, nach Neustart weiterhin kein fertiger Cache · H/I | Start/Kill über Testhalter, kein neuer nativer Crashdialognachweis |
+| Wiederherstellung und Neulauf | Neue Dienstfamilie, erneute tatsächliche Vier-Spur-Trennung erfolgreich in 8,26 s · H/I | Zwölf Sekunden Audio, vier Torch-CPU-Threads; keine allgemeine Performancebaseline |
+| Vollständiger Cache | Nach weiterem Neustart cached=true, alle Dateien hashgleich · H | Zusätzlich nachfolgender Crashfall |
+| Fertiger Cache neben laufender zweiter Trennung | Zweiten Ausschnitt getrennt, Dienst bei Fortschritt 15 hart beendet; erster Cache nach Neustart bereit und vollständig hashgleich, zweiter nicht bereit · H/I | Kein Überschreiben des ersten Caches |
+| Unvollständige Ergebnisse | Beide Crashaufträge ohne fertiges Ergebnis; zusätzliche unvollständige-/beschädigte-Stemregressionen bestanden · H/I und R | Kein Nachweis eines Stromausfalls mitten im Dateisystemschreiben |
+
+Demucs läuft im Dienstprozess mit `num_workers=0`; die erfasste Dienstfamilie
+enthielt keinen Music2Emo-Inferenzworker. Music2Emo verwendet ausschließlich
+seine separat markierten Arbeitsbereiche mit eigenen Sperren. Deren Prozess-/
+Recoveryregressionen bestanden erneut. Im ausschließlich für diese Demucs-Dienste
+umgeleiteten Tempbereich wurden vor/nach Crash und nach Abschluss keine Dateien
+gefunden. Kein tatsächlich nachgewiesener Demucs-Restbesitzer und daher keine neue
+Bereinigung implementiert. Die bereits vorgefundenen Modelldateien einschließlich
+eines älteren partiellen Downloads blieben unverändert und wurden nicht gelöscht.
+
+### Native Audiobedienung und WebView-Diagnostik
+
+N bezeichnet bildgebundene Eingaben im Releaseclient. W bezeichnet lokale
+WebView-Laufzeitdiagnostik im selben Client. Context-/Node-Zähler wurden nur im
+isolierten WebView installiert, mit schwachen Contextreferenzen; der Releasecode
+blieb unverändert. Diese Instrumentierung ist kein unveränderter Produktionslauf.
+
+Nativ ausgeführt: echten lokalen Ausschnitt öffnen, vorhandene vier Gruppen wählen,
+Drums solo, Wiedergabestart, A/B-Punkte, erneuter Start im Loop, Bass hinzufügen,
+Bassgain 50 %, Seek im laufenden Mix, Pause/Resume, Live→Original und zurück,
+Gesang solo, Hörstudio→Analyse→Bibliothek sowie Songwechsel aus laufendem Mix.
+Danach vollständiger App-/Dienstneustart und gespeicherten Ausschnitt erneut geöffnet.
+Keine vollständige kartesische oder längere Belastungsmatrix behauptet.
+
+| Zustand | Gemessener Context-/Quellenzustand · W |
+|---|---|
+| Solo vor Start | Ein suspendierter Context, neun Nodes, vier pausierte Stem-Medienelemente |
+| Laufender Solo-/Mehrspurmix | Derselbe laufende Context; Master stumm, vier laufende Stemquellen; Regler-/Seekwechsel erzeugen keinen weiteren Context |
+| Pause | Context suspendiert, alle fünf Medienelemente pausiert |
+| Originalrückkehr | Erster Context geschlossen, neun Nodes getrennt, keine Stem-Medienelemente, Master wieder hörbar geschaltet; AudioHandlers=0 |
+| Zweiter Live-Zyklus / Ansichtswechsel | Zweiter Context läuft, erster gesammelt; weiterhin vier Stemquellen, kein zusätzlicher Context beim Ansichtswechsel |
+| Songwechsel | Beide erzeugten Contexts geschlossen/gesammelt, alle 18 Nodes getrennt, keine Stemquellen; neuer Master pausiert bei null, Loop entfernt; AudioHandlers=0 |
+| Vollständiger Neustart | Neues WebView ohne Instrumentierung oder alte Stemquellen, AudioHandlers=0, Master ohne Quelle bis zur erneuten Songwahl |
+
+Dies erfasst Medienelemente und Chromium-Audiohandler, nicht unabhängige
+Decoderinstanzen des Betriebssystems. Geschlossene Graphen sind nachgewiesen;
+sofortige Rückgabe sämtlicher Heap-/Treiberallokationen ist daraus nicht ableitbar.
+
+Vier Prozessstichproben von jeweils etwa drei Sekunden, dezimale MB und summierte
+Familien-RSS (gemeinsame Seiten können mehrfach zählen); CPU in Prozent eines Kerns:
+
+| Zustand | Native RSS / Handles / Prozesse / CPU | Dienst RSS / Handles / Prozesse / CPU |
+|---|---|---|
+| Erster Live-Loop | 663,47 MB / 5306 / 8 / 28,65 % | 690,74 MB / 618 / 3 / 0 % |
+| Zweiter Live-Zyklus | 662,88 MB / 5325 / 8 / 32,29 % | 692,54 MB / 623 / 3 / 1,04 % |
+| Nach Songwechsel, pausiert | 687,61 MB / 5301 / 8 / 1,56 % | 692,74 MB / 634 / 3 / 0 % |
+| Neue Prozessfamilie nach Neustart | 582,78 MB / 5330 / 8 / 2,08 % | 687,91 MB / 630 / 3 / 0 % |
+
+JS-Heapstichproben im ersten WebView: 2,61–7,25 MB. Globale Chromium-Listenerzähler
+lagen zwischenzeitlich bei 2038 und nach Songwechsel bei 408. Eine ausdrücklich
+separate erzwungene GC-Diagnose im pausierten Live-Mix reduzierte 1851/6,73 MB
+auf 428/3,68 MB. Das unterscheidet noch nicht gesammelte von erhaltenen Objekten;
+es ist keine automatische Freigabefrist oder Leckfreiheitsgarantie. Keine zusätzlichen
+WorkerGlobalScopes in diesen WebView-Stichproben. Phase-3-Langzeitprüfung bleibt offen.
+
+### Synchronisation und tatsächliche Ausgabegrenze
+
+160 lesende Zeitstichproben während nativ gestarteter Wiedergabe, ungefähr alle
+100 ms über 16 Sekunden: vier Looprücksprünge von etwa 7,83–7,88 auf 3,04–3,08 s.
+Maximaler Player-/Master-Anzeigeunterschied 30,6 ms. Unter den vier Stem-Medienzeiten
+maximal 0,155 ms Unterschied; zwischen Stem und Master bis 118,0 ms.
+Der Master ist im Live-Modus der stille Transport. Diese Einzelserie erlaubt
+keine samplegenaue Ausgabesynchronisations- oder allgemeine Driftaussage.
+Die neue Serie enthält keine Lyrics und ersetzt die frühere Lyrics-/Kurvenabnahme nicht.
+
+FFmpeg bietet hier DirectShow/OpenAL-Eingänge, aber keinen WASAPI-Loopbackeingang;
+die geprüfte DirectShow-Aufzählung fand kein Audioaufnahmegerät. Kein verlässlich
+konfigurierter virtueller Aufnahmeweg wurde nachgewiesen. Daher keine Aufnahme,
+kein numerischer Impulsvergleich am tatsächlichen Ausgang und keine Behauptung
+über Doppeloutput, Umschaltlücken, DAC-Latenz oder unterbrechungsfreies Hören.
+Das gemessene Stummschalten des Masters ist ausschließlich ein Zustandsnachweis.
+Keine Geräte installiert, global umkonfiguriert oder Mikrofonaufnahmen angefertigt.
+
+### WAV, Regressionen und Abschluss
+
+Neu bestanden: **399 Backendtests** (41,45 s), **156 Frontendtests** in 29 Dateien
+(21,91 s), **neun Rusttests** locked/offline und **fünf Node-Dialogdrivertests**.
+TypeScript/Vite und Windows-Releasebuild ohne Bundle bestanden; abschließende
+Releasekompilierung 16,08 s. Vite-Chunkwarnung und Rust-Kopierfallback bleiben.
+Ein erster Build konnte die laufende Test-EXE nicht ersetzen; nach eigenem
+Prozessabschluss erfolgreich wiederholt. Der erste Sandbox-Vorbereitungslauf hing;
+beendet, isolierte Vorbereitung mit lokalen Prozess-/Socketrechten erfolgreich.
+Kein neuer Installer- oder Linux-Bedienlauf.
+
+Die erneut ausgeführten Tests prüfen NaN und beide Unendlichkeiten im Solo-Pfad,
+gültiges Solo, Mehrspur/Gains, ungültige/gekürzte Transfers, Dialogabbruch vor
+Dateizugriff und Erhalt bestehender Ziele bei Fehlern. Native WAV-Dialog-/
+Zielüberschreib-/Fehlerwiederholungsnachweise aus der Erstabnahme bleiben erhalten;
+diese komplette native Dialogserie wurde nicht redundant wiederholt. Im neuen
+nativen Lauf wurde kein WAV exportiert; das vorhandene Exportziel blieb bytegleich.
+Der kompakte neue Ablauf ist eine ergänzende Ressourcen-/Neustartfolge und keine
+neue vollständige D01–D16-Abnahme. Local/API-Schutzregressionen bestanden; kein
+Cloudtransfer oder neuer Anbieterauftrag ausgeführt.
+
+Verwendetes Original, produktive SQLite, vorhandene Modellgewichte und verwaltete
+Testaudios unverändert. Beide isolierten SQLite-Datenbanken und produktive SQLite
+intakt; keine verwaisten Cachebesitzer. Track-, Cache-, Besitzerzeilen, verwaltete
+Audios und Stemhashes über den vollständigen nativen Neustart identisch.
+Eigene Dienste/App/Worker beendet; Testports frei. Keine temporären Mix-WAVs
+oder eigenen aktiven Workerbereiche. Keine unbekannten Verzeichnisse gelöscht.
+
+Geschlossen sind die gezielten H/I-Demucs-Fehler-/Crash-/Cacheerhaltfälle und die
+oben abgegrenzten N/W-Ressourcenstichproben. Offen bleiben insbesondere native
+Demucs-Fehlerdialoge bei Fehlgewichten/hartem Dienstverlust, die vollständige
+wiederholte native Ressourcen-/Seeking-/Lyrics-Kreuzmatrix und tatsächliche
+Audioausgabemessung. Weitere Plattform-/DPI-, Installer-, Langzeit- und
+Qualitätsgrenzen gelten fort. **Keine vollständige Phase-2C- oder Kernfreigabe.**
