@@ -56,13 +56,35 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   nachgewiesen. Nativer Transfer ohne neue Zustimmung verweigert, null zusätzliche
   Anbieteraufrufe; neue Zustimmung ermöglicht genau einen synthetischen Loopback-Aufruf.
   [Vollständige Matrix und Grenzen](PHASE2B-ACCEPTANCE.md).
-- **Phase 2C – Hörstudio und Gesamtregression:** geplant.
+- **Phase 2C – Hörstudio und Gesamtregression:** teilweise bestanden.
+  Echter nativer Demucs-Start, regulärer Abbruch und erfolgreicher CPU-Neulauf;
+  Live-Mix, Solo, Pegel, gemeinsamer Loop und Ansichtswechsel geprüft.
+  32 native Player-/Kurvenstichproben: maximal 23,3 ms Anzeigedifferenz,
+  keine Messung der Audioausgabelatenz. Native Solo-/Vier-Spur-/gewichtete WAVs
+  numerisch geprüft; Escape, Cancel, vorhandenes Ziel und Export nach Neustart bestanden.
+  Reproduzierter Solo-Export nicht endlicher Samples blockweise abgesichert;
+  native Fehlerprobe erhält selbst das zum Überschreiben bestätigte Ziel.
+  Lokale Analyse, synthetischer Loopback-Auftrag, Widerruf und vollständiger
+  App-/Dienstneustart mit identischen SQLite-Zeilen und Audio-/Stemhashes bestanden.
+  Fehlgewichtsfall, harter Demucs-Dienstfehler und vollständige native Audio-
+  Ressourcen-/Seeking-/Ausgabesynchronisationsmatrix bleiben offen.
+  [Vollständige Matrix und Grenzen](PHASE2C-ACCEPTANCE.md).
 - **Phase 3 – Langzeitbetrieb und Performance:** geplant.
 - **Phase 4 – Installer und Plattformabnahme:** geplant.
 - **Phase 5 – Releaseentscheidung:** geplant; vollständige Kernfreigabe offen.
 - **Externe Datenbanken:** bis zur dokumentierten Kernfreigabe gesperrt. SQLite bleibt Standard.
 
 ## Weiter offene Grenzen
+
+Phase 2C entwickelt auf `codex/phase2c-studio-regression` von `b3e4b9c`;
+die öffentlichen Dokumentations- und Phase-2A-/2B-Linien sind bereits enthalten.
+#11 und #12 bleiben offen, #13 bleibt Draft gegen #12. Die vier CI-Jobs
+auch des aktuellen #13-Heads sind erfolgreich. Integrationsreihenfolge:
+#11, danach #12 gegen den aktualisierten Main prüfen, danach #13 und Phase 2C.
+Keine automatischen Main-Merges. Neue lokale Prüfung nach Solo-Korrektur:
+399 Backend-, 156 Frontend-, neun Rust- und fünf Node-Tests bestanden;
+TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich.
+Die kurze Ressourcenprobe ersetzt keine Phase-3-Leckprüfung.
 
 Vollständige lokale Regression aus 2B.3: 396 Backend-, 156 Frontend-, 9 Rust- und
 5 Node-Tests bestanden; TypeScript/Vite und Windows-Releasebuild ohne Bundle erfolgreich.

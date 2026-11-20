@@ -10,6 +10,19 @@ Quellverbesserungen bedeutet keine vollständige Kern-, Plattform- oder
 Qualitätsfreigabe. Die externe Datenbankphase ist weiterhin gesperrt; SQLite
 bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
 
+## Phase 2C am 20. November 2026
+
+Teilweise bestanden: echte native Demucs-Trennung mit Abbruch/Neulauf, Live-Mix,
+gemeinsamer Loop, numerisch geprüfte native Exporte und sichere Dialogabbrüche.
+Ein Solo-Schnellpfad lieferte nicht endliche Float-Samples ungeprüft aus;
+blockweise Prüfung ergänzt und nativ mit erhaltenem vorhandenen Exportziel bestätigt.
+Kombinierter Ablauf einschließlich echter lokaler Analyse, kontrollierter Loopback-API,
+Widerruf und App-/Dienstneustart mit unveränderten SQLite-/Audio-/Stemständen geprüft.
+32 Player-/Kurvenpaare: maximal 23,3 ms Anzeigeunterschied, keine Ausgabelatenzmessung.
+Fehlgewichte, harter Demucs-Dienstfehler und vollständige native Audio-Ressourcen-/
+Seeking-/Ausgabesynchronisationsmatrix offen. Phase 2B bleibt teilweise bestanden.
+[Vollständige Phase-2C-Matrix](PHASE2C-ACCEPTANCE.md). Keine Kernfreigabe.
+
 ## Phase 2B am 18. November 2026
 
 Teilweise bestanden: echte Offline- und kontrollierte Loopback-Anbietertests,
