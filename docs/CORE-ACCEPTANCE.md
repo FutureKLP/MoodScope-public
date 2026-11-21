@@ -10,6 +10,21 @@ Quellverbesserungen bedeutet keine vollständige Kern-, Plattform- oder
 Qualitätsfreigabe. Die externe Datenbankphase ist weiterhin gesperrt; SQLite
 bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
 
+## Phase 3 am 20./21. November 2026
+
+**Teilweise bestanden.** Zehn wiederholte native Original-/Live-Mixzyklen
+sowie ein zusätzlicher Ansichts-/Songwechselgraph geben elf Contexts,
+99 Nodes und acht Mixerlistener frei. Echte lokale CLAP-, XLM-EMO-,
+Music2Emo- und Demucs-Wiederholungen, gezielte Abbrüche/Neuläufe und Cacheaufrufe
+sind von den automatisierten Regressionen getrennt dokumentiert.
+
+Die [zentrale Freigabematrix](PHASE3-PERFORMANCE-ACCEPTANCE.md#zentrale-freigabematrix)
+führt offene Phase-2B-/2C-Kriterien fort. Zweites echtes Textemotionsmodell,
+vollständige native Kreuzmatrix, tatsächliche Audioausgabe und breitere
+Langzeit-/Musiklast bleiben offen; weitere DPI-/Plattform-/Installerprüfungen
+gehören zu Phase 4, abschließende Qualität und Releaseentscheidung zu Phase 5.
+Historische Berichte werden dadurch nicht rückwirkend umgeschrieben.
+
 ## Phase 2C am 20. November 2026
 
 Teilweise bestanden: echte native Demucs-Trennung mit Abbruch/Neulauf, Live-Mix,

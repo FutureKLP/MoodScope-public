@@ -1,6 +1,6 @@
 # Aktueller Entwicklungs- und Abnahmestand
 
-Stand: 20. November 2026. Dies ist die einzige aktuelle Statusübersicht.
+Stand: 21. November 2026. Dies ist die einzige aktuelle Statusübersicht.
 Prüfberichte halten datierte Nachweise fest; frühere Sitzungsstände sind keine
 weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsversion.
 
@@ -79,12 +79,33 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   Wiederholungsmatrix und tatsächliche Audioausgabemessung bleiben offen.
   Keine Leckfreiheit behauptet.
   [Vollständige Matrix und Grenzen](PHASE2C-ACCEPTANCE.md).
-- **Phase 3 – Langzeitbetrieb und Performance:** geplant.
+- **Phase 3 – Langzeitbetrieb und Performance:** teilweise bestanden.
+  Zehn native Original-/Live-Mixzyklen, zusätzlicher Ansichts-/Songwechselgraph,
+  elf geschlossene Contexts, 99 getrennte Nodes und acht entfernte Mixerlistener
+  nachgewiesen. Echte Offline-Modellwiederholungen auf CPU sowie getrennte
+  CLAP-/Music2Emo-CUDA-Läufe, Abbruch/Neulauf und Cacheaufrufe geprüft.
+  Erste beaufsichtigte native Prozesslebensdauer 17 Minuten 18,9 Sekunden;
+  Fortsetzung nach Neustart 6 Minuten 4,98 Sekunden separat, keine
+  Unterbrechungszeit mitgezählt und kein einzelner 20-Minuten-Lauf.
+  SQLite-Zeilen und Audio-/Stemhashes nach Neustart identisch; 100 lesende
+  Bibliotheks-/Cacheabfragen mit geschlossenen SQLite-Verbindungen bestanden.
+  Insgesamt 493 Verbindungen geschlossen, abschließend null aktiv. Neu 399
+  Backend-, 156 Frontend-, neun Rust- und fünf Node-Tests, TypeScript/Vite und
+  Windows-Releasebuild bestanden. Eigene Prozesse beendet, Testports frei.
+  Audioausgabe, vollständige Wechselmatrix und breite Langzeitlast bleiben offen.
+  [Messkonzept, Ergebnisse und zentrale Freigabematrix](PHASE3-PERFORMANCE-ACCEPTANCE.md).
 - **Phase 4 – Installer und Plattformabnahme:** geplant.
 - **Phase 5 – Releaseentscheidung:** geplant; vollständige Kernfreigabe offen.
 - **Externe Datenbanken:** bis zur dokumentierten Kernfreigabe gesperrt. SQLite bleibt Standard.
 
 ## Weiter offene Grenzen
+
+Phase 3 entwickelt separat auf `codex/phase3-performance-acceptance`, direkt von
+`723b8c2`. Anwendungscode unverändert; keine Optimierung ohne bestätigten Fehler.
+Main weiterhin `1717ffd`, #11/#12 offen, #13/#14 Draft. Alle vier Jobs des
+Phase-2C-Heads erfolgreich; keine Reviews/Reviewthreads beim erneuten Abgleich.
+Keine automatischen Merges. Die folgenden datierten Phase-2-Nachweise bleiben
+erhalten; aktuelle Phase-3-Grenzen und Abschlusstests stehen im verlinkten Bericht.
 
 Phase 2C entwickelt auf `codex/phase2c-studio-regression` von `b3e4b9c`;
 die öffentlichen Dokumentations- und Phase-2A-/2B-Linien sind bereits enthalten.
