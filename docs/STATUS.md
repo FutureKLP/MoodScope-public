@@ -23,6 +23,35 @@ Ubuntu-Test- und Native-Buildjobs sind erfolgreich. PR #11 und #12 sind weiterhi
 Main wurde nicht gemergt oder überschrieben.
 Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
+## Nachlauf Phase 3.2 am 21. November 2026
+
+Ein einzelner beaufsichtigter nativer Windows-Lauf ist jetzt mit **20 Minuten
+54,51 Sekunden**, 251 Fünfsekundenproben und unveränderten App-/Dienstprozess-
+lebensdauern nachgewiesen. Zehn Original-/Mixzyklen schließen zehn Contexts
+und trennen 90 Nodes; Pause/Resume, Seeking, zwei A/B-Bereiche, zwei Songwechsel
+und echte Offline-CLAP-Neuberechnung ergänzt. Originale, Modelle und produktive
+Daten unverändert; beide SQLite intakt, eigene Prozesse beendet, Testports frei.
+
+**Phase 3 bleibt teilweise bestanden.** Atmosphäre erklärt einen Teil der
+Private-Bytes-Erhöhung; zusätzlicher nativer Speicherverbleib nach wiederholten
+Graphfreigaben bleibt ungeklärt. Sechs Proactor-Callbacks bei laufenden Prozessen
+zeitlich mit Streamingabbrüchen eingegrenzt, kein sicherer Minimalreproduzierer,
+kein Datenverlust oder fehlgeschlagener Analyseabschluss beobachtet. Keine
+Anwendungskorrektur auf Verdacht. Die übrigen Freigabegrenzen bleiben erhalten.
+
+Alle bisherigen PR-Heads #11–#16 erneut mit erfolgreicher CI bestätigt.
+Empfehlung nach Review: #11, #12, dann #13, #14, #16 in kleinen Schritten;
+Basen, Restdiffs und Pflichtchecks jeweils erneut prüfen. #15 ist die alternative
+Sammellinie mit demselben Head wie #14 und darf in dieser Route nicht zusätzlich
+integriert werden. Kein Merge, keine Schließung und kein Force-Push ausgeführt.
+[Messwerte, Integrationsweg und Phase-4-Übergabe](PHASE3-PERFORMANCE-ACCEPTANCE.md#phase-32-ununterbrochener-nachlauf-und-speicherdiagnose).
+
+Neu bestanden: 399 Backend-, 156 Frontend-, neun Rust- und fünf Node-Tests,
+TypeScript/Vite und locked/offline Windows-Releasebuild ohne Bundle. Breite
+Musiklast, physische Audioausgabe, vollständige native Kreuzmatrix, weitere
+DPI/Plattformen und Installation/Update/Deinstallation bleiben offen. Phase 4
+ist vorbereitet, keine Releasefreigabe und keine externe Datenbankphase.
+
 ## Entwicklungsphasen
 
 - **Phase 1 – native WAV-Abbruchprüfung:** erfolgreich im definierten synthetischen

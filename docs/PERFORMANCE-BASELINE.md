@@ -45,3 +45,25 @@ Handles. Kein Vergleich absoluter Werte verschiedener Neustarts als Leaktrend.
 493 SQLite-Verbindungen im instrumentierten zweiten Dienstlauf geschlossen,
 abschließend null aktiv; keine Inferenzworkerreste. Vollständiger Neustartvergleich
 der SQLite-Zeilen und Audio-/Stemhashes identisch. Physische Audioausgabe offen.
+
+## Phase 3.2 am 21. November 2026
+
+Neuer einzelner Lauf: **20 Minuten 54,51 Sekunden**, 251 Proben, maximal
+5,025 Sekunden Abstand, dieselbe App-/Dienstlebensdauer. Historische getrennte
+Sitzungen oben bleiben unverändert. Zehn native Mixzyklen schließen zehn
+Contexts/90 Nodes, kein erzwungener GC. Zwei kurze Ausschnitte derselben erlaubten
+Aufnahme, keine breite Musik- oder Ausgangsqualitätsabnahme.
+
+Im selben Prozess: konstanter Live-Mix ohne Atmosphäre 411,95–417,75 MiB
+Private Bytes; mit Atmosphäre 500,69–524,42 MiB. Nach Context-Freigabe und
+Atmosphäre aus 412,00–415,27 MiB. Bei weiteren neun gezielten Graphzyklen
+steigt der Speicher auch in Originalzuständen nach Freigabe bis etwa 656 MiB;
+JS-Heap während der Folge 3,82–6,69 MiB. Kein fortlaufender Handletrend,
+keine bestätigte Allokations-/Leckursache und kein Leckfreiheitsnachweis.
+Die Zustandswechselspitze der nativen Familie beträgt 711,88 MiB Private Bytes,
+RSS maximal 810,77 MiB. Dienst-Modelllast und nativen Speicher getrennt halten.
+
+Echte Offline-CLAP-Neuberechnung per HTTP bei nativer Wiedergabe: 12,03 s.
+210 Dienst-SQLite-Verbindungen geschlossen, keine aktiven Verbindungen oder
+eigenen Workerreste. Regressionen/Builds erst nach Sitzungsende. Phase 3 bleibt
+teilweise bestanden; [vollständige Zustandsfenster, Grenzen und Diagnose](PHASE3-PERFORMANCE-ACCEPTANCE.md#phase-32-ununterbrochener-nachlauf-und-speicherdiagnose).

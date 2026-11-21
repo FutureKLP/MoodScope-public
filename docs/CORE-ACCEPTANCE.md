@@ -154,3 +154,14 @@ Die folgenden offenen Kriterien gelten mit diesen begrenzten Ergänzungen weiter
    Emotionsverläufen erhalten. Modellschätzungen sind keine bestätigten Fakten.
 
 [Automatisierte Prüfungen](TEST-BASELINE.md) und [Sicherheitsgrenzen](SECURITY.md).
+
+## Begrenzte Ergänzung Phase 3.2 am 21. November 2026
+
+Das einzelne 20-Minuten-Ziel ist mit einem ununterbrochenen nativen Windows-Lauf
+von 20 Minuten 54,51 Sekunden und 251 Ressourcenproben im engen lokalen
+Musikumfang geschlossen. Zehn Contexts/90 Nodes freigegeben. Zusätzlicher nativer
+Speicherverbleib nach Wiederholungen und die genaue Proactor-Ursache bleiben offen;
+keine Kern- oder Releasefreigabe. Physische Audioausgabe, zweites echtes
+Textemotionsmodell, vollständige native Lyrics-/API-/Audiokreuzmatrix, weitere
+DPI/Mehrmonitor, Windows 10/Linux, Installation/Update/Deinstallation und
+Musik-/Modellqualität unverändert offen. [Nachweis und Phase-4-Übergabe](PHASE3-PERFORMANCE-ACCEPTANCE.md#phase-32-ununterbrochener-nachlauf-und-speicherdiagnose).

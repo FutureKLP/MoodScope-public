@@ -1,5 +1,10 @@
 # Phase 3: Langzeitstabilität und Ressourcen
 
+Aktueller Nachtrag: [Phase 3.2](#phase-32-ununterbrochener-nachlauf-und-speicherdiagnose)
+schließt das einzelne 20-Minuten-Ziel. Speicherrestbedarf und Proactor-Ursache
+bleiben offen; Phase 3 weiterhin teilweise bestanden. Die ersten Abschnitte
+halten die früheren getrennten Sitzungen als datierte Nachweise fest.
+
 Prüfserie vom 20./21. November 2026. **Entscheidung: teilweise bestanden.**
 Keine allgemeine Kern- oder Releasefreigabe.
 Historische Phase-2B-/2C-Berichte bleiben unverändert. Aktueller Überblick:
@@ -259,3 +264,192 @@ erneut vollständig ausgeführt. Kein Appfehler daraus abgeleitet.
 Keine externe Datenbankphase begonnen. Eine Teilabnahme hebt das Kern-Gate
 nicht auf. Offene historische Kriterien werden hier nachgeführt, ohne die
 damaligen Berichte umzuschreiben.
+## Phase 3.2: Integrationsprüfung am 21. November 2026
+
+Live geprüft: Main `1717ffd`, #11 `ff585f5`, #12 `5d459f0`, #13
+`b3e4b9c`, #14/#15 `723b8c2`, #16 `1da542d`. Alle sechs PRs offen,
+keiner gemergt; #13/#14/#16 Draft. Die zugehörigen Actions-Läufe sind erfolgreich:
+#11 44382936443, #12 44384587002, #13 44756726817, #14/#15
+44811473779 und 44811474870, #16 44925957880. Für #16 zusätzlich alle vier
+Windows-/Ubuntu-Test- und Native-Buildjobs einzeln erfolgreich bestätigt.
+Das ersetzt keine Reviews und keine offenen Abnahmekriterien.
+
+Abstammung und Diffs lokal mit den öffentlich bestätigten SHAs geprüft:
+#11 enthält 14 Dokumentationsdateien; #12 drei Quell-/Abnahmecommits und 19
+Dateien gegenüber Main. Der Mergecommit `89bd4a8` in #13 verbindet beide Linien;
+`ff585f5` ist Vorfahr von #13. #13 umfasst gegen #12 sieben Commits und 34
+Dateien einschließlich dieser Dokumentation. #14 fügt drei Commits und acht
+Dateien hinzu, darunter die Prüfung nicht endlicher Solo-WAV-Samples. #16 fügt
+zwei Commits und sechs Dokumentationsdateien hinzu. #15 hat exakt denselben
+Head wie #14, aber Main als Basis: 13 Commits, 48 Dateien. Es ist kein weiterer
+unabhängiger Änderungsblock.
+
+**Empfehlung: kleine Integrationsschritte #11, #12, #13, #14, danach #16.**
+Jeweils erst nach Review und erfolgreichen Pflichtchecks des tatsächlich zu
+integrierenden Stands. Mergecommits bevorzugen, damit die bereits gestapelte
+Abstammung erhalten bleibt. Nach jedem Merge die nächste Basis auf Main
+nachführen, verbleibenden Diff erneut prüfen und CI erneut abwarten. Bei
+Dokumentationskonflikten den jüngsten geprüften Status erhalten und ältere
+Nachweise als datierte Historie bewahren. Drafts erst nach bewusster fachlicher
+Freigabe bereitstellen; Teilabnahme nicht in Releasefreigabe umdeuten.
+
+**#15 in dieser Route nicht zusätzlich mergen.** Nach Übernahme von #14 muss
+sein Head bereits Vorfahr von Main und sein verbleibender Inhaltsdiff leer sein;
+danach kann der PR nach separater Entscheidung als redundant geschlossen
+werden. Alternativ könnte #15 nach umfassendem Review #12–#14 gesammelt
+ersetzen, wäre aber der größere und hier nicht bevorzugte Schritt. Niemals beide
+Routen unabhängig squashen oder cherry-picken. Bei abweichender Mergeart
+Abstammung und patchäquivalente Änderungen vor jeder weiteren Übernahme erneut
+prüfen. In dieser Sitzung kein Merge, keine Schließung, kein Force-Push und
+keine Änderung fremder Reviewbranches.
+## Phase 3.2: ununterbrochener Nachlauf und Speicherdiagnose
+
+Am 21. November 2026 von **18:04:05,529 bis 18:25:00,042 MEZ**:
+**20 Minuten 54,51 Sekunden tatsächlich gemessene Zeit**. 251 Ressourcenproben,
+maximaler Abstand 5,025 Sekunden. Dieselbe App- und Dienstprozessidentität mit
+unveränderter Startzeit über alle Proben; kein Neustart, keine Unterbrechung.
+Startvorbereitung und Prozessabbau zählen nicht zur Dauer. Ein vorheriger
+Sandboxstart ohne native Bereitschaft lief in ein Readiness-Timeout und zählt
+nicht als Performance-Sitzung. Der anschließende eigene native Lauf nutzte lokale
+Socket-/Prozessrechte, isolierte SQLite/Bibliothek, frisches WebView-Profil und
+vorhandene Offlinegewichte. Keine Downloads und keine echten API-Transfers.
+
+Zwei quellbenannte zehn-/zwölfsekündige Ausschnitte derselben erlaubten lokalen
+Aufnahme; keine zwei unabhängigen Songs. Die mitkopierte historische synthetische
+Fixture wurde nicht geöffnet oder als Musikabnahme gezählt. Vorbereitete
+Anzeige-Caches bleiben von echter Inferenz getrennt. Fenster frisch gebunden,
+große Bildregion verwendet. Ein erster Accessibility-Reiterklick führte zur
+Verlaufsansicht; anschließende bildgebundene Bibliotheksnavigation bestätigt.
+Nach Scrollanimationen vor weiteren Koordinateneingaben erneut beobachtet.
+Keine Geometrie-/Hilfsfensterabnahme aus unklaren Eingaben abgeleitet.
+
+Zehn native Original-/Live-Mixzyklen mit Gesangs-/Instrumentalwahl,
+zweimal Live-Pause/Seek/Resume, laufendem Live-Seek, zweimal Original-Pause/
+Seek/Resume, zwei nativ gesetzten A/B-Bereichen und zwei tatsächlichen Songwechseln.
+Alle zehn Contexts geschlossen und alle 90 instrumentierten Gain-/Source-Nodes
+getrennt; sämtliche schwachen Contextreferenzen durch normale GC eingesammelt.
+Abschließend ein pausiertes, ungemutetes Originalelement, keine Stemelemente,
+keine aktiven AudioHandler. Kein erzwungener GC. Fünfsekündige Medienproben
+bestätigen die wechselnden Wiedergabezustände, ersetzen aber keine hochauflösende
+Ausgangs-/Looplatenzmessung. Kein physischer Audioausgabenachweis.
+
+Eine ausdrücklich per HTTP gestartete lokale CLAP-Neuberechnung ohne Whisper
+wurde während nativer Originalwiedergabe nach **12,03 Sekunden** abgeschlossen.
+Dies ist echte Offline-Inferenz im selben Dienst, kein nativer Auslösebeleg und
+kein Music2Emo-Lauf trotz ausgewähltem Music2Emo-Anzeigecache. Modellladen und
+Analyse wurden separat markiert. Kein zweites Textemotionsmodell geprüft.
+Regressionen und Builds liefen erst nach Ende der Performance-Sitzung.
+
+### Zustandsgetrennte Ressourcen
+
+Alle Werte summieren jeweils die eigene native beziehungsweise Dienstfamilie;
+CPU in Kernprozent, 100 % entspricht einem Kern. Konstante Fenster nach den ersten
+20 Sekunden des bezeichneten Zustands ausgewertet. Die ersten 60 Sekunden sind
+Aufwärmphase; die darüber hinausgehende Einrichtungsphase bis Sekunde 80 bleibt
+zusätzlich getrennt. Der erste Originalabschnitt enthält am Ende die Navigation
+ins Studio und ist nur mit dieser Einschränkung vergleichbar. Keine absoluten
+Neustartwerte als Trend verglichen, keine erfundenen Speicherbudgets.
+
+| Zustand innerhalb derselben Sitzung | Native RSS / Private Bytes (MiB) | Handles / CPU-Median |
+|---|---|---|
+| Original, Atmosphäre aus, erster Abschnitt | 557,11–570,87 / 374,72–434,50 | 5.335–5.411 / 37,99 % |
+| Konstanter Live-Mix, Atmosphäre aus, 140,50 s Abschnitt | 596,29–602,29 / 411,95–417,75 | 5.385–5.404 / 43,91 % |
+| Derselbe Live-Mix, Atmosphäre an, 130,48 s Abschnitt | 619,20–629,58 / 500,69–524,42 | 5.358–5.386 / 52,32 % |
+| Original nach Context-Freigabe, Atmosphäre an, 135,49 s | 599,22–607,66 / 505,43–534,62 | 5.331–5.373 / 49,51 % |
+| Original im Studio, Atmosphäre wieder aus, 130,45 s | 590,50–593,43 / 412,00–415,27 | 5.329–5.335 / 35,81 % |
+| Wiederholungszyklen, wechselnde Graphen | bis 810,77 / bis 711,88 | bis 5.420 / kein konstanter Lastvergleich |
+| Letzter pausierter Zustand nach Songrückkehr, 60,21 s Abschnitt | 782,01–788,65 / 640,03–648,30 | 5.306–5.317 / 14,01 % |
+
+Native Familie nach dem Aufwärmen acht Prozesse; Dienst drei. Gesamtspitzen
+native RSS 810,77 MiB, Private Bytes 711,88 MiB, 5.437 Handles und 105,57
+Kernprozent; das sind Fünfsekundenstichproben, keine garantierten Maxima.
+Dienst vor Modellladen etwa 657 MiB RSS / 1.720 MiB Private Bytes, danach
+etwa 1.427 / 2.649 MiB; maximal 661 Handles und 77,82 Kernprozent.
+Letztes Dienstfenster Private Bytes konstant 2.648,86 MiB, 634 Handles,
+CPU-Median null. Residente Modelllast nicht mit nativem Wiedergabespeicher mischen.
+
+**Einordnung der Private Bytes:** Die kontrollierte Atmosphärenzuschaltung
+verschiebt das native Niveau um ungefähr 90–110 MiB; nach Ausschalten liegt
+es wieder bei 412–415 MiB. Damit ist ein zustandsabhängiger Anteil bestätigt.
+Die anschließende gezielte Wiederholung weiterer neun Graphzyklen zeigt jedoch
+zusätzlichen Speicherverbleib: bei geschlossenem Graphen, demselben Song,
+Originalwiedergabe im Studio und ausgeschalteter Atmosphäre etwa 413 MiB vor
+der Folge, 498 nach Zyklus zwei, 575 nach fünf und 656 nach zehn. Die Nähe zur
+jeweiligen Freigabe variiert; das sind keine gleich langen Erholungsfenster.
+Zwei über die gesamte Sitzung identische WebView-Kindprozesse tragen den größten
+Zuwachs. Ihre genaue interne Allokationsart ist nicht bestimmt.
+
+JS-Heap im Live-Mix ohne Atmosphäre 3,71–5,31 MiB, mit Atmosphäre 4,09–8,49 MiB,
+während der Wiederholungsfolge 3,82–6,69 MiB und abschließend 3,90–4,02 MiB.
+Graph-/Nodefreigabe und fehlender fortlaufender Handletrend erklären den nativen
+Restbedarf nicht. Der spätere pausierte Zustand bleibt erhöht, ist aber ein
+anderer Bedienzustand. **Kein Leckfreiheitsnachweis und keine bestätigte Leckursache.**
+Keine spekulative Optimierung. Nächster Speicherlauf: pro Zyklus feste gleiche
+Wiedergabe-/Erholungsfenster und native Allokations-/Medienpufferdiagnose der
+betroffenen WebView-Prozesse; langfristiges Plateau oder fortgesetztes Wachstum
+getrennt prüfen. Diese Diagnose bleibt offen.
+
+### Windows-Proactor
+
+Sechs `ConnectionResetError`-Callbacks im laufenden Dienst: 18:08:50,276;
+vier zwischen 18:19:05,629 und 18:19:05,741; einer 18:19:25,080 MEZ.
+Der lokale Diagnosehandler protokolliert Zeit, Callback und beide Socketenden
+und ruft anschließend unverändert den Standardhandler auf. Keine Unterdrückung.
+Alle sechs betreffen Loopback-TCP-Verbindungen zum eigenen Audiodienst.
+App, Browser und Dienst liefen dabei weiter; kein Testhalterabbruch zu diesen
+Zeitpunkten. Vier Ereignisse liegen innerhalb derselben etwa 0,12 Sekunden wie
+browserseitige `net::ERR_ABORTED`-Meldungen der Stem-Mix-Requests. Ein weiterer
+Callback stimmt zeitlich mit einem solchen Abbruch überein. Der erste trat vor
+Beginn der Browser-Netzaufzeichnung auf und ist nur dem ersten Live-Wechsel
+zuzuordnen. Die genaue Eins-zu-eins-Zuordnung von Request zu Socket fehlt.
+
+Lokaler gezielter Reproduktionsablauf: gespeicherte Vier-Gruppen-Stems öffnen,
+Original-A/B-Loop spielen, Gesang beziehungsweise Instrumental aktivieren,
+Pause/Seek/Resume und Originalrückkehr wiederholen; Callback- und Netzwerkzeiten
+parallel erfassen. In dieser Folge erneut beobachtet, aber nicht bei jedem Zyklus.
+Ein separater minimaler Proactor-TCP-Test mit 20 absichtlichen Resets und zehn
+früh mit TCP-RST geschlossene echte Stem-Antworten erzeugten **keinen** Callback.
+Die lokalen Testskripte und das Wiederholungsprotokoll bleiben erhalten; kein
+zuverlässiger isolierter Minimalreproduzierer und keine endgültige Ursache.
+
+Der Stack endet beim Socket-`shutdown` im Verbindungsabbau der vorhandenen
+Python-Proactor-Laufzeit. Das grenzt die Meldung ein, beweist aber weder einen
+Anwendungsfehler noch den genauen Auslöser der früheren acht Meldungen.
+Kein Prozessabsturz, fehlgeschlagener Analyseabschluss oder Datenverlust in der
+Nachlaufsitzung beobachtet. Auswirkung auf langfristige Socketbereinigung bleibt
+gezielt zu prüfen. Keine Laufzeitänderung und keine Anwendungskorrektur auf Verdacht.
+
+### Regression, Datenabschluss und Entscheidung
+
+Neu bestanden: **399 Backendtests (49,21 s), 156 Frontendtests in 29 Dateien
+(19,44 s), neun Rusttests locked/offline, fünf Node-Dialogdrivertests,
+TypeScript/Vite und Windows-Custom-Protocol-Releasebuild locked/offline (18,22 s)**.
+Bestehende Vite-Chunkwarnung bei 505,50 kB. Kein Installer-/Bundlelauf.
+
+Vollständige Vorher-/Nachher-Hashes: Originalordner, Modellgewichte, produktive
+SQLite und produktive verwaltete Audiodateien unverändert. Produktive und
+isolierte SQLite `integrity_check=ok`. Isolierte Trackzeilen, Cachebesitzer und
+Audio-/Stemhashes unverändert. Erwartet neu geschrieben wurde ausschließlich
+ein `latest`-Analyse-Anzeigecache durch die ausdrücklich erzwungene Neuberechnung;
+alle anderen vorhandenen Cacheeinträge unverändert. Nach Appschluss sämtliche
+isolierten Tabellen und Medienhashes gleich zum unmittelbar vorherigen Snapshot,
+keine verwaisten Cachebesitzer. **210 tatsächliche Dienst-SQLite-Verbindungen
+geöffnet und geschlossen, maximal vier gleichzeitig, abschließend null aktiv.**
+Keine eigenen Workerbereiche, temporären Mixdateien oder Tempdateien verblieben.
+Alle gemessenen Prozessidentitäten beendet, Ports 8765/19222 frei. Absichtlich
+erhaltene Worker-Schutzfixtures der Regression sind separat und keine Dienstreste.
+
+**Phase 3 bleibt teilweise bestanden.** Das einzelne 20-Minuten-Ziel ist jetzt
+im bezeichneten engen Musik-/Windowsumfang geschlossen. Speicherrestbedarf und
+Proactor-Ursache bleiben offen; keine neue allgemeine Langzeit-, Kern- oder
+Releasefreigabe. Physische Audioausgabe, zweites echtes Textemotionsmodell,
+vollständige native Lyrics-/API-/Audiokreuzmatrix, weitere DPI/Mehrmonitor,
+Windows 10/Linux, Installation/Update/Deinstallation und Musik-/Modellqualität
+bleiben unverändert offen.
+
+Übergabe an Phase 4: geprüften Integrationsweg oben beibehalten; pro Plattform
+und DPI einen isolierten Daten-/Prozess-/Ausgabeschutz vorsehen; Windows-10-/
+Linux- und Mehrmonitorabnahme sowie Installation, Update und Deinstallation
+separat planen und tatsächlich durchführen. Den offenen Speicher- und
+Proactor-Diagnoseauftrag mitführen; erfolgreiche Builds ersetzen keine dieser
+Abnahmen. Keine externe Datenbankphase und keine Releasefreigabe.
