@@ -15,6 +15,21 @@ der anfangs laufende #14-Lauf
 [44811474870](https://github.com/FutureKLP/MoodScope-public/actions/runs/44811474870)
 wurde erneut mit vier erfolgreichen Jobs geprüft. Kein Merge oder Force-Push.
 
+Abschließender PR-Abgleich am 21. November:
+
+| PR | Basis / Head | Status |
+|---|---|---|
+| #11 | main / `ff585f5` | Offen, vier grüne Jobs, keine Reviews/Reviewthreads |
+| #12 | main / `5d459f0` | Offen, vier grüne Jobs, keine Reviews/Reviewthreads |
+| #13 | Phase 2A / `b3e4b9c` | Draft, vier grüne Jobs, keine Reviews/Reviewthreads |
+| #14 | Phase 2B / `723b8c2` | Draft, vier grüne Jobs, keine Reviews/Reviewthreads |
+| [#15](https://github.com/FutureKLP/MoodScope-public/pull/15) | main / derselbe Phase-2C-Head `723b8c2` | Zusätzlich vorhandener offener Sammel-PR; vier grüne Jobs, keine Reviews/Reviewthreads |
+| [#16](https://github.com/FutureKLP/MoodScope-public/pull/16) | Phase 2C / Phase-3-Dokumentationsbranch | Neuer Draft; eigene CI separat vom erfolgreichen Ausgangshead prüfen |
+
+#15 ist eine zusätzliche bestehende Integrationslinie, keine bereits erfolgte
+Übernahme der gestapelten PRs. Vor späteren Merges Basis und verbleibenden Diff
+erneut abstimmen. Diese Phase ändert weder Main noch bestehende Reviewbranches.
+
 Windows 11 Build 26200, Ryzen 5 7600X, zwölf logische CPUs, 31,14 GiB RAM,
 RTX 5070 und integrierte Radeon. Bestehender Tauri-Releaseclient mit WebView2,
 eigene SQLite, eigener Dienst und frisches WebView-Profil. Hauptfenster zunächst
@@ -215,6 +230,12 @@ Bereinigter Dokumentationsstand wird ausschließlich nach exakter Index- und
 erreichbarer Historienprüfung als separater Draft auf Phase 2C veröffentlicht.
 Kein automatischer Main-Merge; öffentliche Musik-/Modellrohbelege werden nicht
 Bestandteil der Abnahmedokumentation.
+
+Projektseite, Kernaufgabe und Performanceaufgabe in Notion wurden in-place um
+einen kurzen Status mit Link zu diesem öffentlichen Bericht und Draft #16 ergänzt;
+ihre Arbeitsstatus bleiben erhalten. Der ausführliche lokale Nachtrag wurde von
+der automatischen Übertragungsprüfung abgelehnt und nicht gespeichert. Keine
+neuen Projekt-/Aufgabenduplikate.
 
 Bereits neu bestanden: 399 Backendtests (38,37 s), 156 Frontendtests in 29 Dateien
 (19,32 s), neun Rusttests locked/offline, fünf Node-Dialogdrivertests sowie

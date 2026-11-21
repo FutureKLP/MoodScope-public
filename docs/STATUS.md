@@ -104,6 +104,11 @@ Phase 3 entwickelt separat auf `codex/phase3-performance-acceptance`, direkt von
 `723b8c2`. Anwendungscode unverändert; keine Optimierung ohne bestätigten Fehler.
 Main weiterhin `1717ffd`, #11/#12 offen, #13/#14 Draft. Alle vier Jobs des
 Phase-2C-Heads erfolgreich; keine Reviews/Reviewthreads beim erneuten Abgleich.
+Zusätzlich besteht [PR #15](https://github.com/FutureKLP/MoodScope-public/pull/15)
+mit demselben Phase-2C-Head direkt gegen Main; seine vier Jobs sind ebenfalls
+erfolgreich. Neuer eigener [Draft #16](https://github.com/FutureKLP/MoodScope-public/pull/16)
+zielt auf Phase 2C und enthält ausschließlich den sechs Dateien umfassenden
+Phase-3-Dokumentationsstand. Dessen CI ist separat zu prüfen.
 Keine automatischen Merges. Die folgenden datierten Phase-2-Nachweise bleiben
 erhalten; aktuelle Phase-3-Grenzen und Abschlusstests stehen im verlinkten Bericht.
 
