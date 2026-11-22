@@ -7,6 +7,26 @@ Die automatisierte Prüfung ist von tatsächlichen Musik- und nativen
 Bedienabnahmen getrennt. Tests nutzen deterministische, synthetische Fixtures.
 Produktive Daten, Modelle, Musik, Lyrics und Prüfausgaben bleiben ausgeschlossen.
 
+## Phase 4 am 21./22. November 2026
+
+Windows zunächst 399 Backendtests, 156 Frontendtests, neun Rusttests und fünf
+Node-Tests sowie TypeScript/Vite und tatsächliche NSIS-Builds bestanden. Nach
+Korrektur der plattformgerechten Git-Auswahl drei neue Regressionen; elf gezielte
+Publikations-/Pushschutztests erfolgreich. Die vollständige Windows-Backendsuite
+wurde danach mit 402 Tests erneut ausgeführt.
+
+Ubuntu 24.04.4 LTS in einer separaten Linux-Quellkopie: zunächst zwölf Fehler bei
+387 bestandenen Backendtests. Acht Fehler durch CUDA-Torchaudio neben CPU-Torch,
+vier durch Windows-Git für Linux-Verzeichnisse. Nach gezielter Einrichtung und
+Quellkorrektur **402 Backendtests bestanden (37,02 s)**. Außerdem 156 Frontend-,
+neun Rust- und fünf Node-Tests, TypeScript/Vite und Linux-Release-/Debian-Build
+bestanden. CPU-Setup mit echten Importprüfungen ausgeführt; keine Modelle geladen.
+
+Native Installer-/WSLg-, SQLite-, WAV- und Audio-Monitornachweise sind getrennt in
+[Phase 4](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md) dokumentiert. Kein autonomes
+Backend im Paket, kein echter Debian-Installationstest oder physischer
+Audioausgangsnachweis; frühere Freigabegrenzen bleiben bestehen.
+
 ## Phase 3 am 20./21. November 2026
 
 Neu auf unverändertem Anwendungscode bestanden: 399 Backendtests (38,37 s),

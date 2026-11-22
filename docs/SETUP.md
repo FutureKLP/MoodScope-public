@@ -41,12 +41,24 @@ Nach einem nativen Build kann auch **Start-MoodScope.cmd** per Doppelklick verwe
 
 Auf einem bereits eingerichteten Entwicklungsrechner kann ein separater Build unter `src-tauri/target/v03/release/` oder `src-tauri/target/v02/release/` liegen. Der Projektstarter wählt die neuere EXE aus diesen Ordnern und `src-tauri/target/release/`. Eine bereits geöffnete ältere App und ihr Backend müssen für Version 0.3 neu gestartet werden; ein älterer Dienst wird vom Starter erkannt.
 
+## Stand der Installationspakete
+
+NSIS und Debian wurden in Phase 4 tatsächlich gebaut. Der Windows-Installer wurde
+mit separater Testkennung installiert und deinstalliert; Benutzerdaten blieben
+erhalten. **Beide Pakete enthalten aktuell nur den Desktopclient, kein Python-
+Backend und keine Modellgewichte.** Der installierte Client benötigt weiterhin
+einen separat eingerichteten laufenden Dienst. Ein erfolgreicher Paketbuild ist
+keine Freigabe als eigenständig nutzbare App. Linux-Paketinstallation/-deinstallation
+bleiben offen. [Nachweise und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
 ## Installation und Start unter Linux
 
 Nach Einrichtung der oben genannten Systemvoraussetzungen:
 
 ```bash
 bash scripts/setup.sh
+# Explizite CPU-Umgebung, auch Torchaudio ohne CUDA:
+# bash scripts/setup.sh --cpu
 bash scripts/start.sh
 # Native Entwicklung:
 bash scripts/start.sh --desktop
@@ -55,6 +67,19 @@ npm run tauri build -- --no-bundle
 ```
 
 Windows- und Linux-Builds müssen auf ihren jeweiligen Zielsystemen geprüft werden. Ein erfolgreicher Windows-Build bestätigt keinen Linux-Build.
+
+`--cpu` wählt Torch und Torchaudio vom selben CPU-Paketindex. Beide müssen zur
+gewählten Umgebung passen; ein CUDA-Torchaudio neben CPU-Torch kann bereits den
+CLAP-Import verhindern. Das Setup prüft diese Importe, bevor es die Umgebung als
+validiert markiert. Bei einem fehlgeschlagenen Setup bleibt kein alter
+Validierungsmarker bestehen.
+
+Unter WSL2 zuerst die tatsächliche Ubuntu-Version, Werkzeuge und WSLg-Sockets
+prüfen. Eine separate Quellkopie im Linux-Dateisystem verwenden; Windows-venv,
+produktive SQLite, private Musik und Modelle nicht ungeprüft kopieren. Die
+Tauri-Systempakete werden nicht vom Setupskript installiert. Die Phase-4-Prüfung
+verwendete Ubuntu 24.04.4 LTS, GTK 3 und WebKitGTK 4.1. WSLg-Anzeige und PulseAudio-
+Anschluss ersetzen keine Abnahme an einem eigenständigen Ubuntu-Desktop.
 
 ## YouTube- und SoundCloud-Links
 

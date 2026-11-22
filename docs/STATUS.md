@@ -1,8 +1,32 @@
 # Aktueller Entwicklungs- und Abnahmestand
 
-Stand: 21. November 2026. Dies ist die einzige aktuelle Statusübersicht.
+Stand: 22. November 2026. Dies ist die einzige aktuelle Statusübersicht.
 Prüfberichte halten datierte Nachweise fest; frühere Sitzungsstände sind keine
 weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsversion.
+
+## Phase 4: Installer und Ubuntu unter WSL2
+
+**Teilweise bestanden; eigenständiger Installationsbetrieb bleibt blockiert.**
+Windows-NSIS (2,37 MiB), isolierte Installation mit eigener Testkennung, nativer
+WAV-Import/-Export, Wiedergabe, Bibliotheksneustart und Deinstallation mit
+Datenerhalt bestanden. Das Paket enthält den Desktopclient ohne Python-Backend;
+der direkte Erststart bleibt bei „Backend offline“. Die anschließenden nativen
+Funktionstests verwenden ausdrücklich einen externen eigenen Prüfdienst.
+
+Ubuntu 24.04.4 LTS unter WSL2 tatsächlich erkannt und nach Zustimmung eingerichtet.
+Eigene Quellkopie im Linux-Dateisystem: 402 Backend-, 156 Frontend-, neun Rust-
+und fünf Node-Tests, Webbuild sowie echter Linux-Release-/Debian-Build bestanden.
+Linux-CPU-Setup und native Git-Auswahl korrigiert. Echte WSLg-GUI, GTK-Import,
+Seeking/A/B/Pause, WAV-Export mit Zieldateiabbruch und beaufsichtigter Neustart
+geprüft. 440-Hz-Testsignal am WSLg-Pulse-Ausgabemonitor nachgewiesen; keine
+physische Windows-Ausgabemessung. Auch das Debian-Paket enthält kein Backend.
+
+Linux-Paketinstallation/-deinstallation, autonomer Backendstart, reguläres
+Linux-Alt-F4-Ende, vollständige Lyrics-/Modellmatrix, weitere DPI/Mehrmonitor,
+Windows 10 und unabhängiger Linux-Desktop bleiben offen. Vorhandene unvollständige
+Ubuntu-Paketkonfiguration nicht ungefragt repariert. Frühere Phase-2B-/2C-/3-
+Freigabegrenzen gelten fort. Kein Main-Merge und kein Endnutzer-Release.
+[Vollständige Ergebnisse, Belege und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
 
 ## Verifizierter öffentlicher und lokaler Stand
 

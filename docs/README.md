@@ -39,6 +39,7 @@
 - [Phase 2B: KI, Modelle, Atmosphäre und API](PHASE2B-ACCEPTANCE.md) – Teilabnahme und offene native Kriterien.
 - [Phase 2C: Hörstudio, Mixer und WAV-Export](PHASE2C-ACCEPTANCE.md) – native Teilabnahme, numerische WAV-Prüfung und Gesamtzyklus.
 - [Phase 3: Performance und Ressourcen](PHASE3-PERFORMANCE-ACCEPTANCE.md) – wiederholte native Musik-/Mixprüfung, echte Offline-Worker und zentrale Freigabematrix.
+- [Phase 4: Installer und Plattformen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md) – isolierter NSIS-Lauf, Ubuntu/WSLg, Debian-Build und fehlende Backendverteilung.
 - [Performancebaseline](PERFORMANCE-BASELINE.md) – historische synthetische Messungen; keine Musikabnahme.
 
 ## Release und Veröffentlichung

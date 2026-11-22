@@ -10,6 +10,21 @@ Quellverbesserungen bedeutet keine vollständige Kern-, Plattform- oder
 Qualitätsfreigabe. Die externe Datenbankphase ist weiterhin gesperrt; SQLite
 bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
 
+## Phase 4 am 21./22. November 2026
+
+**Teilweise bestanden.** Isolierter Windows-NSIS-Installations-/Deinstallationslauf
+mit Datenerhalt und nativen WAV-Dialogen; tatsächlicher Ubuntu-WSL2-Build samt
+Debian-Paket und WSLg-GUI mit GTK-Dateidialogen, Seeking/Loop/Pause, numerisch
+geprüftem WAV-Export und Signal am WSLg-Ausgabemonitor. Eigene Bibliotheken nach
+beaufsichtigten Neustarts identisch, geschützte Produktionsdateien unverändert.
+
+Beide Installationspakete enthalten nur den Client. Eigenständiger Backendstart
+ohne Entwicklungsumgebung bleibt blockiert; externe Prüfdienste schließen diese
+Lücke nicht. Echte Linux-Paketinstallation, regulärer Linux-Quitpfad, physische
+Audioausgabe, vollständige Lyrics-/Modellmatrix und weitere Plattform-/DPI-Fälle
+offen. Frühere Ressourcen-, Proactor- und Qualitätsbefunde bleiben erhalten.
+[Getrennte Plattformmatrix und Nachweise](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
 ## Phase 3 am 20./21. November 2026
 
 **Teilweise bestanden.** Zehn wiederholte native Original-/Live-Mixzyklen
