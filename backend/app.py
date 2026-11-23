@@ -26,7 +26,8 @@ from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
 from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method,cancellation,prompt_presets,runtime_devices
 from . import expression_compare,provider_routing,storage,persistence,worker_workspace
 
-DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
+from .paths import data_dir
+DATA = data_dir()
 DATA.mkdir(parents=True, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app):
@@ -191,7 +192,7 @@ def health(purpose:Literal['audio','lyrics','whisper','interpretation','separati
     from scripts.runtime import environment_id
     device=engines.device() if purpose=='audio' else engines.device(purpose)
     name=next((d['name'] for d in runtime_devices.available() if d['id']==('cuda:0' if device=='cuda' else device)),device)
-    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':16,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'system_control':SYSTEM_CONTROL is not None, 'device':device,
+    return {'status':'ok','device_name':name,'api_model':cloud.MODEL, 'version':'0.3.0','api_revision':16,'runtime_id':environment_id(),'instance_id':INSTANCE_ID,'runtime_owner':os.environ.get('MOODSCOPE_RUNTIME_OWNER'),'system_control':SYSTEM_CONTROL is not None, 'device':device,
             'audio_model':AUDIO_MODEL, 'lyric_model':LYRIC_MODEL}
 
 

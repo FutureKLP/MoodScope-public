@@ -43,13 +43,15 @@ Auf einem bereits eingerichteten Entwicklungsrechner kann ein separater Build un
 
 ## Stand der Installationspakete
 
-NSIS und Debian wurden in Phase 4 tatsächlich gebaut. Der Windows-Installer wurde
-mit separater Testkennung installiert und deinstalliert; Benutzerdaten blieben
-erhalten. **Beide Pakete enthalten aktuell nur den Desktopclient, kein Python-
-Backend und keine Modellgewichte.** Der installierte Client benötigt weiterhin
-einen separat eingerichteten laufenden Dienst. Ein erfolgreicher Paketbuild ist
-keine Freigabe als eigenständig nutzbare App. Linux-Paketinstallation/-deinstallation
-bleiben offen. [Nachweise und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+Phase 4.2 ergänzt einen gesonderten Entwicklungsbuild mit CPU-Python-Backend als
+Tauri-Ressource. Bau, Benutzerverzeichnisse und Grenzen stehen unter
+[Backend-Runtime](BACKEND-RUNTIME.md). Lokale NSIS-/Debian-Kandidaten wurden mit
+eigener Testkennung installiert, ohne Projektserver gestartet und mit Datenerhalt
+deinstalliert. Modellgewichte sind nicht enthalten. Die vollständige Linux-
+Paketkonfiguration und Binärlizenzen bleiben offen; keine Endnutzer-/Releasefreigabe.
+Die früheren Phase-4.1-Pakete und der Standardbuild enthalten weiterhin nur den
+Client und benötigen den eingerichteten Projektstarter beziehungsweise Dienst.
+[Nachweise und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
 
 ## Installation und Start unter Linux
 

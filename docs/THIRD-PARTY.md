@@ -30,3 +30,14 @@ Generierungsskript. Es wurde kein neuer fremder Anwendungscode übernommen.
 Eine spätere Installer-/Binaryverteilung benötigt eine eigene Bestands-,
 Lizenzhinweis- und gegebenenfalls Quellangebotsprüfung der tatsächlich gebündelten
 Versionen. Dafür wird hier keine pauschale Freigabe behauptet.
+
+
+## Paketierte CPU-Runtime (23. November 2026)
+
+Die zusätzliche Backendverteilung wird getrennt von Modellgewichten geprüft.
+Der Builder erzeugt Paketversionen, mitgelieferte Lizenztexte und Dateihashes.
+Python-Metadaten ersetzen nicht die Bedingungen eingebetteter nativer Bibliotheken.
+Insbesondere ist der untersuchte Windows-FFmpeg ein GPLv3-Build; vollständige
+Quellbereitstellung und native Notices sind vor öffentlicher Binärverteilung
+noch zu klären. Keine öffentliche Paketfreigabe.
+[Architektur und Lizenzumfang](BACKEND-RUNTIME.md#lizenzen-und-binärfreigabe).

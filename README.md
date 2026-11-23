@@ -40,10 +40,12 @@ Das Windows-Standardsetup verwendet einen CUDA-PyTorch-Build; CPU-Einrichtung,
 Linux, native Builds, Modelle und Linkimport stehen in der
 [Installationsanleitung](docs/SETUP.md).
 
-Die derzeit gebauten NSIS-/Debian-Pakete enthalten den Desktopclient, aber kein
-Python-Backend. Für den Betrieb wird weiterhin die eingerichtete Projektumgebung
-mit separat gestartetem Dienst benötigt. Sie sind keine eigenständig nutzbaren
-Endnutzer-Installer. [Plattformabnahme und Grenzen](docs/PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+Der zusätzliche [Runtimebuild](docs/BACKEND-RUNTIME.md) bündelt ein eigenes
+CPU-Python-/FastAPI-Backend. Lokale NSIS-/Debian-Testkandidaten starten es selbst;
+der normale Entwicklungsbuild verwendet weiterhin den Projektstarter.
+Lizenzen, vollständige Modellprüfung und weitere Plattformfälle bleiben offen.
+Keine Endnutzer-Installerfreigabe.
+[Plattformabnahme und Grenzen](docs/PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
 
 ## Entwicklungsstatus
 

@@ -90,7 +90,7 @@ def transcribe(engine,path,progress,quality='standard',language=None):
     progress('Whisper: lokale Texterkennung auf '+('NVIDIA CUDA' if device=='cuda' else 'CPU'),5)
     catalog.unload_models(engine)
     model=WhisperModel(catalog.model_source(engine.data,'whisper'),device=device,device_index=device_index,
-        compute_type='float16' if device=='cuda' else 'int8',download_root=str(catalog.ROOT/'models'/'whisper'))
+        compute_type='float16' if device=='cuda' else 'int8',download_root=str(catalog.model_dir()/'whisper'))
     try:
         from .cancellation import check
         check()

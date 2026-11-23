@@ -6,6 +6,8 @@
 
 - [Installation und lokaler Start](SETUP.md) – Windows, CPU, Linux, Desktop und Modelle.
 - [Entwicklungsumgebung](ENVIRONMENT.md) – Laufzeiten und Systembibliotheken.
+- [Paketierte Backend-Runtime](BACKEND-RUNTIME.md) – Architektur, Prozessbesitz,
+  Benutzerverzeichnisse und Lizenzgrenzen des zusätzlichen Runtimebuilds.
 - [Mitwirkung und Projektstruktur](CONTRIBUTING.md) – Einstieg, Tests und Review.
 - [Technischer Überblick 0.3](DEVELOPMENT.md) und [Funktionen und Bedienung](USER-GUIDE.md).
 - [Designsystem](DESIGN-SYSTEM.md) – Palette, kontinuierliche Bewegung und Synchronisierung.

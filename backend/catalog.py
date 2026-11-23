@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import threading
+from .paths import model_dir
 
 ROOT=Path(__file__).resolve().parents[1]
 CATALOG={
@@ -79,7 +80,7 @@ def model_source(data,purpose):
         # Explicit model-manager downloads use the shared Hub cache; faster-whisper's
         # own downloader uses a separate directory. Reuse either complete snapshot offline.
         from huggingface_hub import try_to_load_from_cache
-        for location in [ROOT/'models'/'hub',ROOT/'models'/'whisper']:
+        for location in [model_dir()/'hub',model_dir()/'whisper']:
             cached=try_to_load_from_cache(model['repo'],'model.bin',cache_dir=location)
             if isinstance(cached,str) and (Path(cached).parent/'config.json').is_file():return str(Path(cached).parent)
     return value['installed'].get(key,model['repo'])
@@ -93,7 +94,7 @@ def status(data):
         weight='model.bin' if model['purpose']=='whisper' else 'model.safetensors'
         cached=try_to_load_from_cache(model['repo'],weight,revision=model.get('revision'))
         if model['purpose']=='whisper' and not isinstance(cached,str):
-            cached=try_to_load_from_cache(model['repo'],weight,cache_dir=ROOT/'models'/'whisper')
+            cached=try_to_load_from_cache(model['repo'],weight,cache_dir=model_dir()/'whisper')
         if not model.get('custom') and not isinstance(cached,str):cached=try_to_load_from_cache(model['repo'],'pytorch_model.bin')
         installed=(key in value['installed'] or isinstance(cached,str)) and key not in value.get('incomplete',[])
         items.append({'id':key,**model,'installed':installed,'active':value['active'][model['purpose']]==key})
@@ -122,7 +123,7 @@ def download(data,key,progress):
     if model.get('custom'):
         patterns=['*.json','*.model','tokenizer*','*.txt','*.safetensors']
         if model['purpose']=='whisper':patterns+=['model.bin']
-        kwargs={'revision':model['revision'],'token':False,'local_dir':ROOT/'models'/'managed'/key,'ignore_patterns':['*.py','*.pkl','*.pickle','*.pt','*.pth','*.ckpt']}
+        kwargs={'revision':model['revision'],'token':False,'local_dir':model_dir()/'managed'/key,'ignore_patterns':['*.py','*.pkl','*.pickle','*.pt','*.pth','*.ckpt']}
     with _lock:
         value=configuration(data);value['incomplete']=list(set(value.get('incomplete',[])+[key]));save(data,value)
     path=snapshot_download(model['repo'],allow_patterns=patterns,tqdm_class=DownloadProgress,**kwargs)
@@ -157,8 +158,10 @@ def remove(data,key):
         model=models[key];value=configuration(data)
         for purpose,active in list(value['active'].items()):
             if active==key:value['active'][purpose]=DEFAULTS[purpose]
-        root=(ROOT/'models').resolve()
-        if not root.is_relative_to(ROOT.resolve()):raise ValueError('Modellordner liegt außerhalb des Projekts')
+        root=model_dir().resolve()
+        # Installed model storage deliberately lives outside the resource tree.
+        # Only descendants of the selected model root may be removed below.
+        if root==Path(root.anchor):raise ValueError('Ungültiger Modellordner')
         managed=root/'managed'/key
         installed=value['installed'].get(key)
         if installed and not Path(installed).resolve().is_relative_to(root):
@@ -167,7 +170,7 @@ def remove(data,key):
             resolved=managed.resolve()
             if resolved!=managed or managed.is_symlink() or (hasattr(managed,'is_junction') and managed.is_junction()):raise ValueError('Ungültiger Modellpfad')
             shutil.rmtree(resolved)
-        # Existing curated downloads live in the project Hugging Face cache.
+        # Curated downloads live in the selected model root's Hugging Face cache.
         if not model.get('custom'):
             if any(active!=key and models[active]['repo']==model['repo'] for active in value['active'].values()):
                 raise ValueError('Ein anderes ausgewähltes Modell verwendet dieselben Gewichte.')

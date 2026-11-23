@@ -1,31 +1,41 @@
 # Aktueller Entwicklungs- und Abnahmestand
 
-Stand: 22. November 2026. Dies ist die einzige aktuelle Statusübersicht.
+Stand: 23. November 2026. Dies ist die einzige aktuelle Statusübersicht.
 Prüfberichte halten datierte Nachweise fest; frühere Sitzungsstände sind keine
 weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsversion.
 
-## Phase 4: Installer und Ubuntu unter WSL2
+## Phase 4.2: Eigenständige Backend-Runtime
 
-**Teilweise bestanden; eigenständiger Installationsbetrieb bleibt blockiert.**
-Windows-NSIS (2,37 MiB), isolierte Installation mit eigener Testkennung, nativer
-WAV-Import/-Export, Wiedergabe, Bibliotheksneustart und Deinstallation mit
-Datenerhalt bestanden. Das Paket enthält den Desktopclient ohne Python-Backend;
-der direkte Erststart bleibt bei „Backend offline“. Die anschließenden nativen
-Funktionstests verwenden ausdrücklich einen externen eigenen Prüfdienst.
+**Teilweise bestanden; keine Endnutzer- oder Binärfreigabe.** Der opt-in Tauri-
+Runtimebuild bündelt einen separat gebauten PyInstaller-CPU-Ordner. Windows-NSIS
+(396,63 MiB) und Linux-Debian (587,59 MiB) starten ihr eigenes Backend ohne
+separaten Projektserver. Gewichte und bestehende Daten werden nicht übernommen.
+Der Standardentwicklungsbuild behält den Projektstarter.
 
-Ubuntu 24.04.4 LTS unter WSL2 tatsächlich erkannt und nach Zustimmung eingerichtet.
-Eigene Quellkopie im Linux-Dateisystem: 402 Backend-, 156 Frontend-, neun Rust-
-und fünf Node-Tests, Webbuild sowie echter Linux-Release-/Debian-Build bestanden.
-Linux-CPU-Setup und native Git-Auswahl korrigiert. Echte WSLg-GUI, GTK-Import,
-Seeking/A/B/Pause, WAV-Export mit Zieldateiabbruch und beaufsichtigter Neustart
-geprüft. 440-Hz-Testsignal am WSLg-Pulse-Ausgabemonitor nachgewiesen; keine
-physische Windows-Ausgabemessung. Auch das Debian-Paket enthält kein Backend.
+Eigene Benutzerverzeichnisse, Healthcheck mit Version/API 16/Besitzkennung,
+Loopbackbindung, Worker-Neustart, Crashbereinigung, nativer Windows-Appneustart
+und reguläres Ende einschließlich Linux-Alt-F4 sind geprüft. Native synthetische
+WAV-Imports und Exporte auf beiden Plattformen bestanden; Linux-Wiedergabe am
+WSLg-Monitor auch bei schreibgeschützter Installation und maskiertem System-Python.
+Windows wurde mit Python-freiem PATH geprüft, kein frisches Betriebssystem.
+Deinstallation beider eigener Testinstallationen erhält Benutzerdaten/Exporte.
+Alle 10.071 geschützten Dateien unverändert; produktive SQLite lesend intakt.
 
-Linux-Paketinstallation/-deinstallation, autonomer Backendstart, reguläres
-Linux-Alt-F4-Ende, vollständige Lyrics-/Modellmatrix, weitere DPI/Mehrmonitor,
-Windows 10 und unabhängiger Linux-Desktop bleiben offen. Vorhandene unvollständige
-Ubuntu-Paketkonfiguration nicht ungefragt repariert. Frühere Phase-2B-/2C-/3-
-Freigabegrenzen gelten fort. Kein Main-Merge und kein Endnutzer-Release.
+407 Backendtests plus ein POSIX-Skip unter Windows, 408 unter Linux; jeweils
+156 Frontend-, zehn Rust- und fünf Node-Tests sowie Web-/Release-/Paketbuilds.
+Die abschließende Modell-Löschpfadkorrektur hat eigene Regressionen; die nativen
+Kandidaten wurden davor gebaut. Keine native Modellinferenz aus leeren Modellordnern
+behauptet. Music2Emo wird ohne separate Kompatibilitätsruntime als nicht verfügbar
+gemeldet; der Entwicklungspfad bleibt erhalten.
+
+Offen: vollständige Binärlizenzen/Quellbereitstellung (insbesondere GPL-FFmpeg),
+CPU-Abhängigkeitslocks, native Verzögerungs-/Versionsfehlerfälle, versionswechselndes
+Update, Modell-/Lyricsmatrix und weitere Plattformen. Der finale Debian-Kandidat
+blieb im isolierten dpkg-Root wegen fehlendem GStreamer-bad-Paket unkonfiguriert;
+eine einzelne benötigte Pluginbibliothek wurde nur lokal extrahiert. Keine
+systemweite Reparatur der vorhandenen unvollständigen libc-bin-Konfiguration.
+WSLg unter Root ersetzt keinen unabhängigen Ubuntu-Desktop-/Normalbenutzertest.
+Frühere Phase-2B-/2C-/3-Grenzen gelten fort. Kein Main-Merge und kein Endnutzer-Release.
 [Vollständige Ergebnisse, Belege und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
 
 ## Verifizierter öffentlicher und lokaler Stand
@@ -147,7 +157,9 @@ ist vorbereitet, keine Releasefreigabe und keine externe Datenbankphase.
   Windows-Releasebuild bestanden. Eigene Prozesse beendet, Testports frei.
   Audioausgabe, vollständige Wechselmatrix und breite Langzeitlast bleiben offen.
   [Messkonzept, Ergebnisse und zentrale Freigabematrix](PHASE3-PERFORMANCE-ACCEPTANCE.md).
-- **Phase 4 – Installer und Plattformabnahme:** geplant.
+- **Phase 4.2 – Installer und Backend-Runtime:** teilweise bestanden; lokale autonome
+  Windows-/Linux-Kandidaten und Datenerhalt geprüft. Lizenz-, Modell- und weitere
+  Plattformgates offen; maßgeblicher aktueller Umfang steht oben.
 - **Phase 5 – Releaseentscheidung:** geplant; vollständige Kernfreigabe offen.
 - **Externe Datenbanken:** bis zur dokumentierten Kernfreigabe gesperrt. SQLite bleibt Standard.
 

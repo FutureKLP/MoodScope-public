@@ -1,4 +1,152 @@
-# Phase 4: Installer und Plattformprüfung
+# Phase 4.2: Backend-Runtime und Installationsprüfung
+
+Prüfserie 22./23. November 2026. **Teilweise bestanden; keine Endnutzer- oder
+öffentliche Binärfreigabe.** Lokale Windows-/Linux-Kandidaten starten jetzt ein
+gebündeltes Backend selbst. Der unten erhaltene Phase-4.1-Bericht beschreibt die
+vorherigen Clientpakete; dessen Backendlücke gilt nicht für den neuen Runtimebuild.
+
+[Aktueller Status](STATUS.md) · [Runtimearchitektur und Build](BACKEND-RUNTIME.md)
+· [Setup](SETUP.md) · [Drittanbieter](THIRD-PARTY.md).
+
+## Architektur und Inhalt
+
+Gewählt: PyInstaller One-folder als feste Tauri-Ressource, zusätzliches Cargo-
+Feature `packaged-backend` und eigene Buildkonfiguration. Keine kopierte Entwickler-
+venv, kein CUDA-Cache, keine zusätzlichen Renderer-Shellrechte. Der normale
+Entwicklungsbuild bleibt beim vorhandenen Windows-/Linux-Projektstarter.
+Ein separat eingebettetes Python würde zusätzliche Bootstrap-/Importpfadpflege
+verlangen; One-file müsste bei jedem Start entpacken. Modelle bleiben separat.
+
+FastAPI/Uvicorn, Transformers/CLAP/XLM-EMO, PyTorch/Torchaudio, Demucs,
+Faster-Whisper/CTranslate2/PyAV, Librosa/SoundFile und ImageIO-FFmpeg sind im
+CPU-Umfang gesammelt. Builderinventar, Lizenztexte und SHA256-Dateimanifeste
+werden erzeugt; das Inventar der Builderdistributionen ist kein Beweis, dass
+jedes Modul eingefroren ist. Windows-Builder: 100 Distributionen. Upstreamtests,
+Referenzdaten und Bytecodecaches werden aus dem erzeugten Ordner ausgeschlossen.
+Keine Musik, Gewichte oder SQLite in den geprüften Runtime-Dateimanifesten.
+
+| Lokaler Kandidat | Runtimeordner | Paket |
+|---|---|---|
+| Windows x64 | 1.120.327.053 Bytes, 6.876 Dateien | NSIS 415.900.194 Bytes (396,63 MiB), lokale Zlib-Kompression |
+| Linux x86_64 | 1.806.615.685 Bytes, 6.817 Dateien | Debian 616.133.584 Bytes (587,59 MiB) |
+
+Die Kandidaten verwenden eine separate Testkennung. Das Paketverhalten der
+normalen Produktkennung auf vorhandenen Benutzerdaten ist damit nicht abgenommen.
+Die abschließende Korrektur des Modell-Löschpfads wurde anschließend im Quellstand
+mit Regressionen geprüft; native Paketnachweise beziehen sich auf die Kandidaten
+davor. Der Windows-Kandidat enthält außerdem nicht die spätere POSIX-spezifische
+SO_REUSEADDR-Zeile; sein Windows-Codepfad ist davon nicht betroffen.
+
+## Start, Besitz und Benutzerverzeichnisse
+
+Rust startet nur das feste mitgelieferte Programm und prüft bis zu 120 Sekunden
+Status, Version 0.3.0, API 16 und eigene Besitzkennung. Erst danach entsteht das
+Hauptfenster. Ein fremder Listener wird weder übernommen noch beendet. Der
+Supervisor hält den Loopback-Socket auch über Worker-Neustarts; Windows verwendet
+Socket-Sharing/Selector, POSIX einen explizit geerbten Socket mit SO_REUSEADDR.
+Stdin-Pipes binden App, Supervisor und Worker aneinander. Es gibt keine PID-Datei
+oder Port-basierten Kill. Unerwartete Workerfehler haben höchstens zwei Wiederanläufe;
+kein automatischer Anbieterretry. Supervisorverlust beendet den Client mit Exit 1.
+
+`app_local_data_dir` der jeweiligen Appkennung enthält `data` und `models`:
+SQLite, verwaltete WAVs, Stems, Profile/Einstellungen, Logs und temporäre
+Workerbereiche unter `data`, HF-/Whisper-/Demucs-Gewichte unter `models`.
+Der Linux-Installationsbaum blieb im nativen Test schreibgeschützt; dpkg-Dateiprüfung
+meldete keine Veränderungen. Windows nutzt die bekannte AppData-Funktion statt
+einer geerbten LOCALAPPDATA-Testumleitung. Keine automatische Datenmigration,
+keine Verschiebung vorhandener Gewichte oder Originale.
+
+## Tatsächlich geprüfte Plattformfälle
+
+| Fall | Windows NSIS | Linux Debian / WSLg |
+|---|---|---|
+| Installation | Eigener Zielpfad und Registrierung, Exit 0 | Isolierter dpkg-Root mit kopiertem Paketstatus; anfängliche Installation und Reinstallation erfolgreich |
+| Finaler Paketstatus | Installiert und getestet | Finaler Kandidat korrekt unkonfiguriert: deklarierte Abhängigkeit `gstreamer1.0-plugins-bad` fehlt; kein force-depends |
+| Eigenständiger Erststart | Mit Python-freiem PATH und absichtlich ungültigem PYTHONHOME/PYTHONPATH; Rust entfernt Overrides, eigene Prozessfamilie/Health bestätigt | System-Python im Testnamespace maskiert, Installation nur lesbar, kein Projektserver; eigene Runtime/Health bestätigt |
+| Import und Wiedergabe | Nativer WAV-Dialog, Track sichtbar, Player bis 0:02 | GTK-Import; 1,999979 s Signal am WSLg-Ausgabemonitor, 440,004583 Hz, Peak 0,195343 |
+| Hörstudio und WAV-Export | Native Zielauswahl; Stereo/48 kHz/96.000 Frames, maximaler Samplefehler 0 | GTK-Zielauswahl; gleiche Audioeigenschaften und maximaler Samplefehler 0 |
+| Dienstneustart / Workercrash | Eingefrorener Protokolllauf: neuer Worker, neue Sitzung; installierter Workercrash erholt sich | Eingefrorener Protokolllauf: Neustart, Workercrash und Wiederherstellung |
+| Nativer Appneustart | UI-Neustart mit neuer Client-PID und Besitzkennung bestätigt | Mehrfache getrennte native Starts und eingefrorener Dienstneustart; vollständige native UI-Neustartfolge offen |
+| Reguläres Ende | Beenden und Bestätigung: Exit 0, keine eigenen Backendkinder/Listener | Alt-F4 über WSLg-Fenster: Exit 0, keine eigene Backendfamilie/Listener |
+| Harter Clientabbruch | Eigene Backendfamilie endet, Daten hashgleich und SQLite ok; erneuter Start funktioniert | Eigene Familie/Port frei, Daten hashgleich und SQLite ok |
+| Supervisorverlust | Client Exit 1, keine eigene Familie/Listener | Pipe-EOF im eingefrorenen Protokolllauf geprüft; identische installierte Fehlermatrix noch offen |
+| Unbekannter Listener | Native Fehleranzeige; keine Backendkinder oder HTTP-Anfragen; Listener bleibt erhalten | Socketregression / Protokoll; native Fehlermatrix offen |
+| Fehlende Runtime | Native Fehleranzeige, mit OK beendet; Testdatei wiederhergestellt | Native Fehlerprobe offen |
+| Update | Gleichversions-Reinstallation erhält acht Datendateien | Reinstallation im isolierten Root; final fehlende Abhängigkeit bleibt sichtbar |
+| Deinstallation | Eigene EXE/Registrierung entfernt; Bibliothek/Profile/Exporte und fremde Sentineldatei erhalten | Eigenes Paket mit dpkg -r entfernt; 180 Dateien im Benutzerprofil unverändert |
+
+Die Quellen sind selbst verfasste synthetische Stereo-WAVs mit 440 Hz, 0–2 s.
+Für Hörstudioexporte wurde ein ausdrücklich synthetischer Einspurcache vorbereitet;
+das ist kein Demucs-Inferenznachweis. Es wurde keine Originalmusik verwendet und
+kein Anbieterauftrag ausgelöst. Windows hat keinen neuen physischen Ausgangsnachweis;
+der Linux-Pulse-Monitor liegt vor dem Windows-Audiogerät. Leere Modellordner führen
+zu sichtbaren Fehlgewichtsfehlern, nicht zu behaupteter erfolgreicher Inferenz.
+
+Die zusätzliche Nur-Lese-Testumgebung benötigte schreibbares `/var/tmp` neben
+`/tmp`; damit funktioniert Audio auch in der stärkeren Isolation. Die fehlende
+GStreamer-Pluginbibliothek wurde nur extrahiert und per lokalem Pluginpfad verwendet,
+nicht im Host installiert. Das ersetzt keine vollständige konfigurierte Debian-
+Installation. Host-`libc-bin` bleibt unverändert halb konfiguriert. WSL lief als Root;
+Normalbenutzerrechte und unabhängiger Ubuntu-Desktop bleiben offen.
+
+Testhaltergrenzen: X11 `windowclose` zerstört das Fenster und zählt nicht als
+reguläres Ende. Frühere Starts während laufender Paketextraktion und einzelne
+Probestatusrennen wurden korrigiert wiederholt. Der NSIS-Wrapper kehrt vor seiner
+abgetrennten Aufräumphase zurück; die erste Registrierungsprüfung war zu früh,
+die abschließende Prüfung bestätigt deren Entfernung. Kein Testhaltercleanup als
+nativen Quiterfolg gewertet.
+
+## Regression, Integrität und öffentliche Übernahme
+
+Windows: **407 Backendtests bestanden, ein POSIX-Skip**. Linux: **408 bestanden**.
+Beide Plattformen: **156 Frontend-, zehn Rust- und fünf Node-Tests**, TypeScript/
+Vite, native Release- und jeweilige Paketbuilds. Prozessbesitz, Portkonflikt,
+TIME_WAIT, Benutzerpfade und fehlende Kompatibilitätsruntime haben Regressionen.
+Der letzte Modellpfadtest trennt Ressourcen und Benutzergewichte ausdrücklich.
+Vite-Chunkwarnung bleibt; Buildtests beweisen keine vollständige Kernfreigabe.
+
+Alle **10.071** geschützten Produktionsdaten-, Gewichts- und Musikdateien sind
+vor/nach der Serie hashgleich, produktive SQLite lesend intakt. Eigene Dienste
+sind beendet. Rohbelege, Installer, Manifeste und lokale Übergaben bleiben ignoriert.
+Vor öffentlichem Quellpush sind exakter Index, erreichbare Historie und Diff zu
+prüfen; Ergebnisse und neuer CI-Stand werden im Draft-PR festgehalten.
+
+Am 23. November unverändert: Main `1717ffd`, #11 `ff585f5`, #12 `5d459f0`,
+#13 `b3e4b9c`, #14/#15 `723b8c2`, #16 `7df500e`; alle offen, #13/#14/#16 Draft,
+jeweilige Head-Workflows erfolgreich. #17 bleibt Draft gegen Phase 3; sein früherer
+Head `f4bf651` hat erfolgreiche CI, keine Reviews/Reviewthreads. Neuer Quellstand
+benötigt eigene CI. Keine Merges, Schließungen oder Force-Pushes. #15 bleibt eine
+alternative Sammelintegration, kein zusätzlicher Schritt in der gestapelten Kette.
+
+## Offene Freigabegrenzen
+
+Music2Emo benötigt eine separate ältere Python-/Torch-Kompatibilitätsumgebung;
+im eingefrorenen Paket wird es selbst bei vorhandenen Gewichten als nicht verfügbar
+gemeldet. Entwicklungspfad und Crash-Recovery bleiben erhalten. Ein separater
+Kompatibilitätsinstaller ist noch nicht freigegeben.
+
+Binärlizenzen sind **nicht vollständig freigegeben**: GPLv3-FFmpeg benötigt passende
+Quellen/Buildangaben und Weiterverteilung; native Notices (unter anderem PyAV,
+libsndfile, CTranslate2, Torch und C/C++-Runtime) müssen final zusammengeführt werden.
+Bei ctranslate2, flatbuffers, sentencepiece, tokenizers und tqdm enthält das geprüfte
+Wheel keine gesammelten Lizenztextdateien, nur Metadaten. Plattformübergreifend
+gesperrte CPU-Distributionslocks fehlen. Keine öffentlichen Binaries hochgeladen.
+
+Die bestehende moderate Dependabot-Warnung wurde im angemeldeten Browser konkret
+geprüft: `glib 0.18.5`, transitiv über GTK/Tauri, `GHSA-wrw7-89jp-8q8g`, betroffen
+ab 0.15 bis vor 0.20, gepatcht ab 0.20.0. Keine ungeprüfte GTK-Hauptversionsänderung;
+Warnung weder behoben noch als sicher abgehakt.
+[Advisory](https://github.com/advisories/GHSA-wrw7-89jp-8q8g).
+
+Weiter offen: finaler Paketnachlauf nach Modellpfadkorrektur, vollständig konfigurierte
+Debianinstallation, verzögerter und inkompatibler Dienst als native Fehlerfälle
+(Version/Besitz bisher Vertragstest), versionswechselndes Update, echte installierte
+Modell-/Lyricsmatrix, Normalbenutzer/Linux außerhalb WSL, Windows 10, weitere DPI/
+Mehrmonitor und frühere Phase-2B-/2C-/3-Grenzen. **Phase 4 bleibt teilweise bestanden.**
+
+---
+
+# Historischer Prüfstand Phase 4.1: Clientpakete
 
 Prüfserie vom 21./22. November 2026. **Teilweise bestanden.** Windows-NSIS,
 isolierte Windows-Installation/Deinstallation, Ubuntu-Build, Debian-Paketbuild
