@@ -66,7 +66,10 @@ def test_stop_reaps_owned_family_and_preserves_unrelated_process():
         descendant=psutil.Process(int(child.stdout.readline()))
         packaged_backend.stop(child)
         assert child.poll() is not None
-        assert not descendant.is_running() or descendant.status()==psutil.STATUS_ZOMBIE
+        try:
+            assert not descendant.is_running() or descendant.status()==psutil.STATUS_ZOMBIE
+        except psutil.NoSuchProcess:
+            pass  # Reaping can finish between the two process observations.
         assert unrelated.poll() is None
     finally:
         if child.poll() is None:packaged_backend.stop(child)

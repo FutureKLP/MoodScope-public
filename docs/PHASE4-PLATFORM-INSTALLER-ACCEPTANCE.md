@@ -105,6 +105,11 @@ TIME_WAIT, Benutzerpfade und fehlende Kompatibilitätsruntime haben Regressionen
 Der letzte Modellpfadtest trennt Ressourcen und Benutzergewichte ausdrücklich.
 Vite-Chunkwarnung bleibt; Buildtests beweisen keine vollständige Kernfreigabe.
 
+Der erste neue CI-Pushlauf fand ein Rennen im Testhalter: Der beendete Nachkomme
+kann zwischen `is_running()` und `status()` verschwinden. Der parallele PR-Lauf
+bestand. Die Regression akzeptiert nun `NoSuchProcess` als abgeschlossenen
+Prozess; keine Änderung am Anwendungscleanup und kein bloßer Wiederholungslauf.
+
 Alle **10.071** geschützten Produktionsdaten-, Gewichts- und Musikdateien sind
 vor/nach der Serie hashgleich, produktive SQLite lesend intakt. Eigene Dienste
 sind beendet. Rohbelege, Installer, Manifeste und lokale Übergaben bleiben ignoriert.
