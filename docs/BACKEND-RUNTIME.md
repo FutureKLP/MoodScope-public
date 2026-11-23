@@ -1,5 +1,29 @@
 # Paketierte Backend-Runtime (Entwicklung)
 
+Prüfnachtrag Phase 4.3 vom 23. November 2026: Beide neuen Kandidaten wurden aus
+`25b4dc06211d7f4d925d426b8011b39e764be6aa` gebaut. Ihre Paket-, Quell- und
+Runtime-Dateihashes werden getrennt geführt. Windows enthält 6.876 Runtime-
+Dateien mit 1.120.328.268 Bytes, Linux nach Entfernung unbenutzter Torch-
+Testprogramme 6.779 Dateien mit 1.763.082.947 Bytes. Aufgelöste Builderinventare
+und erfolgreiche `pip check`-Läufe machen diese Kandidaten nachvollziehbar;
+plattformweise gesperrte CPU-Distributionslocks und bitidentische Neubauten
+sind damit noch nicht nachgewiesen.
+
+Die finale Modellpfadkorrektur ist über beide installierten APIs geprüft:
+verwaltete Benutzermodelle außerhalb der Ressourcen lassen sich entfernen,
+fremde Pfade werden abgewiesen und die Auswahl fällt auf den Standard zurück.
+Hierfür wurden ausschließlich selbst verfasste Wegwerfmarker verwendet,
+keine echten Modellgewichte. Fehlende Offline-Whisper-Gewichte liefern jetzt
+eine übersetzte Installationshilfe ohne Wiederholung oder Ersatzwerte. Eine
+echte Inferenz aus diesen Installationen ist weiterhin nicht nachgewiesen.
+
+Das Debianpaket lässt sich einschließlich seiner GStreamer-Abhängigkeiten in
+einer isolierten Kopie der vorhandenen Ubuntu-Systemdateien vollständig
+konfigurieren. Das ist mehr als eine extrahierte Pluginbibliothek oder kopierte
+dpkg-Statusliste, aber kein frischer unabhängiger Ubuntu-Desktop. Der tatsächliche
+WSL-Host und sein halb konfiguriertes `libc-bin` bleiben unverändert.
+[Genauer Paketnachweis und offene Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
 ## Architektur
 
 Der zusätzliche Build `src-tauri/tauri.runtime.conf.json` aktiviert das Rust-
@@ -109,6 +133,16 @@ selbst bei vorhandenen Gewichtsdateien. Die bestehende Entwicklungsinstallation
 und deren Crash-Recovery bleiben erhalten. Es gibt noch keinen freigegebenen
 optionalen Installer für den Kompatibilitätsworker. Vorhandene Gewichte werden
 nicht verschoben; die Paketfunktion darf nicht als verfügbar beworben werden.
+
+Für eine spätere optionale Music2Emo-Runtime empfiehlt sich ein eigenes,
+plattformweise gesperrtes CPU-Paket mit eng versioniertem Arbeitsprotokoll und
+derselben Besitz-/Pipe-Lebensdauer wie beim Hauptdienst. Vor Aufnahme sind
+Python-/Torch-/Transformers-Kompatibilität, Abbruch und Wiederanlauf, RAM-/
+Plattenbedarf sowie Code- und Gewichtsrechte getrennt zu prüfen. Insbesondere
+ersetzen MIT-Codebedingungen nicht die Nichtkommerziell-Bedingungen optionaler
+MERT-Gewichte. Kein ungeprüfter Worker und keine Gewichte wurden in die
+aktuellen Kandidaten übernommen; Download und Einrichtung bleiben ausdrücklich
+optional und benötigen eine eigene Abnahme.
 
 ## Lizenzen und Binärfreigabe
 

@@ -47,8 +47,11 @@ Phase 4.2 ergänzt einen gesonderten Entwicklungsbuild mit CPU-Python-Backend al
 Tauri-Ressource. Bau, Benutzerverzeichnisse und Grenzen stehen unter
 [Backend-Runtime](BACKEND-RUNTIME.md). Lokale NSIS-/Debian-Kandidaten wurden mit
 eigener Testkennung installiert, ohne Projektserver gestartet und mit Datenerhalt
-deinstalliert. Modellgewichte sind nicht enthalten. Die vollständige Linux-
-Paketkonfiguration und Binärlizenzen bleiben offen; keine Endnutzer-/Releasefreigabe.
+deinstalliert. Phase 4.3 baut beide Kandidaten nach der finalen Modellpfadkorrektur
+neu; das Debianpaket ist mit vollständigen GStreamer-Abhängigkeiten in einer
+isolierten Systemkopie konfiguriert. Modellgewichte sind nicht enthalten.
+Unabhängige Linux-Desktopabnahme, finale WSLg-Audiowiederholung und Binärlizenzen
+bleiben offen; keine Endnutzer-/Releasefreigabe.
 Die früheren Phase-4.1-Pakete und der Standardbuild enthalten weiterhin nur den
 Client und benötigen den eingerichteten Projektstarter beziehungsweise Dienst.
 [Nachweise und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).

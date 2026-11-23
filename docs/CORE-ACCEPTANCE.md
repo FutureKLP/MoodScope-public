@@ -10,7 +10,41 @@ Quellverbesserungen bedeutet keine vollständige Kern-, Plattform- oder
 Qualitätsfreigabe. Die externe Datenbankphase ist weiterhin gesperrt; SQLite
 bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
 
-## Phase 4 am 21./22. November 2026
+## Phase 4.3 am 23. November 2026
+
+**Weiterhin teilweise bestanden.** Neue Windows-/Linux-Kandidaten aus
+`25b4dc0` enthalten den autonomen Backendstand einschließlich der finalen
+Modellpfadkorrektur und einer verständlichen Offline-Whisper-Fehlgewichtshilfe.
+Beide installierten APIs bestehen die Modellpfadregression mit eigenen
+Wegwerfmarkern. Keine echte installierte Modellinferenz behauptet.
+
+Windows startet ohne Python im PATH, trotz ungültiger Python-Overrides und
+schreibgeschützter Runtime. Nativer Musikimport, Wiedergabefortschritt,
+samplegleicher WAV-Export und reguläres Ende sind bestätigt. Worker-/Client-
+Crash, Neustart und Supervisorverlust mit Exit 1 sind im getrennten finalen
+Lauf bestanden. Eine überlappende Reinstallation war ein ungültiger
+Testhalterversuch; die sequenzielle Wiederholung erhält zehn Datendateien.
+
+Linux-Debian ist einschließlich GStreamer-bad in einer isolierten Kopie der
+Ubuntu-Systemdateien vollständig konfiguriert. Hostpakete unverändert.
+Schreibgeschützter autonomer Start als UID 1000, GTK-Musikimport, samplegleicher
+WAV-Export und Alt-F4 mit vollständigem Cleanup sind bestätigt. Die neue
+Audiowiederholung bleibt offen: zunächst unpassende Temp-Rechte im Testhalter,
+beim späteren Nachlauf verweigert der WSLg-PulseAudio-Server die Verbindung.
+Frühere Monitormessungen sind kein Nachweis für diesen Kandidaten. Auch die
+finale installierte Linux-Crash-/Neustart-/Supervisorverlustmatrix als UID 1000
+ist bestanden. Beide eigenen Testinstallationen sind entfernt; Benutzerdateien,
+Exporte und fremde Sentineldateien blieben erhalten.
+
+409 Backendtests plus ein POSIX-Skip auf Windows, 410 unter Linux; jeweils
+156 Frontend-, zehn Rust- und fünf Node-Tests, Web-/Release-/Paketbuilds.
+Binärlizenzen/Quellbereitstellung, glib-Advisory, CPU-Distributionslocks,
+versionswechselndes Update, installierte Modell-/Lyricsmatrix, Windows 10,
+unabhängiger Linux-Desktop und frühere Ressourcen-/Qualitätsgrenzen bleiben
+offen. Die folgenden Phase-4.1-Aussagen sind historische Clientpaketnachweise.
+[Aktuelle Paketmatrix und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
+## Historischer Phase-4.1-Stand am 21./22. November 2026
 
 **Teilweise bestanden.** Isolierter Windows-NSIS-Installations-/Deinstallationslauf
 mit Datenerhalt und nativen WAV-Dialogen; tatsächlicher Ubuntu-WSL2-Build samt

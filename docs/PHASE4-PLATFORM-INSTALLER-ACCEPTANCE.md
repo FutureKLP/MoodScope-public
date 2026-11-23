@@ -1,4 +1,176 @@
-# Phase 4.2: Backend-Runtime und Installationsprüfung
+# Phase 4.3: Finaler Paketnachlauf
+
+Prüfserie vom 23. November 2026. **Weiterhin teilweise bestanden; keine
+Endnutzerfreigabe und keine Veröffentlichung von Installationsbinaries.**
+Die unten erhaltenen Phase-4.2- und Phase-4.1-Berichte gelten ausschließlich
+für ihre damaligen Kandidaten. Die folgenden Pakete wurden neu gebaut.
+
+## Exakte Quell- und Paketbindung
+
+Anwendungscheckpoint: `25b4dc06211d7f4d925d426b8011b39e764be6aa` auf
+`codex/phase4-platform-installer`, auf öffentlicher Abstammung. Ausgangshead
+`2f89689` erneut mit origin und Draft-PR #17 abgeglichen; alle vier PR-Jobs
+erfolgreich. Main beim Abgleich unverändert `1717ffd`. Keine Übernahme von #15,
+kein Merge, Force-Push, PR-Schließen oder Endnutzer-Release.
+
+Der Nachlauf fand eine rohe englische Whisper-Offline-Fehlmeldung. Die gezielte
+Korrektur erklärt fehlende Gewichte und die Modellverwaltung auf Deutsch und
+Englisch, ohne Retry oder Ersatzwerte. Unbenutzte Torch-Testprogramme und deren
+Testarchive werden beim Runtimebau entfernt; notwendige Helfer bleiben erhalten.
+Beide Änderungen haben eigene Regressionen. Die zunächst aus `2f89689` gebauten
+Zwischenpakete gelten nicht als Nachweis für den korrigierten Kandidaten.
+
+Frische PyInstaller-Analysen aus den separaten CPU-Buildern, jeweils erfolgreiches
+`pip check`, aufgelöste Paketinventare, Lizenzsammlung und vollständige SHA256-
+Dateimanifeste. 239 Quell-Dateihashes binden die Linux-Kopie an den Checkpoint;
+installierte Runtime-Dateien wurden gegen die neuen Manifeste verglichen.
+Keine Musik, Lyrics, SQLite oder Modellgewichte im finalen Runtime-Dateiinventar.
+Kein Nachweis bitidentischer Wiederholungsbuilds; CPU-Distributionslocks bleiben offen.
+
+| Kandidat | Runtime | Installationspaket | SHA256 des Pakets |
+|---|---|---|---|
+| Windows x64 / NSIS | 6.876 Dateien, 1.120.328.268 Bytes | 415.900.755 Bytes | `30e0bd71e008e1d7a2ee8db85bfdf710c22a63c2727ba766e1552c85f43fd9ed` |
+| Linux x86_64 / Debian | 6.779 Dateien, 1.763.082.947 Bytes | 602.680.696 Bytes | `5916a255a3b97d5f3c4e092ccfdbeb5443681cd3bbf7048a6de231dc6b279ee0` |
+
+Beide Pakete verwenden ausschließlich eine eigene Testkennung. Produktive
+Einstellungen oder Gewichte wurden nicht übernommen. Ein fehlender NSIS-
+Cache-/DNS-Zugriff im Sandbox-Build wurde durch einen regulären Build mit
+Zugriff auf die vorhandenen offiziellen Werkzeuge behoben.
+
+## Tatsächliche finale Installationsnachweise
+
+| Fall | Windows NSIS | Linux Debian / WSLg |
+|---|---|---|
+| Installation | Eigener Zielpfad und Registrierung, Exit 0; finale Runtimehashes stimmen | Vollständig konfigurierte isolierte Systemkopie, reguläres dpkg-Installieren, Exit 0, leeres `dpkg --audit`; Runtimehashes stimmen |
+| Autonomer Start | Python-freier PATH, ungültige PYTHONHOME/PYTHONPATH; Overrides im eigenen Worker entfernt | System-Python maskiert, ungültige Python-Overrides, eigene Runtime und Health bestätigt |
+| Schreibschutz | Eigener Runtimeordner per gesicherter ACL schreibgeschützt; Schreibprobe abgewiesen, ursprüngliche ACL anschließend wiederhergestellt | Gesamte installierte Systemkopie nur lesbar eingebunden; eigenes Profil schreibbar |
+| Health / Besitz | Version 0.3.0, API 16, eigene Besitzkennung und Prozessfamilie bestätigt | Entsprechender Healthcheck und Prozessfamilie; Client und Backend als UID 1000 |
+| Musikimport | Nativer WAV-Dateidialog mit lokalem 20-s-Testmusikausschnitt | Nativer GTK-Dateidialog mit demselben lokalen Ausschnitt |
+| Wiedergabe | Native Anzeige bis 11,45 s, danach Songende; keine physische Ausgabemessung | Finale Wiederholung offen; unten abgegrenzte Testumgebungs-/WSLg-Störung |
+| WAV-Export | Nativer Speicherdialog; Stereo, 48 kHz, 960.000 Frames, maximaler Samplefehler 0 | GTK-Speicherdialog; dieselben Eigenschaften und maximaler Samplefehler 0 |
+| Modellpfade | Installierte API: eigener verwalteter Testmarker entfernt, fremder Pfad abgewiesen, Auswahlrückfall und Fehlerwiederholung bestanden | Entsprechende installierte API-Regressionsfolge bestanden |
+| Fehlende Gewichte | Neue verständliche Whisper-Installationshilfe nativ sichtbar | Entsprechende neue Hilfe nativ sichtbar |
+| Reguläres Ende | UI-Beenden und Bestätigung, Exit 0, keine eigenen Kinder oder Listener | Alt-F4, Exit 0, keine eigene Backendfamilie oder Listener |
+| Worker-/Clientcrash und Neustart | Finale installierte Prozessmatrix bestanden, Benutzerdaten hashgleich und SQLite intakt | Finale installierte Matrix als UID 1000 bestanden; Daten hashgleich, SQLite intakt, eigene Kinder/Port freigegeben |
+| Supervisorverlust | Finale Wiederholung: Client Exit 1, keine eigenen Kinder oder Listener | Finale installierte Wiederholung: Exit 1, keine eigenen Kinder oder Listener |
+| Inkompatible API | Eigenes künstliches Testbackend mit API 15: kein Hauptfenster; 120-s-Readinessgrenze und native Fehlermeldung | Finale native Fehlerprobe offen |
+| Falsche Besitzkennung | Eigenes künstliches Testbackend: kein Hauptfenster, Readiness-Timeout, Client Exit 1; echte Runtime danach hashgleich | Finale native Fehlerprobe offen |
+| Belegter Port | Eigener fremder Testlistener bleibt erhalten; keine Backendkinder, keine HTTP-Nutzdaten | Finale native Fehlerprobe offen |
+| Fehlende Runtime-Datei | Native Neuinstallationshilfe, Client Exit 1; Originaldatei hashgleich wiederhergestellt | Finale native Fehlerprobe offen |
+| Verzögerter Start | Kontrollierte fünf Sekunden Verzögerung des eigenen Health-Testbackends; Hauptfenster erscheint, Alt-F4 Exit 0 | Finale native Fehlerprobe offen |
+| Wiederholung nach Dienstfehler | Anschließend echte unveränderte Runtime erneut mit eigener Familie gestartet; „Dienst bereit“, Alt-F4 Exit 0 ohne Kinder oder Listener | Finale native Fehlerprobe offen |
+| Gleichversions-Reinstallation | Getrennter sequenzieller Lauf, Exit 0; zehn Benutzerdatendateien erhalten | Reguläre Ersetzung durch das korrigierte Paket in der konfigurierten Testwurzel |
+| Versionswechsel | Offen: keine zwei sicher verwendbaren unterschiedlichen Installationsversionen | Offen |
+| Deinstallation | Eigene Anwendung und Registrierung entfernt; 16 Benutzer-/Profil-/Exportdateien hashgleich, fremde Sentineldatei erhalten | Eigene Anwendung regulär mit dpkg entfernt; 190 Benutzerdateien hashgleich, SQLite intakt, fremde Sentineldatei und Hoststatus erhalten |
+
+Die Exporte prüfen den realen WAV-/Dialogweg mit einem ausdrücklich markierten
+Cache aus dem lokalen Originalmix. Sie sind **keine Demucs-Trennung oder
+Modellinferenz**. Musik- und Quelldateinamen, WAVs und Rohbelege bleiben lokal.
+Die zusätzlich angeforderte synthetische Linux-Monitorprobe ist vorbereitet,
+aber für dieses Paket noch nicht erfolgreich gemessen. Historische synthetische
+Messungen unten ersetzen diese finale Probe nicht.
+
+Die API-/Besitz-/Verzögerungsproben ersetzen vorübergehend ausschließlich die
+eigene Test-Runtime durch ein selbst verfasstes lokales Protokollprogramm.
+Sie prüfen Tauris native Startgrenze, nicht einen vollständigen Analysedienst.
+Die echte Runtime wurde nach jeder Probe anhand ihres Ausgangshashes
+wiederhergestellt; ein erfolgreicher echter Neustart schließt die Folge ab.
+Portkonflikt und fehlende Datei verwenden den tatsächlichen installierten
+Client. Der unbekannte Listener erhielt nur geschlossene TCP-Verbindungen
+ohne HTTP-Nutzdaten und wurde vom Client weder übernommen noch beendet.
+
+Die erste Linux-Benutzerisolation erzeugte Temp-Dateisysteme mit Root-Rechten;
+ein Diagnosesocket belegte den fehlenden Schreibzugriff für UID 1000. Nur im
+Testnamespace auf übliche Rechte korrigiert. Eine eigene D-Bus-Sitzung zeigte
+außerdem die zunächst fehlende UID-Auflösung; der gesperrte Testbenutzer wurde
+ausschließlich in der Systemkopie ergänzt. Beim späteren Nachlauf verweigert
+der WSLg-PulseAudio-Server die Verbindung (`Connection refused`), auch mit
+separater begrenzter `pactl`-Prüfung. Kein fremder Audiodienst beendet oder WSL
+zurückgesetzt. Finale Audiomessung bleibt offen; kein bewiesener Appfehler aus
+dieser Testumgebungsgrenze abgeleitet.
+
+Eine Windows-Reinstallation überlappte versehentlich mit einer Crashprobe;
+dieser Versuch ist ungültig. Getrennte Wiederholungen bestanden vollständig.
+Weitere Halterkorrekturen: Mountpunkte vor schreibgeschütztem Einbinden anlegen,
+Hostpfade auf den Linux-Testnamespace abbilden und native Dialoge vor Eingaben
+erneut eindeutig auswählen. Haltercleanup zählt nicht als reguläres Beenden.
+
+Ein zu früh während des Debian-Bundlings gestarteter Nachinstallationslauf
+hatte alte dpkg-Kontrollsummen bei bereits aktuellen Nutzdateien behalten.
+Der Vergleich mit dem fertig gebauten Paket bestätigt unveränderte korrekte
+Paket- und Nutzdatenhashes. Installation nach vollständigem Buildende regulär
+wiederholt; anschließend `dpkg --verify` ohne Abweichung und `dpkg --audit`
+leer. Erst danach wurde die erfolgreiche Deinstallation gewertet. Kein
+Paketmanagerzustand des Hosts betroffen und keine Force-Reparatur verwendet.
+
+## Debian-Abhängigkeit und Isolationsgrenzen
+
+`gstreamer1.0-plugins-bad` ist im endgültigen Debianpaket korrekt deklariert.
+WebKits GStreamer-Medienpfad benötigt unter anderem dessen `fakevideosink` aus
+`libgstdebugutilsbad.so`. Basis-/Good-Plugins, Audiosink, WAV-Parser und weitere
+benötigte Elemente wurden in derselben Benutzerisolation gefunden; PulseAudio
+war bei der ersten Diagnose erreichbar. Kein lokaler Plugin-Suchpfad ersetzt
+die Paketinstallation.
+
+Nach lesender Vorprüfung wurde ausschließlich eine eigene Kopie der Ubuntu-
+Systemdateien und Paketdatenbanken angelegt. Darin ließ sich `libc-bin` regulär
+konfigurieren; eine apt-Simulation wurde vor der normalen Installation geprüft.
+87 GStreamer-Pakete wurden nur dort zusätzlich installiert, danach der finale
+MoodScope-Kandidat mit normalem dpkg konfiguriert. Keine Force-Option, gelöschte
+Sperre, beendeter Paketprozess oder globale Abhängigkeitsinstallation.
+Host-Paketstatus blieb hashgleich und dessen halb konfiguriertes `libc-bin`
+unverändert. Das ist eine vollständig konfigurierte **hostbasierte isolierte
+Installation**, kein frischer oder unabhängiger Ubuntu-Desktop.
+
+## Regressionen und Freigabegrenzen
+
+Korrigierter Quellcheckpoint: Windows **409 Backendtests bestanden, ein POSIX-
+Skip**; Linux **410 bestanden**. Je Plattform **156 Frontend-, zehn Rust- und
+fünf Node-Tests**, TypeScript/Vite sowie native Release-/Paketbuilds bestanden.
+Der erste Linux-Testlauf hatte nur ein fehlendes Git-Verzeichnis in der neuen
+Quellkopie als Fehler; der vollständige korrigierte Lauf bestand. Die bekannte
+Vite-Chunkwarnung bleibt. Diese Prüfungen ersetzen keine installierte Modellmatrix.
+
+Music2Emo ist im installierten Paket weiterhin zuverlässig nicht verfügbar.
+Keine ungefragten Downloads, produktiven Modellkopien, echten Cloudaufträge,
+Anbieterwechsel oder Änderungen der Consent-Logik. Echte installierte Inferenz
+bleibt ohne gesondert freigegebene Testgewichte unbestätigt. Die technische
+Empfehlung für eine spätere getrennte Kompatibilitätsruntime steht unter
+[Backend-Runtime](BACKEND-RUNTIME.md).
+
+Der Vor-/Nachvergleich aller 10.071 geschützten Musik-, Modell- und produktiven
+Datendateien ist hashgleich; produktive SQLite wurde lesend mit
+`integrity_check=ok` geprüft. Die eigene Windows-Crashmatrix erhält die
+Testdatenhashes und bestätigt ebenfalls SQLite-Integrität. Es wurden keine
+Originaldateien, produktiven Gewichte oder Einstellungen für die Installation
+verschoben oder verändert. Rohbelege und Dateimanifeste bleiben ignoriert lokal.
+Die Linux-Crash-/Deinstallationsprüfungen bestätigen ebenfalls SQLite-Integrität.
+Der abschließende Prozess-/Portabgleich auf beiden Plattformen findet keine
+eigene native Testfamilie und keinen Listener auf dem Testport.
+
+Binärfreigabe blockiert: fehlende Lizenztexte in fünf Distributionen, exakte
+GPL-FFmpeg-Quellen/Buildherkunft und vollständige native Notices/Weiterverteilungs-
+nachweise. Die konkrete Versions-/Lizenzmatrix steht unter
+[Drittanbieter](THIRD-PARTY.md#konkrete-distributionsprüfung-phase-43).
+
+Dependabot-Alert #2 und `GHSA-wrw7-89jp-8q8g` erneut im angemeldeten Browser
+geprüft. Der aktuelle Linux-Rustgraph führt `glib 0.18.5` über GTK 0.18.2,
+WebKitGTK und Tauri 2.12.5. GTK verlangt `glib = 0.18`; GitHub bestätigt 0.18.5
+als höchste auflösbare Version, die Advisory nennt 0.20.0 als erste gepatchte
+Version. Ein direktes Update wäre keine kompatible Einzelkorrektur. Keine
+ungeprüfte GTK-Migration, kein selbst behaupteter Fix und keine Ausblendung
+der Warnung. [Advisory](https://github.com/advisories/GHSA-wrw7-89jp-8q8g).
+
+Weiter offen: restliche native Fehlerfälle, versionswechselndes Update, CPU-
+Distributionslocks, finale Linux-Audioprobe, vollständige installierte Modell-/
+Lyricsmatrix, unabhängiger Linux-Desktop, Windows 10, weitere DPI/Mehrmonitor,
+physische Windows-Ausgabe, zweites echtes Textemotionsmodell, Phase-3-
+Speicherrestbedarf/Proactor-Ursache und Musik-/Modellqualität. **Phase 4 bleibt
+teilweise bestanden; keine Endnutzer- oder öffentliche Binärfreigabe.**
+
+---
+
+# Historischer Phase-4.2-Stand: Backend-Runtime und Installationsprüfung
 
 Prüfserie 22./23. November 2026. **Teilweise bestanden; keine Endnutzer- oder
 öffentliche Binärfreigabe.** Lokale Windows-/Linux-Kandidaten starten jetzt ein

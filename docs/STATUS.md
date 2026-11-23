@@ -4,7 +4,51 @@ Stand: 23. November 2026. Dies ist die einzige aktuelle Statusübersicht.
 Prüfberichte halten datierte Nachweise fest; frühere Sitzungsstände sind keine
 weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsversion.
 
-## Phase 4.2: Eigenständige Backend-Runtime
+## Phase 4.3: Finaler Paketnachlauf
+
+**Weiterhin teilweise bestanden; keine Endnutzer- oder Binärfreigabe.** Beide
+Kandidaten wurden aus Anwendungscheckpoint `25b4dc0` neu gebaut. Windows-NSIS:
+415.900.755 Bytes; Linux-Debian: 602.680.696 Bytes. Quell-/Runtime-/Paketmanifeste
+verbinden die neuen Artefakte mit genau diesem Stand. Fehlende Offline-Whisper-
+Gewichte liefern jetzt eine konkrete Installationshilfe; unnötige Torch-
+Testprogramme sind aus dem Runtimeordner entfernt.
+
+Final installiert geprüft: autonomer Windows-Start ohne Python im PATH, mit
+ungültigen Python-Overrides und schreibgeschützter Runtime; Linux-Start als
+UID 1000 aus schreibgeschützter, vollständig konfigurierter isolierter
+Systemkopie mit maskiertem System-Python. Modellpfadregression über beide
+installierten APIs, native Musikimporte und samplegleiche 20-s-WAV-Exporte.
+Exportcaches sind ausdrücklich Testfixtures, keine Demucs-Inferenz. Windows-
+Wiedergabe bis 11,45 s, reguläres Ende auf beiden Plattformen ohne eigene Kinder
+oder Listener. Finale installierte Crash-/Neustart-/Supervisorverlustmatrix auf
+beiden Plattformen bestanden; getrennte Windows-Gleichversions-Reinstallation
+erhält zehn Benutzerdatendateien. Windows weist Portkonflikt, fehlende Runtime,
+inkompatible API und falsche Besitzkennung ab; kontrollierter verzögerter Start
+und anschließender echter Neustart bestanden. Testinstallationen entfernt,
+16 Windows-/190 Linux-Benutzerdateien und fremde Sentineldateien erhalten.
+
+Debian-GStreamer-bad ist korrekt deklariert und in der isolierten Systemkopie
+einschließlich seiner Abhängigkeiten regulär installiert; `dpkg --audit` leer.
+Hostpaketstatus unverändert, kein Force-depends und keine Hostreparatur.
+Normale Temp-Rechte im Testnamespace korrigiert; der spätere WSLg-Audionachlauf
+bleibt wegen verweigerter PulseAudio-Verbindung offen. Frühere Messungen zählen
+nicht für den neuen Kandidaten. Kein unabhängiger Linux-Desktopnachweis.
+
+Windows 409 Backendtests plus ein POSIX-Skip, Linux 410; jeweils 156 Frontend-,
+zehn Rust- und fünf Node-Tests sowie Web-/Release-/Paketbuilds bestanden.
+Alle 10.071 geschützten Musik-, Modell- und Produktionsdatendateien hashgleich;
+produktive SQLite lesend intakt. Keine echten installierten Modellgewichte oder
+Cloudaufträge verwendet; Music2Emo bleibt ohne getrennte Runtime nicht verfügbar.
+
+Releaseblocker: GPL-FFmpeg-Quellen/Buildherkunft und native Notices, fehlende
+Lizenztexte in fünf Distributionen, CPU-Distributionslocks, glib 0.18.5 ohne
+kompatiblen offiziellen Einzelupdatepfad im GTK-/Tauri-Graphen, restliche native
+Fehlermatrix, finale Linux-Audioprobe, versionswechselndes Update und vollständige
+installierte Modell-/Lyrics-/Plattformmatrix. Frühere Ressourcen-, Proactor- und
+Qualitätsgrenzen bleiben bestehen. Keine Merges oder öffentlichen Binaries.
+[Vollständiger aktueller Nachweis](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
+## Historischer Phase-4.2-Stand: Eigenständige Backend-Runtime
 
 **Teilweise bestanden; keine Endnutzer- oder Binärfreigabe.** Der opt-in Tauri-
 Runtimebuild bündelt einen separat gebauten PyInstaller-CPU-Ordner. Windows-NSIS
