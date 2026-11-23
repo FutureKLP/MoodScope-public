@@ -81,3 +81,21 @@ def test_decode_failure_still_releases_whisper_model(tmp_path,monkeypatch):
         transcription.transcribe(Item(data=tmp_path),tmp_path/'missing.wav',lambda *args:None)
     gc.collect()
     assert references and references[0]() is None
+
+
+def test_missing_offline_whisper_weights_explain_installation_without_retry(tmp_path,monkeypatch):
+    import pytest
+    import faster_whisper
+    from huggingface_hub.errors import LocalEntryNotFoundError
+    from backend import transcription,catalog
+    calls=[]
+    def missing(*args,**kwargs):
+        calls.append(kwargs)
+        raise LocalEntryNotFoundError('Raw upstream offline cache error')
+    monkeypatch.setattr(faster_whisper,'WhisperModel',missing)
+    monkeypatch.setattr(transcription,'device_for',lambda engine:'cpu')
+    monkeypatch.setattr(catalog,'unload_models',lambda engine:None)
+    monkeypatch.setattr(catalog,'model_source',lambda *args:'fixture')
+    with pytest.raises(ValueError,match='Whisper-Modellgewichte fehlen.*Modelle & API'):
+        transcription.transcribe(Item(data=tmp_path),tmp_path/'unused.wav',lambda *args:None)
+    assert len(calls)==1

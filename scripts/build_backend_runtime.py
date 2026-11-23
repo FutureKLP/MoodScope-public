@@ -21,7 +21,9 @@ def exclude_test_assets(folder):
     folder=Path(folder).resolve()
     for path in folder.rglob('*'):
         relative=path.relative_to(folder)
-        if path.is_file() and any(part in {'tests','test','__pycache__'} for part in relative.parts):
+        torch_test = relative.parts[:3] == ('_internal','torch','bin') and (
+            path.name.startswith('test_') or path.name.endswith('Test') or path.name == 'script_module_v4.ptl')
+        if path.is_file() and (torch_test or any(part in {'tests','test','__pycache__'} for part in relative.parts)):
             path.unlink()
 
 
