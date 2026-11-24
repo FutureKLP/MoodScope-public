@@ -1,0 +1,87 @@
+[
+  {
+    "package": "ctranslate2",
+    "version": "4.9.1",
+    "url": "https://raw.githubusercontent.com/OpenNMT/CTranslate2/v4.9.1/LICENSE",
+    "file": "ctranslate2/LICENSE",
+    "sha256": "54aa79d9fe3c09e67a16dcd95b9e88676405a6ec174efda31036983cf7672ecb",
+    "bytes": 1115,
+    "upstream_commit": "88e735ac42a2a97c7c10daec4e7ce9db49edf562"
+  },
+  {
+    "package": "flatbuffers",
+    "version": "25.12.19",
+    "url": "https://raw.githubusercontent.com/google/flatbuffers/v25.12.19/LICENSE",
+    "file": "flatbuffers/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "bytes": 11358,
+    "upstream_commit": "7e163021e59cca4f8e1e35a7c828b5c6b7915953"
+  },
+  {
+    "package": "sentencepiece",
+    "version": "0.2.3",
+    "url": "https://raw.githubusercontent.com/google/sentencepiece/v0.2.3/LICENSE",
+    "file": "sentencepiece/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "bytes": 11358,
+    "upstream_commit": "eafd99cf3b8bfa5101c2c5f42aab2cc39947938d"
+  },
+  {
+    "package": "tokenizers",
+    "version": "0.23.3",
+    "url": "https://raw.githubusercontent.com/huggingface/tokenizers/v0.23.3/LICENSE",
+    "file": "tokenizers/LICENSE",
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "bytes": 11357,
+    "upstream_commit": "301277072263fb3830eb66eec7e47adadf76f1dc"
+  },
+  {
+    "package": "tqdm",
+    "version": "4.70.1",
+    "file": "tqdm/LICENCE",
+    "url": "https://raw.githubusercontent.com/tqdm/tqdm/v4.70.1/LICENCE",
+    "sha256": "fcff87c3a47ce8028a8512aa182d4fcf0ad1c90544ee75cf9b343684cac194de",
+    "bytes": 1985,
+    "upstream_commit": "9cf5a12b1f955468a17f0ba3c59092b23e4258ac"
+  },
+  {
+    "package": "sentencepiece",
+    "version": "0.2.3",
+    "file": "sentencepiece/darts_clone-LICENSE",
+    "url": "https://raw.githubusercontent.com/google/sentencepiece/v0.2.3/third_party/darts_clone/LICENSE",
+    "sha256": "155f59997298ee336602c49f9c1110f268ac394ca2197eb02647a3555935ad52",
+    "bytes": 1481,
+    "upstream_commit": "eafd99cf3b8bfa5101c2c5f42aab2cc39947938d"
+  },
+  {
+    "package": "sentencepiece",
+    "version": "0.2.3",
+    "file": "sentencepiece/libsais-LICENSE",
+    "url": "https://raw.githubusercontent.com/google/sentencepiece/v0.2.3/third_party/libsais/LICENSE",
+    "sha256": "e38f5960984c2350dba530a89395789c0ea6039a1b551511b478b94dec1d5dfa",
+    "bytes": 10757,
+    "upstream_commit": "eafd99cf3b8bfa5101c2c5f42aab2cc39947938d"
+  },
+  {
+    "package": "imageio-ffmpeg",
+    "version": "0.8.1",
+    "component": "Bundled GPLv3 FFmpeg programs; not the BSD wrapper",
+    "file": "imageio-ffmpeg/ffmpeg/LICENSE",
+    "url": "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.0.2-essentials_build.zip",
+    "archive_member": "ffmpeg-9.0.2-essentials_build/LICENSE",
+    "archive_sha256": "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba",
+    "upstream_source": "https://github.com/FFmpeg/FFmpeg/commit/946fcce07b",
+    "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+    "bytes": 35147,
+    "runtime_files": {
+      "win32": {
+        "path": "_internal/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v9.0.2.exe",
+        "sha256": "3256173f3f8bffd7df12227c68adf68025edb1832273a9530688a7bb1ed8edec"
+      },
+      "linux": {
+        "path": "_internal/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v9.0.2",
+        "sha256": "0d709a0bed1a43f24cd2c420878c63afea4580671b6949ad19ed124572f3bc3d"
+      }
+    }
+  }
+]

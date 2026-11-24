@@ -35,7 +35,7 @@ def inventory():
             raise RuntimeError('CPU-only builder required; CUDA distribution detected')
         licenses=[]
         for entry in dist.files or []:
-            if any(word in entry.name.lower() for word in ['license','copying','notice']):
+            if any(word in entry.name.lower() for word in ['license','licence','copying','notice']):
                 source=Path(dist.locate_file(entry))
                 if source.is_file():licenses.append((str(entry),source))
         packages.append((dist,{'name':name,'version':dist.version,
@@ -43,6 +43,41 @@ def inventory():
             'classifiers':[v for v in dist.metadata.get_all('Classifier',[]) if v.startswith('License')],
             'license_files':[name for name,_ in licenses]},licenses))
     return packages
+
+
+def supplemental_licenses(packages, legal):
+    """Copy reviewed, version-bound upstream texts; never fetch during a build."""
+    source = ROOT / 'docs' / 'distribution-licenses'
+    catalog = json.loads((source / 'provenance.json').read_text(encoding='utf8'))
+    versions = {row['name'].lower().replace('_', '-'): row['version'] for _, row, _ in packages}
+    included = []
+    for item in catalog:
+        if versions.get(item['package']) != item['version']:
+            continue
+        binaries = item.get('runtime_files')
+        if binaries is not None:
+            if sys.platform not in binaries:
+                continue
+            binary = binaries[sys.platform]
+            runtime = legal.parent.resolve()
+            binary_path = runtime / binary['path']
+            if not binary_path.resolve().is_relative_to(runtime):
+                raise ValueError('Invalid supplemental binary path')
+            with binary_path.open('rb') as stream:
+                digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+            if digest != binary['sha256']:
+                raise ValueError('Supplemental binary checksum mismatch: ' + binary['path'])
+        path = source / item['file']
+        if not path.resolve().is_relative_to(source.resolve()):
+            raise ValueError('Invalid supplemental license path')
+        body = path.read_bytes()
+        if hashlib.sha256(body).hexdigest() != item['sha256']:
+            raise ValueError('Supplemental license checksum mismatch: ' + item['file'])
+        destination = legal / item['package'] / ('upstream-' + path.name)
+        destination.parent.mkdir(exist_ok=True)
+        destination.write_bytes(body)
+        included.append(item)
+    (legal / 'upstream-provenance.json').write_text(json.dumps(included, indent=2), encoding='utf8')
 
 
 def main():
@@ -76,6 +111,7 @@ def main():
         for index,(_,source) in enumerate(files):
             folder=legal/row['name'];folder.mkdir(exist_ok=True)
             shutil.copyfile(source,folder/(str(index)+'-'+source.name))
+    supplemental_licenses(packages, legal)
     shutil.copyfile(work/'packages.json',target/'packages.json')
     shutil.copyfile(ROOT/'LICENSE',legal/'MoodScope-LICENSE.txt')
     python_license=Path(sys.base_prefix)/'LICENSE.txt'
