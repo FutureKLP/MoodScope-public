@@ -50,8 +50,11 @@ eigener Testkennung installiert, ohne Projektserver gestartet und mit Datenerhal
 deinstalliert. Phase 4.3 baut beide Kandidaten nach der finalen Modellpfadkorrektur
 neu; das Debianpaket ist mit vollständigen GStreamer-Abhängigkeiten in einer
 isolierten Systemkopie konfiguriert. Modellgewichte sind nicht enthalten.
-Unabhängige Linux-Desktopabnahme, finale WSLg-Audiowiederholung und Binärlizenzen
-bleiben offen; keine Endnutzer-/Releasefreigabe.
+Phase 4.4 ergänzt versionsgebundene Original-Lizenztexte und echte installierte
+Windows-/Linux-CPU-Inferenz mit vorhandenen Testgewichten. Die synthetische WSLg-Monitorprobe
+ist erneut gelungen; sie ersetzt keine physische Audioabnahme. Unabhängige
+Linux-Desktopabnahme, vollständige Modellmatrix, Distributionsquellen/-rechte
+und weitere Releasegates bleiben offen; keine Endnutzer-/Releasefreigabe.
 Die früheren Phase-4.1-Pakete und der Standardbuild enthalten weiterhin nur den
 Client und benötigen den eingerichteten Projektstarter beziehungsweise Dienst.
 [Nachweise und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).

@@ -24,6 +24,44 @@ dpkg-Statusliste, aber kein frischer unabhängiger Ubuntu-Desktop. Der tatsächl
 WSL-Host und sein halb konfiguriertes `libc-bin` bleiben unverändert.
 [Genauer Paketnachweis und offene Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
 
+## Nachprüfung Phase 4.4
+
+Die Sammlung erfasst jetzt auch `LICENCE`. Sie ergänzt acht überprüfte
+Originaltexte für sechs exakt zugeordnete Paketversionen einschließlich
+SentencePiece-Drittanbieterhinweisen. Quellen, Upstreamcommits und SHA256 stehen
+im [versionsgebundenen Katalog](distribution-licenses/provenance.json). Der
+Builder kopiert nur bei passender Paketversion und korrektem Hash; keine
+Netzabfrage im Build. Eine andere Version erhält keine irrtümlich zugeordnete
+Altversion-Lizenz. Ihre Lizenzprüfung ist erneut erforderlich.
+
+Neue lokale Kandidaten verwenden dieselben hashgeprüften eingefrorenen
+Anwendungs-/Abhängigkeitsbinaries von `25b4dc0` mit zusätzlichen Lizenzdateien;
+keine neue Python-Abhängigkeitsauflösung und kein Dependency-Upgrade. Die
+Tauri-Clients werden mit einer separaten Testkennung neu gebaut. Das ist ein
+nachvollziehbarer Lizenz-Paketnachlauf, kein frischer PyInstaller-Neubau und
+kein Beleg bitidentischer Builds. Historische Kandidaten bleiben erhalten.
+
+Echte Offline-CPU-Inferenz in installierten Windows-/Linux-Clients ist nun mit vorhandenen,
+in das eigene Benutzerprofil kopierten Gewichten nachgewiesen: CLAP/XLM-EMO,
+Demucs und Faster-Whisper. Audio stammt aus freigegebener lokaler Testmusik;
+der getrennte XLM-EMO-Test verwendet selbst verfassten Text. Keine vorbereiteten
+Analyse-/Stemcaches als Inferenznachweis. Ergebnisse, Modellkopien und Rohbelege
+bleiben lokal. Teilumfang und native Neustartgrenzen stehen im
+[Abnahmebericht](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
+CPU-Distributionslocks bleiben ein gesondertes offenes Gate. Exakte Versionen
+und SHA256 sind für die geprüften veröffentlichten Artefakte lesend verfügbar;
+PyPI-Torch-Metadaten belegen ausdrücklich nicht die CPU-Wheels. Ein belastbarer
+Lock benötigt pro OS/Python/Architektur alle transitiven Versionen und die
+konkreten offiziellen CPU-/PyPI-Artefakthashes, inklusive Buildwerkzeugen.
+Demucs 4.0.1 liegt dort als Source Distribution vor: dessen Wheelbau benötigt
+zusätzlich gesperrte Buildabhängigkeiten und ein überprüftes Wheelartefakt.
+Die bisherigen Paket-/Dateimanifeste und `pip freeze` sind kein solcher Lock.
+Eine frische isolierte Installation aus einem vollständigen Hashlock samt
+`pip check`, Regressionen und Paketbau ist noch nicht erfolgt. Keine ungetestete
+Lockdatei als reproduzierbare Freigabe veröffentlicht. Selbst ein vollständiger
+Resolverlock garantiert keine bitidentischen PyInstaller-/Compiler-/NSIS-Builds.
+
 ## Architektur
 
 Der zusätzliche Build `src-tauri/tauri.runtime.conf.json` aktiviert das Rust-

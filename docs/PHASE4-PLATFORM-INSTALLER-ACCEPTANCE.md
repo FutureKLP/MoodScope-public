@@ -1,3 +1,252 @@
+# Phase 4.4: Distributions- und Sicherheitsnachprüfung
+
+Prüfserie vom 23./24. November 2026. **Phase 4 weiterhin teilweise bestanden;
+öffentliche Binärverteilung blockiert, keine Endnutzerfreigabe.** Die folgenden
+Nachweise ergänzen die vollständig erhaltenen historischen Berichte darunter.
+
+## Git- und Kandidatenbindung
+
+Ausgangshead `4c5ff2cd18d4f532cc272a254fa9329d1135f0b3` erneut gegen origin und
+Draft-PR #17 geprüft. Main unverändert `1717ffd074041dd5db4e129f9f3aed3fb1a072dc`.
+Beide zugehörigen CI-Läufe erfolgreich; keine offenen Inline-Reviewthreads.
+Kein Merge, Force-Push, PR-Schließen oder Binärrelease.
+
+Die erhaltenen Phase-4.3-Pakete haben weiterhin die unten dokumentierten SHA256.
+Die vollständigen Runtime-Manifeste wurden erneut abgeglichen; 377 Windows-PE-
+und 393 Linux-ELF-Dateien zusätzlich auf Versionsressourcen/Verknüpfung untersucht.
+Die neuen lokalen Lizenz-Testpakete verwenden unveränderte eingefrorene
+Anwendungs-/Abhängigkeitsbinaries des Anwendungscheckpoints `25b4dc0`, ergänzte
+Lizenzdateien und neu gebaute Tauri-Clients mit eigener Testkennung. Keine neue
+Abhängigkeitsauflösung, kein frischer PyInstaller-Neubau, kein Versionsupgrade.
+
+| Neuer lokaler Kandidat | Paketbytes | SHA256 |
+|---|---|---|
+| Windows x64 / NSIS | 415.970.356 | `b0627d0ea95bb631a406bc2f0f99165227cbe47a4324552e07c75a601fd68116` |
+| Linux x86_64 / Debian | 602.684.864 | `37eaac031afdeb7bfc6fc013d3688841bd3be47a9f70da71c4c7369e938acd11` |
+
+Linux enthält 6.788 Runtime-Dateien mit 1.763.136.381 Bytes.
+Windows enthält 6.885 Runtime-Dateien mit 1.120.381.759 Bytes; die neun zusätzlichen
+Dateien sind Lizenztexte und deren Zuordnung, alle ursprünglichen Runtime-Dateien
+hashgleich. Der NSIS-Kandidat ist mit eigener Registrierung installiert; sieben
+Originaltexte im installierten Paket gegen den Katalog geprüft. Ein erster
+Installationsversuch vor dem fertigen Paket wurde vor Ausführung abgewiesen und
+zählt nicht als Installation. Finale Windows-/Linux-Nachtests werden getrennt
+von den erhaltenen Phase-4.3-Kandidaten geführt.
+
+## Abschließender GPL-Lizenznachlauf
+
+Die obige Tabelle hält die Zwischenkandidaten mit sieben Zusatztexten fest.
+Der abschließende Kandidat enthält zusätzlich den unveränderten GPLv3-Text
+für die konkret hashgebundenen ImageIO-FFmpeg-Programme: acht Zusatztexte,
+keine Änderung ursprünglicher eingefrorener Runtime-Dateien.
+
+| Finaler Kandidat | Paketbytes | SHA256 |
+|---|---|---|
+| Windows NSIS | 415.982.909 | `2d1f35877eb85e85edd8755eeeb21b715005b3afd5cb3fb62e8cb52461534cc3` |
+| Linux Debian | 602.697.760 | `0539faf2a350a47c7ae09392a6cfaba3ab6f0b42a0997a9bd65d266f2570cbe0` |
+
+Finale Runtime: Windows 6.886 Dateien / 1.120.418.422 Bytes,
+Linux 6.789 Dateien / 1.763.173.015 Bytes. Beide Pakete regulär in die eigenen
+Testinstallationen übernommen; vollständige installierte Runtimehashes und
+acht Zusatztexte geprüft, Debian-Audit leer, dpkg-Dateiprüfung sauber,
+Host-Paketstatus unverändert. Keine öffentliche Binärverteilung.
+
+Abschließend beide eigenen Testinstallationen regulär deinstalliert: 77 Windows-
+und 514 Linux-Benutzerdateien einschließlich Modellkopien hashgleich erhalten,
+unabhängige Sentineldateien erhalten, eigene Anwendungsdateien/Registrierung
+entfernt. SQLite-Prüfungen intakt, Linux-Hostpaketstatus unverändert. Eigene
+Anwendungsprozesse beendet und Testport frei.
+
+Die Originaltexte bleiben einschließlich Upstream-Leerzeichen und Zeilenenden
+unverändert. Git-Zeilenendenkonvertierung ist ausschließlich für den
+Lizenzassetordner deaktiviert; alle acht Hashes auch direkt aus dem Index
+bestätigt. Eigene Build- und Provenienzdaten ersetzen keine Rechtsfreigabe.
+
+## Lizenzen und FFmpeg
+
+Die konkrete [Distributionsmatrix](THIRD-PARTY.md#distributionsnachprüfung-phase-44-23-november-2026)
+belegt acht ergänzte Originaltexte für sechs Paketversionen, einschließlich des
+GPLv3-Textes der konkreten FFmpeg-Binaries. Der Builder erkennt jetzt auch
+`LICENCE`; drei neue Regressionen sichern Sammlung, Versions-/Texthashbindung
+und plattformspezifische native Binärbindung.
+Native Notices, exakte Wheel-/Vendorherkunft und Corresponding Source bleiben
+unvollständig. GPLv3-ImageIO-FFmpeg und die widersprüchliche LGPL-/x264-/x265-
+Selbstauskunft der separaten PyAV-Bibliotheken sind nicht rechtlich freigegeben.
+Eine konkrete Liste benötigter Quellen, Buildskripte und Verteilungsnachweise
+steht in der Matrix. Keine pauschale Rechtsfreigabe aus vorhandenen Lizenztexten.
+
+## glib-Sicherheitsbewertung
+
+[GHSA-wrw7-89jp-8q8g](https://github.com/advisories/GHSA-wrw7-89jp-8q8g) und
+[RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html)
+erneut gelesen; kein zugeordnetes CVE. Betroffen sind `VariantStrIter::next`,
+`next_back`, `nth`, `nth_back` und `last` in glib >=0.15.0,<0.20.0. Ein C-Aufruf
+schreibt durch `&p` in einen als unveränderlich referenzierten Nullzeiger.
+Optimierung kann den Schreibzugriff verwerfen; `CStr::from_ptr(NULL)` führt zu
+undefiniertem Verhalten und möglichen Abstürzen. Der Upstreamfix verwendet
+`let mut p` und `&mut p`. Ein Angriffsweg in MoodScope ist damit noch nicht belegt;
+der generische Netzwerk-CVSS-Wert beweist keine fernausnutzbare MoodScope-Lücke.
+
+Der exakte Linux-Lockgraph enthält Tauri 2.12.5, GTK 0.18.2, WebKitGTK-Rust 2.0.2,
+Wry 0.57.1, tauri-runtime-wry 2.12.3 und glib 0.18.5. GTK und weitere Bindings
+verlangen die 0.18-Linie. Auch der geprüfte aktuelle Tauri-Upstreamstand 2.12.7
+verwendet GTK 0.18; Wry 0.57.3 verlangt weiterhin GTK 0.18/WebKitGTK 2.0.2.
+Ein unterstütztes einzelnes Update auf glib >=0.20 ist damit nicht nachgewiesen.
+Der geprüfte Upstreambranch 0.18 enthält weiterhin die fehlerhafte Stelle.
+
+Die lesende Suche in den lokal vorhandenen Rust-Abhängigkeitsquellen findet
+`VariantStrIter`/`array_iter_str` ausschließlich in glib selbst, dessen Tests
+und Dokumentation; keine Verwendung im MoodScope-Quellcode oder den übrigen
+vorhandenen Abhängigkeiten. Dies begrenzt den belegten Aufrufumfang, ist kein
+formaler Nachweis der Nichterreichbarkeit im optimierten ausgelieferten ELF.
+Das Paket bleibt aufgrund seiner aufgelösten Version advisory-betroffen.
+
+Ein eigener kleiner Backport ist technisch denkbar, aber kein nachgewiesener
+gewarteter 0.18-Release. Er würde überprüfte Vendorquellen, Patchpflege,
+optimierte Iteratorregressionen und vollständige Linux-/Tauri-/Paketabnahme
+erfordern. Kein ungeprüfter Fork, kein inkompatibles Override und keine
+Warnungsunterdrückung eingebaut. Dependabot #2 im angemeldeten Brave erneut
+bestätigt: offen, 0.18.5 maximal auflösbar, Fix ab 0.20.0; genau ein offener
+Dependabot-Alert in der gelesenen Übersicht. Keine Warnung ausgeblendet.
+
+Vorläufig: keine neuen betroffenen Iteratoraufrufe einführen, lokale
+Desktop-/Loopback-Grenze erhalten und keine öffentliche Binärfreigabe erteilen.
+Für die Releaseentscheidung fehlen ein unterstützter Fix oder ein vollständig
+geprüfter kompatibler Backport sowie die dokumentierte Restrisikobewertung.
+Quellen: [Tauri](https://github.com/tauri-apps/tauri/blob/dev/crates/tauri/Cargo.toml),
+[Wry](https://github.com/tauri-apps/wry/blob/dev/Cargo.toml),
+[Upstreamfix](https://github.com/gtk-rs/gtk-rs-core/pull/1343).
+
+## Echte installierte CPU-Inferenz unter Linux
+
+Tatsächlich installierter, unveränderter Phase-4.3-Debian-Client in einer neuen
+isolierten Kopie der vollständig konfigurierten Testsystemwurzel, UID 1000,
+schreibgeschützte Installation, maskiertes System-Python, eigener autonomer
+Backendprozess. Modelle liegen in Kopien im eigenen Benutzer-Datenverzeichnis;
+kein Download, keine produktiven Gewichtsänderungen und keine Cloudaufrufe.
+
+| Modell/Fall | Tatsächlicher Nachweis |
+|---|---|
+| CLAP + XLM-EMO / CPU | Frischer Auftrag mit lokalem 20-s-Musikexcerpt und zwei ausdrücklich selbst verfassten Testtextzeilen: vier Audio-/zwei Textsegmente, `cached=False`, 23,38 s; nativ nach Appneustart geöffnet |
+| Demucs / CPU | `htdemucs` mit vorhandenen Original-Checkpointkopien: echter Auftrag abgeschlossen, vier erzeugte Quellen; keine vorbereiteten Stemfixtures verwendet |
+| Faster-Whisper Base / CPU | Vorhandener vollständiger 145.217.532-Byte-Checkpoint separat materialisiert und kopiert; echte Offline-Transkription/Analyse abgeschlossen. Keine Behauptung vollständiger oder korrekter Worterkennung |
+| Abbruch | Neuer echter Analyseauftrag: `cancelled`, „Auftrag abgebrochen“, kein Ersatzresultat |
+| Fehlende Gewichte | Vor Bereitstellung der Whisper-Kopie verständliche Installationshilfe im nativen Client sichtbar; kein Download oder fingiertes Ergebnis |
+| Reguläres Ende | Zugeordnetes WSLg-Fenster regulär geschlossen: Exit 0, keine eigenen Kinder, Testport frei; eigene Daten danach hashgleich |
+| Music2Emo | Weiterhin ausdrücklich nicht verfügbar; kein Kompatibilitätsbundle ergänzt |
+
+Der erste Testhalter erreichte nach erfolgreicher Inferenz seine 900-s-Grenze.
+Sein Cleanup zählt nicht als reguläres Beenden. Der anschließende echte Neustart
+öffnete das gespeicherte CLAP-/XLM-EMO-Ergebnis nativ; der getrennte spätere
+reguläre Exit 0 ist der Beenden-Nachweis. Native Detail-/Spurauswahl und endgültige
+Neustartmatrix werden nicht aus HTTP-Erfolgen allein abgeleitet.
+
+## Linux-Negativmatrix im installierten Client
+
+Eigene Phase-4.4-Systemkopie mit dem hashgeprüften ursprünglichen installierten
+Phase-4.3-Client. Pro Fall separates Benutzerprofil. API-/Besitz-/Verzögerungs-
+proben verwenden ausschließlich das selbst verfasste Health-Protokollprogramm;
+sie sind keine Analyse- oder Modelltests. Nach jedem Fall ist die echte
+Runtime hashgleich wiederhergestellt. Native Fehlerdialoge wurden aufgenommen.
+
+| Fall | Ergebnis |
+|---|---|
+| API 15 statt 16 | Kein Hauptfenster, native Startfehlermeldung nach 121,04 s, Exit 1 |
+| Falsche Besitzkennung | Kein Hauptfenster, native Startfehlermeldung nach 120,90 s, Exit 1 |
+| Fehlende Runtime | Native Fehlermeldung nach 0,27 s, Exit 1; Datei unverändert wiederhergestellt |
+| Eigener fremder Testlistener | Native Fehlermeldung, Exit 1; Listener erhalten, null HTTP-Nutzdaten empfangen |
+| Kontrolliert fünf Sekunden verzögert | Hauptfenster nach 5,40 s; reguläres Alt-F4, Exit 0 |
+| Echter Neustart nach Fehlern | Echte unveränderte Runtime startet nach 2,84 s wieder; reguläres Schließen über das Fensterkreuz, Exit 0 |
+
+Keine fremden Listener beendet und keine globale Linux-Paketreparatur.
+Die Prüfung gilt für diese WSLg-/hostbasierte isolierte Installation, nicht für
+einen unabhängigen Linux-Desktop. Windows-Negativnachweise bleiben separat.
+
+## Finaler Installationsnachlauf vom 24. November
+
+Der neue Debian-Kandidat wurde nach der Unterbrechung in derselben eigenen
+Systemkopie regulär erneut installiert, anschließend `dpkg --audit` leer und
+`dpkg --verify` ohne Abweichung. Nach dem abschließenden GPL-Nachlauf passen alle
+6.789 installierten Runtime-Dateien zum Manifest; acht Zusatztexte enthalten,
+Host-Paketstatus hashgleich.
+Ein vorher abgebrochener Halterlauf zählt nicht als vollständiger Nachweis.
+Die alten eigenen Linux-Testdaten/-modelle wurden für die neue Kennung kopiert;
+das ist keine Migration oder Prüfung eines tatsächlichen Versionsupdates.
+
+Der final installierte Windows-Client startet ohne Python im PATH und mit
+ungültigen geerbten Pythonpfaden seinen eigenen CPU-Dienst. Alle **6.886**
+installierten Runtime-Dateien sind hashgeprüft. Modellkopien liegen außerhalb
+der Installation im eigenen Testbenutzerverzeichnis. Echte Inferenz über die
+installierte API, getrennt von nativer UI-Abnahme:
+
+| Windows-Fall | Ergebnis |
+|---|---|
+| CLAP + XLM-EMO / CPU | Vier Audio-/zwei Textsegmente aus freigegebener Testmusik und selbst verfasstem Text, `cached=False`, 48,55 s |
+| Demucs htdemucs / CPU | Tatsächlicher Auftrag abgeschlossen, vier neue Quellen, `cached=False` |
+| Faster-Whisper Base / CPU | Modell geladen und echte lokale Berechnung abgeschlossen; **null erkannte Textsegmente**, kein Worterkennungsnachweis |
+| Echter Abbruch | Neuer Analyseauftrag `cancelled`, kein Ersatzresultat |
+| App schließen und neu starten | Reguläres Alt-F4, Exit 0; neuer autonomer Backendbesitzer und neue Instanzkennung |
+| Gespeicherte Ergebnisse nach Neustart | Installierte API liest Analyse und echte Demucs-Spuren wieder; neun Benutzerdatendateien hashgleich, SQLite intakt |
+| Native Ergebnisanzeige/-wiederöffnung | Nach Auswahl des vollständigen Fensterbildes bedienbar: neuer CLAP-/XLM-EMO-Auftrag nativ gestartet, `cached=False`, zehn Audio-/zwei Textsegmente in 14,24 s; Kurven und beide selbst verfassten Textzeilen sichtbar. Nach regulärem Schließen und Neustart erneut nativ als „CPU · AUS CACHE“ geöffnet |
+
+Die zunächst reproduzierte 16×16-/fehlende Werkzeuggeometrie ist durch explizite
+Auswahl des vollständigen Fensterbildes gelöst; keine App- oder Werkzeugquellen
+gepatcht. Unter Windows wurde anschließend im nativen Hörstudio „Demucs · 4
+Gruppen“ ausgewählt; `htdemucs` und gespeicherte Spurbedienelemente sichtbar.
+Neun eigene Datendateien nach Neustart hashgleich, SQLite intakt, abschließendes
+Alt-F4 mit Exit 0 und freiem Port. Unter Linux im finalen Achttextpaket ebenfalls
+Kurven und zwei Testtextzeilen nach Neustart geöffnet, ausdrücklich Demucs statt
+Auto ausgewählt und „Gespeicherte Spuren sind bereit“ für `htdemucs` angezeigt.
+Regulärer Exit 0, keine eigenen Kinder oder Listener. Ein zwischenzeitlich
+unterbrochener Halter zählt nicht als regulärer Exit; der getrennte abschließende
+Lauf liefert diesen Nachweis. Der ursprüngliche Linux-Whisper-Lauf ergab ebenfalls
+null Textsegmente: echte Inferenz ohne Beleg erfolgreicher Worterkennung.
+
+## Finale Linux-Audioprobe
+
+Die erste lesende `pactl info`-Probe meldete erneut `Connection refused`.
+Später war derselbe WSLg-Server ohne Konfigurationsänderung wieder erreichbar,
+`RDPSink.monitor` vorhanden. Der installierte Client importierte das ausdrücklich
+synthetische Stereo-/48-kHz-/2-s-/440-Hz-Signal über seinen nativen GTK-Dialog.
+Ausgabemonitor: 127.174 Frames, Spitzenpegel 0,15872, 63.939 aktive Samples,
+aktive Spanne 1,38998 s, dominante Frequenz 440,294 Hz. Dies belegt ein Signal
+am WSLg-Monitor, keine vollständige zweisekündige verlustfreie Erfassung und
+keine physische Windows-Geräteausgabe. Keine WSL-/Audioeinstellung erzwungen,
+kein fremder Audiodienst beendet. Ein zunächst unvollständig eingetragener
+Dialogpfad wurde am Screenshot korrigiert und erst danach bestätigt.
+
+## Distributionslocks, Updates und Regressionen
+
+[CPU-Lockgrenze](BACKEND-RUNTIME.md#nachprüfung-phase-44): offizielle Artefakthashes
+lesend geprüft, aber kein vollständiger plattformweiser Hashlock mit frischer
+Installations-/Buildregression abgeschlossen. Insbesondere CPU-Index und
+Demucs-Sourcebuild getrennt behandeln. Keine ungeprüften Dependency-Upgrades.
+Keine zwei geeigneten unterschiedlichen Installationsversionen vorhanden;
+versionswechselndes Update bleibt auf beiden Plattformen offen. Ein
+Gleichversions-/Lizenzpaketnachlauf schließt dieses Gate nicht.
+
+Windows: **412 Backendtests bestanden, ein POSIX-Skip**; Linux: **413 bestanden**.
+Je Plattform 156 Frontend-, zehn Rust- und fünf Node-Tests sowie TypeScript/Vite
+bestanden. Native Release-/NSIS-/Debian-Builds erfolgreich. Bekannte Vite-
+Chunkwarnung und Windows-Hardlinkwarnung im Rustcache ohne Testfehler.
+Der eingeschränkte erste Windows-Backendlauf lieferte keinen belastbaren
+Abschluss; der vollständige Lauf außerhalb der Sandbox zählt. Ein neuer Test
+hatte zunächst eine plattformabhängige Pfaderwartung; nach Korrektur beide
+vollständigen Suiten erfolgreich. Keine Produktionsdaten für Tests verwendet.
+
+Vor-/Nachvergleich: alle **10.071** geschützten Musik-, Modell- und produktiven
+Datendateien hashgleich; produktive SQLite lesend `integrity_check=ok`.
+Rohinventare, Modellkopien, Musik, Texte und Identifikatoren bleiben ignoriert
+lokal. Keine externen Datenbankadapter oder echten Anbieteraufrufe.
+
+Weiterhin offen: vollständige native Modell-/Lyrics-/Plattformkreuzmatrix,
+versionswechselnde Updates, CPU-Hashlocks, unabhängiger Linux-Desktop,
+Windows 10, DPI/Mehrmonitor, physische Ausgabe, die früheren Ressourcen-/
+Qualitätsgrenzen sowie glib und vollständige native Distributionsrechte.
+**Phase 4 teilweise bestanden; Binärfreigabe blockiert.**
+
+---
+
 # Phase 4.3: Finaler Paketnachlauf
 
 Prüfserie vom 23. November 2026. **Weiterhin teilweise bestanden; keine

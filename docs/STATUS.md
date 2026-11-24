@@ -1,8 +1,58 @@
 # Aktueller Entwicklungs- und Abnahmestand
 
-Stand: 23. November 2026. Dies ist die einzige aktuelle Statusübersicht.
+Stand: 24. November 2026. Dies ist die einzige aktuelle Statusübersicht.
 Prüfberichte halten datierte Nachweise fest; frühere Sitzungsstände sind keine
 weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsversion.
+
+## Phase 4.4: Distributions- und Sicherheitsnachprüfung
+
+**Weiterhin teilweise bestanden; öffentliche Binärverteilung blockiert und
+keine Endnutzerfreigabe.** Fünf konkrete Lizenz-Sammlungslücken für neue Builds
+behoben: `LICENCE` wird erkannt; acht Originaltexte mit Versions-/Quell-/Hash-
+zuordnung und nativer FFmpeg-Binärbindung ergänzt. Vollständige native Notices, exakte FFmpeg-/Codecquellen,
+Buildherkunft und Weiterverteilungsrechte bleiben offen. Erhaltene vollständige
+Runtime-Manifeste erneut geprüft, 377 Windows-PE-/393 Linux-ELF-Komponenten
+inventarisiert. Neue lokale Lizenz-Testpakete für NSIS und Debian gebaut;
+Anwendungs-/Abhängigkeitsbinaries bleiben unverändert, eigene Testkennungen.
+
+Echte installierte Linux-CPU-Inferenz nun mit vorhandenen Benutzerkopien von
+CLAP/XLM-EMO, Demucs und Faster-Whisper bestanden. Keine vorbereiteten
+Analyse-/Stemcaches; XLM-EMO mit selbst verfasstem Testtext, Audio aus freigegebener
+lokaler Testmusik. Gespeicherte CLAP-/Textkurven nach Neustart nativ geöffnet,
+echter Abbruch bestätigt, vorherige fehlende Whisper-Gewichte verständlich
+angezeigt. Regulärer Exit 0 ohne Kinder/Listener und eigener Datenerhalt belegt. Die Linux-Negativmatrix für API-/Besitzfehler, fehlende Runtime,
+Portkonflikt, Verzögerung und echten Folgestart ist in derselben eigenen
+Installation vollständig bestanden; Konfliktlistener erhalten, keine HTTP-Nutzdaten.
+Music2Emo bleibt ohne separate geprüfte Runtime nicht verfügbar.
+
+WSLg-PulseAudio nach zunächst verweigerter Verbindung ohne Eingriff wieder
+erreichbar: synthetische Clientwiedergabe am Monitor mit 440,29 Hz und Peak 0,159
+erfasst. Kein vollständiger samplegleicher Zwei-Sekunden- oder physischer
+Windows-Ausgabenachweis. Bestehendes glib-Advisory erneut im angemeldeten
+Browser geprüft: offen, GTK-0.18-Graph verhindert kompatibles Einzelupdate.
+Kein konkreter MoodScope-Laufzeitangriff belegt, keine Unbetroffenheit behauptet,
+kein ungeprüfter Backport/Override und keine Warnungsunterdrückung.
+
+Windows 412 Backendtests plus ein POSIX-Skip, Linux 413; jeweils 156 Frontend-,
+zehn Rust-, fünf Node-Tests, Web-/Release-/Paketbuilds bestanden. Alle 10.071
+Original-/Modell-/Produktionsdateien hashgleich und produktive SQLite intakt.
+CPU-Distributionshashlocks, echtes Versionsupdate und vollständige
+Modell-/Lyrics-/Plattformmatrix sowie frühere Qualitäts-/Ressourcengrenzen offen.
+[Neue Nachweise, Kandidaten und Sicherheitsbewertung](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
+Nachlauf 24. November: finaler Windows-Client mit eigenem Backend, echten
+CLAP-/XLM-EMO-/Demucs-/Whisper-CPU-Aufträgen und echtem Abbruch geprüft.
+Whisper erkennt in diesem Ausschnitt null Textsegmente; kein Wortqualitätsnachweis.
+Nach regulärem Schließen/neuem Start sind Analyse und Spuren über die installierte
+API erhalten, neun Datendateien hashgleich und SQLite intakt. Die anfängliche
+Werkzeuggeometriegrenze ist gelöst: neuer nativer Windows-CLAP-/XLM-EMO-Auftrag
+mit zehn Audio-/zwei Testtextsegmenten in 14,24 s, anschließend nach Neustart
+nativ aus dem Cache geöffnet. Unter beiden Systemen Demucs ausdrücklich im
+Hörstudio ausgewählt und gespeicherte Spuren angezeigt, regulärer Exit 0.
+Finale NSIS-/Debian-Kandidaten regulär installiert, alle 6.886/6.789 Runtimehashes
+und jeweils acht Zusatztexte bestätigt, Host-Paketstatus unverändert.
+Beide eigenen Installationen danach regulär entfernt; 77 Windows-/514 Linux-
+Benutzerdateien und unabhängige Sentineldateien unverändert erhalten, SQLite intakt.
 
 ## Phase 4.3: Finaler Paketnachlauf
 

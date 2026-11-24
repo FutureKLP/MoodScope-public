@@ -3,6 +3,28 @@
 Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
 [STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
 
+## Nachtrag Phase 4.4 (23./24. November 2026)
+
+Phase 4 bleibt **teilweise bestanden**, Binärverteilung blockiert. Fünf konkrete
+Lizenz-Sammlungslücken für neue Kandidaten behoben, vollständige FFmpeg-/native
+Quellen-, Build- und Weiterverteilungsprüfung offen. glib-Advisory weiterhin
+offen; kein kompatibles Einzelupdate im GTK-0.18-Graphen, kein ungeprüfter Fix.
+
+Echte installierte Windows-/Linux-CPU-Inferenz mit vorhandenen Testkopien von CLAP,
+XLM-EMO, Demucs und Faster-Whisper erstmals nachgewiesen; selbst verfasster
+Texttest getrennt von tatsächlicher Musik. Gespeicherte Kurven nach Neustart
+nativ geöffnet, Demucs-Spuren im passenden Hörstudiomodell angezeigt, echter
+Abbruch und reguläres Ende mit Datenerhalt belegt. Windows zusätzlich neuer
+nativer CLAP-/XLM-EMO-Auftrag in 14,24 s mit zehn Audio-/zwei Testtextsegmenten;
+Whisper auf beiden Systemen ohne erkannte Textsegmente, keine Qualitätsfreigabe.
+WSLg-Monitorprobe mit synthetischem Signal erfolgreich, keine physische Ausgabe.
+Windows 412 Backendtests plus ein Skip / Linux 413, jeweils 156 Frontend-, zehn
+Rust- und fünf Node-Tests sowie Web-/Release-/Paketbuilds bestanden; alle 10.071
+geschützten Dateien unverändert. Die übrigen Plattform-, Modell-/Lyrics-,
+CPU-Hashlock-, Versionsupdate- und früheren Qualitäts-/Ressourcengates bleiben
+offen. Keine Kern-/Endnutzerfreigabe oder externe Datenbankphase.
+[Belege und genaue Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
 ## Entscheidung
 
 Die Anwendung bleibt eine Entwicklungsversion. Die Veröffentlichung geprüfter
