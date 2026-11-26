@@ -1,5 +1,10 @@
 # Phase 2A: native Bibliothek, Player und Lyrics
 
+Datierter Nachweis des Phase-2A-Quellstands. Die zugehörigen Importfunktionen,
+Testhalter und Regressionen gehören zu dieser Quelllinie; ihr aktueller
+Integrationsstatus steht in [STATUS.md](STATUS.md). Die historischen Teststände
+und Abnahmegrenzen unten bleiben erhalten.
+
 **Entscheidung: Phase 2A im festgelegten synthetischen Windows-Prüfumfang vollständig bestanden.**
 Die vier zunächst blockierten Importfälle wurden in Phase 2A.2 tatsächlich nativ
 abgeschlossen. Desktopprüfung am 17. November 2026, Dokumentationsabschluss am
