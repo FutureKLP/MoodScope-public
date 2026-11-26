@@ -11,6 +11,19 @@ def test_translates_interface_fields_without_touching_user_data():
     assert translated['tags']==data['tags']
     assert translated['warnings'][0].startswith('No synchronised lyrics')
 
+
+@pytest.mark.parametrize('status', [401, 503])
+def test_audio_provider_http_error_is_fully_translated(status):
+    message = (f'Audio-Modellserver meldet HTTP {status}. '
+               'Audiofähigkeit, Modell-ID, Key und Kontingent prüfen. '
+               'Keine automatische Wiederholung. Fehler-ID: fixture. '
+               'Details: data/logs/moodscope.log')
+    translated = language.response({'message': message}, 'en')['message']
+    assert f'HTTP {status}' in translated
+    assert 'Check audio support, model ID, key and quota. No automatic retry.' in translated
+    assert 'Error ID: fixture.' in translated
+    assert language.response({'message': message}, 'de')['message'] == message
+
 def test_english_errors_catalogue_and_validation_do_not_leak_input(client):
     response=client.get('/api/tracks/missing/notes',headers={'Accept-Language':'en-GB,en;q=0.9'})
     assert response.status_code==404 and response.json()['detail']=='Song not found'

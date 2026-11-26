@@ -6,6 +6,8 @@ import threading
 import uuid
 import tempfile
 import re
+import asyncio
+from contextlib import asynccontextmanager
 from typing import Literal
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -22,13 +24,31 @@ from pydantic import BaseModel, Field, SecretStr
 from .core import parse_lrc, biggest_split,text_coverage
 from .models import ROOT, engines, AUDIO_MODEL, LYRIC_MODEL, PIPELINE_VERSION
 from . import cloud, links, catalog, insights, library, diagnostics, research, separation, providers,focus,language,audio_method,cancellation,prompt_presets,runtime_devices
-from . import expression_compare,provider_routing,storage,persistence
+from . import expression_compare,provider_routing,storage,persistence,worker_workspace
 
 DATA = Path(os.environ.get('MOODSCOPE_DATA', ROOT / 'data'))
 DATA.mkdir(parents=True, exist_ok=True)
-app = FastAPI(title='MoodScope local analysis', version='0.3.0')
+@asynccontextmanager
+async def lifespan(app):
+    await asyncio.to_thread(worker_workspace.recover, DATA)
+    async def sweep():
+        while True:
+            await asyncio.sleep(5)
+            await asyncio.to_thread(worker_workspace.recover, DATA)
+    task = asyncio.create_task(sweep())
+    try:
+        yield
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+
+app = FastAPI(title='MoodScope local analysis', version='0.3.0', lifespan=lifespan)
 ORIGINS = ['http://127.0.0.1:1420', 'http://localhost:1420', 'tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost', 'http://127.0.0.1:8765']
-app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=['GET','POST'], allow_headers=['Content-Type','Accept-Language'])
+app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=['GET','POST'], allow_headers=['Content-Type','Accept-Language'], expose_headers=['X-MoodScope-Instance'])
 executor = ThreadPoolExecutor(max_workers=1)
 jobs = {}
 job_lock = threading.RLock()
@@ -67,8 +87,10 @@ async def local_only(request: Request, call_next):
             return JSONResponse({'detail':'Untrusted local preflight'},status_code=403)
         return Response(status_code=204,headers={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST','Access-Control-Allow-Headers':'Content-Type, Accept-Language','Vary':'Origin'})
     result=await call_next(request)
+    result.headers['X-MoodScope-Instance'] = INSTANCE_ID
     if sibling:
         result.headers['Access-Control-Allow-Origin']=origin
+        result.headers['Access-Control-Expose-Headers']='X-MoodScope-Instance'
         result.headers.add_vary_header('Origin')
     locale=language.language(request.headers.get('accept-language'))
     if locale=='en' and result.headers.get('content-type','').startswith('application/json'):
