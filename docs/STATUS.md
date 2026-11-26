@@ -7,7 +7,7 @@ weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsve
 ## Verifizierter öffentlicher und lokaler Stand
 
 Kontrollierte Quellintegration am 26. November 2026. Diese Quelllinie enthält
-die bereits geprüften Vorgänger und den Phase-2C-Quellhead `723b8c296283bd09468066617344a999543a143d`.
+die bereits geprüften Vorgänger und den Phase-3-Quellhead `7df500e31016876d297fb32d59758c614fc44ff1`.
 Die datierten Nachweise unten beschreiben ihren jeweiligen Testumfang;
 sie sind keine Installer-, Distributions- oder Endnutzerfreigabe.
 Aktuelle Merge- und CI-Nachweise werden bei Abschluss ergänzt. Private
@@ -70,12 +70,38 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   Wiederholungsmatrix und tatsächliche Audioausgabemessung bleiben offen.
   Keine Leckfreiheit behauptet.
   [Vollständige Matrix und Grenzen](PHASE2C-ACCEPTANCE.md).
-- **Phase 3 – Langzeitbetrieb und Performance:** geplant.
+- **Phase 3 – Langzeitbetrieb und Performance:** teilweise bestanden.
+  Zehn native Original-/Live-Mixzyklen, zusätzlicher Ansichts-/Songwechselgraph,
+  elf geschlossene Contexts, 99 getrennte Nodes und acht entfernte Mixerlistener
+  nachgewiesen. Echte Offline-Modellwiederholungen auf CPU sowie getrennte
+  CLAP-/Music2Emo-CUDA-Läufe, Abbruch/Neulauf und Cacheaufrufe geprüft.
+  Erste beaufsichtigte native Prozesslebensdauer 17 Minuten 18,9 Sekunden;
+  Fortsetzung nach Neustart 6 Minuten 4,98 Sekunden separat, keine
+  Unterbrechungszeit mitgezählt und kein einzelner 20-Minuten-Lauf.
+  SQLite-Zeilen und Audio-/Stemhashes nach Neustart identisch; 100 lesende
+  Bibliotheks-/Cacheabfragen mit geschlossenen SQLite-Verbindungen bestanden.
+  Insgesamt 493 Verbindungen geschlossen, abschließend null aktiv. Neu 399
+  Backend-, 156 Frontend-, neun Rust- und fünf Node-Tests, TypeScript/Vite und
+  Windows-Releasebuild bestanden. Eigene Prozesse beendet, Testports frei.
+  Audioausgabe, vollständige Wechselmatrix und breite Langzeitlast bleiben offen.
+  [Messkonzept, Ergebnisse und zentrale Freigabematrix](PHASE3-PERFORMANCE-ACCEPTANCE.md).
 - **Phase 4 – Installer und Plattformabnahme:** geplant.
 - **Phase 5 – Releaseentscheidung:** geplant; vollständige Kernfreigabe offen.
 - **Externe Datenbanken:** bis zur dokumentierten Kernfreigabe gesperrt. SQLite bleibt Standard.
 
 ## Weiter offene Grenzen
+
+Phase 3 entwickelt separat auf `codex/phase3-performance-acceptance`, direkt von
+`723b8c2`. Anwendungscode unverändert; keine Optimierung ohne bestätigten Fehler.
+Main weiterhin `1717ffd`, #11/#12 offen, #13/#14 Draft. Alle vier Jobs des
+Phase-2C-Heads erfolgreich; keine Reviews/Reviewthreads beim erneuten Abgleich.
+Zusätzlich besteht [PR #15](https://github.com/FutureKLP/MoodScope-public/pull/15)
+mit demselben Phase-2C-Head direkt gegen Main; seine vier Jobs sind ebenfalls
+erfolgreich. Neuer eigener [Draft #16](https://github.com/FutureKLP/MoodScope-public/pull/16)
+zielt auf Phase 2C und enthält ausschließlich den sechs Dateien umfassenden
+Phase-3-Dokumentationsstand. Dessen CI ist separat zu prüfen.
+Keine automatischen Merges. Die folgenden datierten Phase-2-Nachweise bleiben
+erhalten; aktuelle Phase-3-Grenzen und Abschlusstests stehen im verlinkten Bericht.
 
 Phase 2C entwickelt auf `codex/phase2c-studio-regression` von `b3e4b9c`;
 die öffentlichen Dokumentations- und Phase-2A-/2B-Linien sind bereits enthalten.
