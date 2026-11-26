@@ -7,6 +7,25 @@ Die automatisierte Prüfung ist von tatsächlichen Musik- und nativen
 Bedienabnahmen getrennt. Tests nutzen deterministische, synthetische Fixtures.
 Produktive Daten, Modelle, Musik, Lyrics und Prüfausgaben bleiben ausgeschlossen.
 
+## Phase 2C am 20. November 2026
+
+Nach bestätigter Solo-Exportkorrektur 399 Backendtests bestanden (38,48 s),
+zehn gezielte Separationstests einschließlich NaN und beider Unendlichkeiten.
+Vor der Korrektur reproduzierte der neue NaN-Test den Fehler zuverlässig.
+Unverändertes Frontend: 156 Tests in 29 Dateien bestanden (20,35 s).
+Neun Rusttests locked/offline, fünf Node-Dialogdrivertests, TypeScript/Vite und
+Windows-Releasebuild ohne Bundle erfolgreich; Releasekompilierung 17,05 s.
+Bekannte Chunkwarnung und Rust-Kopierfallback bleiben. Kein Installerlauf.
+
+Die separate native Prüfung verwendet synthetische Quellen und echte vorhandene
+Demucs-Gewichte: Start, Abbruch, erfolgreicher CPU-Neulauf, Mix/Loop, drei numerisch
+geprüfte Exporte, Escape/Cancel, tatsächlicher Exportfehler und erneuter Export
+nach vollständigem App-/Dienstneustart. Fünf tatsächliche Dienstmixvarianten und
+fünf getrennte kontrollierte Vier-Spur-Sollvergleiche bestanden. Letztere sind
+deterministische Fixtures, keine Demucs- oder Musikqualitätsabnahme.
+Ressourcenstichproben und Anzeigezeitvergleich ersetzen keine Audioausgangs-/
+Langzeit-Leckprüfung. [Vollständiger Nachweis](PHASE2C-ACCEPTANCE.md).
+
 ## Befehle
 
 In der eingerichteten Projektumgebung:
