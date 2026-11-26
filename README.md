@@ -28,17 +28,67 @@ unter Windows insbesondere MSVC, Windows SDK und WebView2. CUDA ist optional.
 
 ## Installation und lokaler Start
 
-Im ausgecheckten Projektordner unter Windows:
+Alle folgenden Befehle im ausgecheckten Projektordner ausführen. Die Skripte
+richten Python- und Node-Pakete projektlokal ein; Betriebssystempakete und
+GPU-Treiber müssen vorher vorhanden sein.
+
+### Windows
 
 ```powershell
 .\scripts\setup.ps1
 .\scripts\start.ps1
 ```
 
-Im Browser anschließend [MoodScope öffnen](http://127.0.0.1:8765).
-Das Windows-Standardsetup verwendet einen CUDA-PyTorch-Build; CPU-Einrichtung,
-Linux, native Builds, Modelle und Linkimport stehen in der
-[Installationsanleitung](docs/SETUP.md).
+Das Standardsetup verwendet einen CUDA-PyTorch-Build. Für eine CPU-Einrichtung
+stattdessen:
+
+```powershell
+.\scripts\setup_runtime.ps1 -Cpu
+npm ci
+npm run build
+.\scripts\start.ps1
+```
+
+Für das native Desktopfenster nach der Einrichtung:
+
+```powershell
+npm run tauri build -- --no-bundle
+.\scripts\start.ps1 -Desktop
+```
+
+Danach kann auch **Start-MoodScope.cmd** per Doppelklick verwendet werden.
+
+### Linux
+
+Python ab 3.11 einschließlich `venv` und Node.js ab 22.12 mit npm bereitstellen.
+Für das native Fenster zusätzlich Rust und die Linux-Systempakete aus den
+[Tauri-Voraussetzungen](https://v2.tauri.app/start/prerequisites/) installieren,
+insbesondere WebKitGTK 4.1, GTK 3, OpenSSL und die Build-Werkzeuge.
+Die Setupskripte installieren diese Systempakete nicht.
+
+```bash
+# CPU-Einrichtung mit passenden Torch-/Torchaudio-Paketen:
+bash scripts/setup.sh --cpu
+bash scripts/start.sh
+```
+
+Für eine entsprechend vorbereitete GPU-Umgebung steht alternativ
+`bash scripts/setup.sh` ohne `--cpu` bereit. Treiber und PyTorch-Build müssen
+zur GPU passen. Für das native Desktopfenster nach der Einrichtung:
+
+```bash
+bash scripts/start.sh --desktop
+# Separaten nativen Client bauen:
+npm run tauri build -- --no-bundle
+```
+
+### Nach dem Start
+
+Beim Browserstart [MoodScope öffnen](http://127.0.0.1:8765); Strg+C beendet den
+Dienst. Im nativen Modus öffnet sich das Appfenster. Unter **Modelle & API**
+lokale Modelle herunterladen und auswählen; Modellgewichte werden nicht mit
+dem Quellcode geliefert. Für optionale Linkimporte ist eine zusätzliche
+Einrichtung erforderlich. [Modelle, Linkimporte und weitere Setupdetails](docs/SETUP.md).
 
 Der zusätzliche [Runtimebuild](docs/BACKEND-RUNTIME.md) bündelt ein eigenes
 CPU-Python-/FastAPI-Backend. Lokale NSIS-/Debian-Testkandidaten starten es selbst;
