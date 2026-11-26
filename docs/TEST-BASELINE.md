@@ -156,3 +156,45 @@ Keine neue tatsächliche Musikprüfung, Modellinferenz, native Bedienabnahme,
 Installer-, Linux-, Windows-10- oder vollständige Advisoryprüfung in diesem Lauf.
 Ein erfolgreicher entfernter CI-Lauf wird nicht behauptet. Abnahmegrenzen bleiben
 in [CORE-ACCEPTANCE.md](CORE-ACCEPTANCE.md) erhalten.
+## Phase 2B am 18. November 2026
+
+381 Backendtests (36,21 s), 146 Frontendtests in 28 Dateien (17,15 s),
+neun Rusttests locked/offline und fünf Node-Drivertests bestanden. TypeScript/Vite
+und Windows-Releasebuild ohne Bundle erfolgreich; bekannte Chunkwarnung bleibt.
+Die erste Buildwiederholung traf eine noch laufende EXE; nach Beendigung erfolgreich.
+Aktuelle Python-3.13-Projektumgebung verwenden: der ältere Python-3.10-Testhalterlauf
+scheiterte an sechs `hashlib.file_digest`-Aufrufen, die Wiederholung bestand.
+
+Neue Regressionen prüfen fehlende CLAP-Prozessor-/Gewichtsdateien ohne halbe
+Engineaktivierung und ausdrücklichen CPU-Modus des Desktop-Testhalters.
+Tatsächliche Offline-Inferenz, kontrollierte lokale API-Fehler, Dienstabbruch,
+Neustart und native Bedienung sind getrennt in [Phase 2B](PHASE2B-ACCEPTANCE.md)
+ausgewiesen. Die native Gesamtmatrix bleibt teilweise offen; keine vollständige
+Kernfreigabe. Keine neuen echten Anbieter-, Installer- oder anderen Plattformtests.
+
+## Phase 2B.3 am 20. November 2026
+
+396 Backendtests bestanden (57,40 s), finale vollständige Frontendsuite mit 156 Tests
+(18,14 s), einschließlich englischer Checkbox und lokaler Analyse bei ungültigem
+Anbieterstatus. Der vorherige vollständige 154-Fälle-Lauf und der zusätzliche
+39-Fälle-App-Lauf sind als Zwischenprüfungen erhalten. Neun Rusttests locked/offline, fünf Node-Dialogdrivertests,
+TypeScript/Vite und native Windows-Releasekompilierung ohne Bundle erfolgreich.
+Bekannte Chunkwarnung bleibt; kein Installer-/Plattformtest.
+
+Neue Regressionen: normale und unterbrochene Workerlebensdauer, echter Prozesskill,
+aktive Workersperre, FastAPI-Startup-Recovery, ungültige Besitzmarker und verlinkte
+Dateien; sichtbare Zustimmung nach Sitzungs-/Routing-/Verbindungswechsel, erneute
+Versionsprüfung vor Transfer sowie Dienstinstanzheader und Listenerbereinigung.
+Keine Modellinferenz in diesen deterministischen Regressionen.
+
+Der erste Backend-Gesamtlauf hatte 391 Erfolge und einen Langpfadfehler aufgrund
+des zu langen Testhalter-Tempverzeichnisses. Wiederholung mit kurzem isoliertem
+`--basetemp` bestand; abschließender Lauf nach ergänzten Regressionen wie oben.
+Die Prozessregressionen benötigen lokale Prozess-/Socketrechte; ein anfänglicher
+Sandboxlauf blieb ohne Fortschritt. Fehlerhafte erste Windows-Fixtures und die
+korrigierte Prozesszuordnung des realen Testhalters bleiben als Fehlversuche erhalten.
+
+Echter Music2Emo-Crash-/Neustartlauf und Loopback-API-Prüfung bestanden getrennt
+von den Regressionen. Native App gestartet und sichtbar; Bedienfolge wegen
+Testwerkzeug-Geometriefehler unvollständig. Exakte Einordnung, Datenabschluss und
+offene Kriterien: [Phase 2B.3](PHASE2B-ACCEPTANCE.md#nachabnahme-2b3-vom-20-november-2026).

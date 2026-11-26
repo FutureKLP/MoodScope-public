@@ -4,6 +4,23 @@ import pytest
 from backend.models import Engines
 
 
+@pytest.mark.parametrize('stage', ['processor', 'weights'])
+def test_missing_clap_files_explain_recovery_without_partial_engine(tmp_path, monkeypatch, stage):
+    import transformers
+    engine = Engines()
+    engine.data = tmp_path
+    monkeypatch.setattr(engine, 'device', lambda *args: 'cpu')
+    def missing(*args, **kwargs):
+        raise OSError('loader internals must not become the user message')
+    monkeypatch.setattr(transformers.ClapProcessor, 'from_pretrained',
+                        missing if stage == 'processor' else lambda *args, **kwargs: object())
+    monkeypatch.setattr(transformers.ClapModel, 'from_pretrained', missing)
+    with pytest.raises(ValueError, match='Installation prüfen') as error:
+        engine.audio(np.zeros(48000), 48000, lambda *args: None)
+    assert 'loader internals' not in str(error.value)
+    assert engine.processor is None and engine.audio_model is None
+
+
 @pytest.mark.parametrize('invalid',[False,True])
 def test_clap_rejects_nonfinite_predictions_and_preserves_valid_formula(tmp_path,monkeypatch,invalid):
     import torch
@@ -48,3 +65,43 @@ def test_nonfinite_lyric_scores_are_not_published():
         for name in ['joy','sadness','anger','fear']] for line in lines]
     with pytest.raises(ValueError,match='Emotionswerte'):
         engine.lyrics([{'start':0,'end':1,'text':'Authored words'}],lambda *args:None)
+
+
+def test_text_model_switch_reloads_selected_source_with_controlled_doubles(tmp_path, monkeypatch):
+    """Selection/lifecycle regression only; no second real model inference."""
+    import transformers
+    from backend import app, catalog
+    engine = Engines()
+    engine.data = tmp_path
+    monkeypatch.setattr(engine, 'device', lambda *args: 'cpu')
+    monkeypatch.setattr(app, 'engines', engine)
+    monkeypatch.setattr(app, 'DATA', tmp_path)
+    monkeypatch.setattr(app, 'jobs', {})
+    second = 'controlled-text-fixture'
+    models = {**catalog.CATALOG, second: {
+        'repo': 'fixture/text-emotions', 'purpose': 'lyrics', 'custom': True}}
+    monkeypatch.setattr(catalog, 'entries', lambda data: models)
+    monkeypatch.setattr(catalog, 'status', lambda data: catalog.configuration(data))
+    fixture = tmp_path / 'controlled-text-model'
+    fixture.mkdir()
+    catalog.save(tmp_path, {'active': {}, 'installed': {second: str(fixture)}})
+    loaded = []
+
+    def pipeline(task, *, model, **kwargs):
+        loaded.append(model)
+        dominant = 'sadness' if model == str(fixture) else 'joy'
+        def predict(lines, **kwargs):
+            return [[{'label': label, 'score': .7 if label == dominant else .1}
+                     for label in ('joy', 'sadness', 'anger', 'fear')] for line in lines]
+        return predict
+
+    monkeypatch.setattr(transformers, 'pipeline', pipeline)
+    values = []
+    for key in ('xlm-emo', second, 'xlm-emo'):
+        app.select_model(app.ModelChoice(model_id=key))
+        assert engine.lyric_pipe is None
+        values.append(engine.lyrics([{'start': 0, 'end': 1, 'text': 'Authored fixture'}],
+                                    lambda *args: None, context_weight=0)[0]['valence'])
+    assert loaded == [catalog.CATALOG['xlm-emo']['repo'], str(fixture),
+                      catalog.CATALOG['xlm-emo']['repo']]
+    assert values[0] > 0 and values[1] < 0 and values[2] == values[0]

@@ -52,8 +52,12 @@ class Engines:
             progress('Lade CLAP-Musikmodell (erster Start: Download)', 10)
             source=catalog.model_source(self.data,'audio')
             kwargs={'revision':AUDIO_REVISION} if source==AUDIO_MODEL else {}
-            self.processor = ClapProcessor.from_pretrained(source,**kwargs)
-            self.audio_model = ClapModel.from_pretrained(source,**kwargs).to(device).eval()
+            try:
+                processor = ClapProcessor.from_pretrained(source,**kwargs)
+                model = ClapModel.from_pretrained(source,**kwargs).to(device).eval()
+            except OSError:
+                raise ValueError('Audiomodell konnte nicht geladen werden. In Modelle & API die Installation prüfen oder ein installiertes Modell auswählen. Gespeicherte Analysen bleiben erhalten.') from None
+            self.processor, self.audio_model = processor, model
         from .audio_method import LABELS,VALENCE,AROUSAL,prepare_emotion_audio,prompt_diagnostics
         from .prompt_presets import content
         prompts=content(self.data,'audio').splitlines()

@@ -99,7 +99,8 @@ def prepare():
 def environment(area):
     return {**os.environ, 'MOODSCOPE_DATA': str(area / 'data'),
             'WEBVIEW2_USER_DATA_FOLDER': str(area / 'webview'),
-            'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1', 'CUDA_VISIBLE_DEVICES': ''}
+            'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1',
+            'CUDA_VISIBLE_DEVICES': '-1', 'MOODSCOPE_DEVICE': 'cpu'}
 
 
 def run(area, binary):

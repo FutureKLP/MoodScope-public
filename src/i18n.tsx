@@ -14,7 +14,7 @@ const cache:Record<Language,Map<string,string>>={de:new Map(),en:new Map()};
 const catalogues={de:reverse,en:dictionary};
 const escape=(part:string)=>part.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const templates=Object.fromEntries(Object.entries(catalogues).map(([locale,entries])=>[locale,Object.entries(entries).filter(([key])=>key.includes('{0}')).map(([key,value])=>({pattern:new RegExp('^'+key.split(/\{\d+\}/g).map(escape).join('(.+?)')+'$'),value}))])) as Record<Language,{pattern:RegExp;value:string}[]>;
-const fragments=Object.fromEntries(Object.entries(catalogues).map(([locale,entries])=>[locale,Object.entries(entries).filter(([key])=>key.length>=12).sort((a,b)=>b[0].length-a[0].length)])) as Record<Language,[string,string][]>;
+const fragments=Object.fromEntries(Object.entries(catalogues).map(([locale,entries])=>[locale,Object.entries(entries).filter(([key])=>key.length>=12||key===' Error ID: ').sort((a,b)=>b[0].length-a[0].length)])) as Record<Language,[string,string][]>;
 export function t(value:string,args:unknown[]=[]):string{
   if(typeof value!=='string')return '';
   let translated=cache[language].get(value);
