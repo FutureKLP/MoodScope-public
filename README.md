@@ -39,7 +39,10 @@ GPU-Treiber müssen vorher vorhanden sein.
 .\scripts\start.ps1
 ```
 
-Das Standardsetup verwendet einen CUDA-PyTorch-Build. Für eine CPU-Einrichtung
+Das Standardsetup richtet NVIDIA-CUDA ein: derzeit PyTorch 2.15.0 mit CUDA 13.2
+und zusätzliche Whisper-CUDA-Pakete. Ein geeigneter NVIDIA-Treiber und eine vom
+Build unterstützte GPU sind erforderlich; das Skript prüft einen echten
+CUDA-Rechenschritt. Es installiert keinen Treiber. Für eine CPU-Einrichtung
 stattdessen:
 
 ```powershell
@@ -73,14 +76,47 @@ bash scripts/start.sh
 ```
 
 Für eine entsprechend vorbereitete GPU-Umgebung steht alternativ
-`bash scripts/setup.sh` ohne `--cpu` bereit. Treiber und PyTorch-Build müssen
-zur GPU passen. Für das native Desktopfenster nach der Einrichtung:
+`bash scripts/setup.sh` ohne `--cpu` bereit. Das Linux-Skript installiert die
+Projektanforderungen, wählt aber keinen zur eigenen GPU geprüften CUDA-Build
+aus. Torch und Torchaudio müssen zusammenpassen; Treiber, GPU-Architektur und
+gewählte CUDA-Wheels vorher gemäß der
+[offiziellen PyTorch-Einrichtung](https://pytorch.org/get-started/locally/)
+abgleichen. Ein erfolgreiches Setup allein bestätigt unter Linux keine GPU-Inferenz.
+Für das native Desktopfenster nach der Einrichtung:
 
 ```bash
 bash scripts/start.sh --desktop
 # Separaten nativen Client bauen:
 npm run tauri build -- --no-bundle
 ```
+
+### GPU prüfen und in der App auswählen
+
+Für NVIDIA zunächst `nvidia-smi` im Terminal prüfen. Anschließend in der
+eingerichteten Projektumgebung einen echten PyTorch-CUDA-Schritt ausführen:
+
+```powershell
+# Windows
+.\.venv-modern\Scripts\python.exe -c "import torch; assert torch.cuda.is_available(); print(torch.cuda.get_device_name(0)); print((torch.ones(1, device='cuda') * 2).sum().item())"
+```
+
+```bash
+# Linux
+.venv-modern/bin/python -c "import torch; assert torch.cuda.is_available(); print(torch.cuda.get_device_name(0)); print((torch.ones(1, device='cuda') * 2).sum().item())"
+```
+
+Unter **Modelle & API → Wo deine Modelle rechnen** pro Aufgabe **CPU**,
+**Automatisch** oder eine erkannte GPU wählen und speichern. Automatik prüft
+CUDA und kann auf CPU zurückfallen. Eine ausdrücklich gewählte GPU meldet
+Gerätefehler; sie wechselt dabei nicht unbemerkt auf CPU. Genügend RAM/VRAM für
+das jeweilige Modell ist zusätzlich nötig. AMD-/Intel-GPU-Beschleunigung ist
+über diese CUDA-Auswahl nicht implementiert.
+
+Whisper verwendet CTranslate2 und benötigt für GPU-Inferenz zusätzlich passende
+cuBLAS-/cuDNN-Bibliotheken. Ein bestandener PyTorch-Test bestätigt Whisper-CUDA
+noch nicht; dessen CPU-Betrieb bleibt separat auswählbar. Unter Linux installiert
+`setup.sh` diese zusätzlichen Whisper-CUDA-Pakete nicht automatisch.
+[Hardware- und Runtimegrenzen](docs/ENVIRONMENT.md) · [Ausführliche Einrichtung](docs/SETUP.md).
 
 ### Nach dem Start
 
