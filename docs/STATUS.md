@@ -10,8 +10,9 @@ Kontrollierte Quellintegration am 26. November 2026. Diese Quelllinie enthält
 die bereits geprüften Vorgänger und den Phase-3-Quellhead `7df500e31016876d297fb32d59758c614fc44ff1`.
 Die datierten Nachweise unten beschreiben ihren jeweiligen Testumfang;
 sie sind keine Installer-, Distributions- oder Endnutzerfreigabe.
-Aktuelle Merge- und CI-Nachweise werden bei Abschluss ergänzt. Private
-Phase-5-Historie und die interne Release-Matrix gehören nicht zu dieser Linie.
+Die Vorgänger wurden über PR #11, #12, #13 und #15 in Main integriert.
+Für ihre jeweiligen Integrationsstände bestanden die erforderlichen Prüfungen.
+Die Phase-3-Integration erhält eigene CI-Nachweise vor dem Merge.
 Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
 ## Entwicklungsphasen
