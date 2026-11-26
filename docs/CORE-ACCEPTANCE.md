@@ -1,5 +1,8 @@
 # Kernabnahme und Freigabegrenzen
 
+Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 ## Entscheidung
 
 Die Anwendung bleibt eine Entwicklungsversion. Die Veröffentlichung geprüfter

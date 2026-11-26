@@ -1,5 +1,8 @@
 # Native Windows-Exportprüfung
 
+Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
+[STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
+
 ## Voraussetzungen und Abgrenzung
 
 Interaktive, entsperrte Windows-Sitzung, WebView2, eingerichtete Python- und
