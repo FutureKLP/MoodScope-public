@@ -40,6 +40,13 @@ Das Windows-Standardsetup verwendet einen CUDA-PyTorch-Build; CPU-Einrichtung,
 Linux, native Builds, Modelle und Linkimport stehen in der
 [Installationsanleitung](docs/SETUP.md).
 
+Der zusätzliche [Runtimebuild](docs/BACKEND-RUNTIME.md) bündelt ein eigenes
+CPU-Python-/FastAPI-Backend. Lokale NSIS-/Debian-Testkandidaten starten es selbst;
+der normale Entwicklungsbuild verwendet weiterhin den Projektstarter.
+Lizenzen, vollständige Modellprüfung und weitere Plattformfälle bleiben offen.
+Keine Endnutzer-Installerfreigabe.
+[Plattformabnahme und Grenzen](docs/PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
 ## Entwicklungsstatus
 
 Version 0.3 ist eine Entwicklungsversion. Maßgeblich für abgeschlossene Phasen,

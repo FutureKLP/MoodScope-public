@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-os.environ.setdefault('HF_HOME', str(ROOT / 'models'))
+from .paths import data_dir, model_dir
+os.environ.setdefault('HF_HOME', str(model_dir()))
 os.environ.setdefault('USE_TF', '0')
 os.environ.setdefault('USE_FLAX', '0')
 AUDIO_MODEL = 'laion/clap-htsat-unfused'
@@ -16,7 +17,7 @@ PIPELINE_VERSION = f'clap-level-controlled-v7-harmony-v2-grid5-coverage50:{AUDIO
 class Engines:
     def __init__(self):
         self.audio_model = self.processor = self.lyric_pipe = None
-        self.data=ROOT/'data'
+        self.data=data_dir()
 
     def device(self,purpose='audio'):
         import torch

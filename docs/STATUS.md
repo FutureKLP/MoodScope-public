@@ -7,12 +7,188 @@ weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsve
 ## Verifizierter öffentlicher und lokaler Stand
 
 Kontrollierte Quellintegration am 26. November 2026. Diese Quelllinie enthält
-die bereits geprüften Vorgänger und den Phase-3-Quellhead `7df500e31016876d297fb32d59758c614fc44ff1`.
-Die datierten Nachweise unten beschreiben ihren jeweiligen Testumfang;
-sie sind keine Installer-, Distributions- oder Endnutzerfreigabe.
-Aktuelle Merge- und CI-Nachweise werden bei Abschluss ergänzt. Private
-Phase-5-Historie und die interne Release-Matrix gehören nicht zu dieser Linie.
+die geprüften Vorgänger bis Phase 3 sowie den Phase-4-Quellhead
+`0c1d40e6679dbdd065f96dd4e8cb4dfda46e5842`.
+Die folgenden datierten Berichte halten historische Prüfstände und ihre
+damaligen Grenzen fest. Aktuelle Merge- und CI-Nachweise werden bei Abschluss
+ergänzt. Keine Installer-, Distributions- oder Endnutzerfreigabe.
 Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
+
+## Phase 4.4: Distributions- und Sicherheitsnachprüfung
+
+**Weiterhin teilweise bestanden; öffentliche Binärverteilung blockiert und
+keine Endnutzerfreigabe.** Fünf konkrete Lizenz-Sammlungslücken für neue Builds
+behoben: `LICENCE` wird erkannt; acht Originaltexte mit Versions-/Quell-/Hash-
+zuordnung und nativer FFmpeg-Binärbindung ergänzt. Vollständige native Notices, exakte FFmpeg-/Codecquellen,
+Buildherkunft und Weiterverteilungsrechte bleiben offen. Erhaltene vollständige
+Runtime-Manifeste erneut geprüft, 377 Windows-PE-/393 Linux-ELF-Komponenten
+inventarisiert. Neue lokale Lizenz-Testpakete für NSIS und Debian gebaut;
+Anwendungs-/Abhängigkeitsbinaries bleiben unverändert, eigene Testkennungen.
+
+Echte installierte Linux-CPU-Inferenz nun mit vorhandenen Benutzerkopien von
+CLAP/XLM-EMO, Demucs und Faster-Whisper bestanden. Keine vorbereiteten
+Analyse-/Stemcaches; XLM-EMO mit selbst verfasstem Testtext, Audio aus freigegebener
+lokaler Testmusik. Gespeicherte CLAP-/Textkurven nach Neustart nativ geöffnet,
+echter Abbruch bestätigt, vorherige fehlende Whisper-Gewichte verständlich
+angezeigt. Regulärer Exit 0 ohne Kinder/Listener und eigener Datenerhalt belegt. Die Linux-Negativmatrix für API-/Besitzfehler, fehlende Runtime,
+Portkonflikt, Verzögerung und echten Folgestart ist in derselben eigenen
+Installation vollständig bestanden; Konfliktlistener erhalten, keine HTTP-Nutzdaten.
+Music2Emo bleibt ohne separate geprüfte Runtime nicht verfügbar.
+
+WSLg-PulseAudio nach zunächst verweigerter Verbindung ohne Eingriff wieder
+erreichbar: synthetische Clientwiedergabe am Monitor mit 440,29 Hz und Peak 0,159
+erfasst. Kein vollständiger samplegleicher Zwei-Sekunden- oder physischer
+Windows-Ausgabenachweis. Bestehendes glib-Advisory erneut im angemeldeten
+Browser geprüft: offen, GTK-0.18-Graph verhindert kompatibles Einzelupdate.
+Kein konkreter MoodScope-Laufzeitangriff belegt, keine Unbetroffenheit behauptet,
+kein ungeprüfter Backport/Override und keine Warnungsunterdrückung.
+
+Windows 412 Backendtests plus ein POSIX-Skip, Linux 413; jeweils 156 Frontend-,
+zehn Rust-, fünf Node-Tests, Web-/Release-/Paketbuilds bestanden. Alle 10.071
+Original-/Modell-/Produktionsdateien hashgleich und produktive SQLite intakt.
+CPU-Distributionshashlocks, echtes Versionsupdate und vollständige
+Modell-/Lyrics-/Plattformmatrix sowie frühere Qualitäts-/Ressourcengrenzen offen.
+[Neue Nachweise, Kandidaten und Sicherheitsbewertung](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
+Nachlauf 24. November: finaler Windows-Client mit eigenem Backend, echten
+CLAP-/XLM-EMO-/Demucs-/Whisper-CPU-Aufträgen und echtem Abbruch geprüft.
+Whisper erkennt in diesem Ausschnitt null Textsegmente; kein Wortqualitätsnachweis.
+Nach regulärem Schließen/neuem Start sind Analyse und Spuren über die installierte
+API erhalten, neun Datendateien hashgleich und SQLite intakt. Die anfängliche
+Werkzeuggeometriegrenze ist gelöst: neuer nativer Windows-CLAP-/XLM-EMO-Auftrag
+mit zehn Audio-/zwei Testtextsegmenten in 14,24 s, anschließend nach Neustart
+nativ aus dem Cache geöffnet. Unter beiden Systemen Demucs ausdrücklich im
+Hörstudio ausgewählt und gespeicherte Spuren angezeigt, regulärer Exit 0.
+Finale NSIS-/Debian-Kandidaten regulär installiert, alle 6.886/6.789 Runtimehashes
+und jeweils acht Zusatztexte bestätigt, Host-Paketstatus unverändert.
+Beide eigenen Installationen danach regulär entfernt; 77 Windows-/514 Linux-
+Benutzerdateien und unabhängige Sentineldateien unverändert erhalten, SQLite intakt.
+
+## Phase 4.3: Finaler Paketnachlauf
+
+**Weiterhin teilweise bestanden; keine Endnutzer- oder Binärfreigabe.** Beide
+Kandidaten wurden aus Anwendungscheckpoint `25b4dc0` neu gebaut. Windows-NSIS:
+415.900.755 Bytes; Linux-Debian: 602.680.696 Bytes. Quell-/Runtime-/Paketmanifeste
+verbinden die neuen Artefakte mit genau diesem Stand. Fehlende Offline-Whisper-
+Gewichte liefern jetzt eine konkrete Installationshilfe; unnötige Torch-
+Testprogramme sind aus dem Runtimeordner entfernt.
+
+Final installiert geprüft: autonomer Windows-Start ohne Python im PATH, mit
+ungültigen Python-Overrides und schreibgeschützter Runtime; Linux-Start als
+UID 1000 aus schreibgeschützter, vollständig konfigurierter isolierter
+Systemkopie mit maskiertem System-Python. Modellpfadregression über beide
+installierten APIs, native Musikimporte und samplegleiche 20-s-WAV-Exporte.
+Exportcaches sind ausdrücklich Testfixtures, keine Demucs-Inferenz. Windows-
+Wiedergabe bis 11,45 s, reguläres Ende auf beiden Plattformen ohne eigene Kinder
+oder Listener. Finale installierte Crash-/Neustart-/Supervisorverlustmatrix auf
+beiden Plattformen bestanden; getrennte Windows-Gleichversions-Reinstallation
+erhält zehn Benutzerdatendateien. Windows weist Portkonflikt, fehlende Runtime,
+inkompatible API und falsche Besitzkennung ab; kontrollierter verzögerter Start
+und anschließender echter Neustart bestanden. Testinstallationen entfernt,
+16 Windows-/190 Linux-Benutzerdateien und fremde Sentineldateien erhalten.
+
+Debian-GStreamer-bad ist korrekt deklariert und in der isolierten Systemkopie
+einschließlich seiner Abhängigkeiten regulär installiert; `dpkg --audit` leer.
+Hostpaketstatus unverändert, kein Force-depends und keine Hostreparatur.
+Normale Temp-Rechte im Testnamespace korrigiert; der spätere WSLg-Audionachlauf
+bleibt wegen verweigerter PulseAudio-Verbindung offen. Frühere Messungen zählen
+nicht für den neuen Kandidaten. Kein unabhängiger Linux-Desktopnachweis.
+
+Windows 409 Backendtests plus ein POSIX-Skip, Linux 410; jeweils 156 Frontend-,
+zehn Rust- und fünf Node-Tests sowie Web-/Release-/Paketbuilds bestanden.
+Alle 10.071 geschützten Musik-, Modell- und Produktionsdatendateien hashgleich;
+produktive SQLite lesend intakt. Keine echten installierten Modellgewichte oder
+Cloudaufträge verwendet; Music2Emo bleibt ohne getrennte Runtime nicht verfügbar.
+
+Releaseblocker: GPL-FFmpeg-Quellen/Buildherkunft und native Notices, fehlende
+Lizenztexte in fünf Distributionen, CPU-Distributionslocks, glib 0.18.5 ohne
+kompatiblen offiziellen Einzelupdatepfad im GTK-/Tauri-Graphen, restliche native
+Fehlermatrix, finale Linux-Audioprobe, versionswechselndes Update und vollständige
+installierte Modell-/Lyrics-/Plattformmatrix. Frühere Ressourcen-, Proactor- und
+Qualitätsgrenzen bleiben bestehen. Keine Merges oder öffentlichen Binaries.
+[Vollständiger aktueller Nachweis](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
+## Historischer Phase-4.2-Stand: Eigenständige Backend-Runtime
+
+**Teilweise bestanden; keine Endnutzer- oder Binärfreigabe.** Der opt-in Tauri-
+Runtimebuild bündelt einen separat gebauten PyInstaller-CPU-Ordner. Windows-NSIS
+(396,63 MiB) und Linux-Debian (587,59 MiB) starten ihr eigenes Backend ohne
+separaten Projektserver. Gewichte und bestehende Daten werden nicht übernommen.
+Der Standardentwicklungsbuild behält den Projektstarter.
+
+Eigene Benutzerverzeichnisse, Healthcheck mit Version/API 16/Besitzkennung,
+Loopbackbindung, Worker-Neustart, Crashbereinigung, nativer Windows-Appneustart
+und reguläres Ende einschließlich Linux-Alt-F4 sind geprüft. Native synthetische
+WAV-Imports und Exporte auf beiden Plattformen bestanden; Linux-Wiedergabe am
+WSLg-Monitor auch bei schreibgeschützter Installation und maskiertem System-Python.
+Windows wurde mit Python-freiem PATH geprüft, kein frisches Betriebssystem.
+Deinstallation beider eigener Testinstallationen erhält Benutzerdaten/Exporte.
+Alle 10.071 geschützten Dateien unverändert; produktive SQLite lesend intakt.
+
+407 Backendtests plus ein POSIX-Skip unter Windows, 408 unter Linux; jeweils
+156 Frontend-, zehn Rust- und fünf Node-Tests sowie Web-/Release-/Paketbuilds.
+Die abschließende Modell-Löschpfadkorrektur hat eigene Regressionen; die nativen
+Kandidaten wurden davor gebaut. Keine native Modellinferenz aus leeren Modellordnern
+behauptet. Music2Emo wird ohne separate Kompatibilitätsruntime als nicht verfügbar
+gemeldet; der Entwicklungspfad bleibt erhalten.
+
+Offen: vollständige Binärlizenzen/Quellbereitstellung (insbesondere GPL-FFmpeg),
+CPU-Abhängigkeitslocks, native Verzögerungs-/Versionsfehlerfälle, versionswechselndes
+Update, Modell-/Lyricsmatrix und weitere Plattformen. Der finale Debian-Kandidat
+blieb im isolierten dpkg-Root wegen fehlendem GStreamer-bad-Paket unkonfiguriert;
+eine einzelne benötigte Pluginbibliothek wurde nur lokal extrahiert. Keine
+systemweite Reparatur der vorhandenen unvollständigen libc-bin-Konfiguration.
+WSLg unter Root ersetzt keinen unabhängigen Ubuntu-Desktop-/Normalbenutzertest.
+Frühere Phase-2B-/2C-/3-Grenzen gelten fort. Kein Main-Merge und kein Endnutzer-Release.
+[Vollständige Ergebnisse, Belege und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
+## Verifizierter öffentlicher und lokaler Stand
+
+Öffentlicher Main: `1717ffd074041dd5db4e129f9f3aed3fb1a072dc`,
+[PR #10](https://github.com/FutureKLP/MoodScope-public/pull/10) gemergt.
+Die Phase-2A-Änderungen sind noch nicht öffentlich in Main integriert.
+Ihr erhaltener lokaler Branch ist `codex/phase2a-native-library-player-lyrics`:
+`9b7e4f3` (Importpicker), `9d44a4a` (Main-Integration), `c539444` (Abnahme).
+Phase 2A ist separat als [PR #12](https://github.com/FutureKLP/MoodScope-public/pull/12)
+auf `codex/phase2a-public-review` veröffentlicht (`5d459f0`), noch nicht gemergt.
+Die vier CI-Jobs dieses PRs sind erfolgreich. [PR #11](https://github.com/FutureKLP/MoodScope-public/pull/11)
+bleibt separat offen. Der lokale Phase-2B-Branch `codex/phase2b-native-ai`
+integriert beide öffentlichen Quell-/Dokumentationslinien ohne private Vorfahren.
+[PR #13](https://github.com/FutureKLP/MoodScope-public/pull/13) bleibt ein Draft
+gegen den Phase-2A-Reviewbranch von PR #12. Die native Nachabnahme 2B.4 prüft den
+erneut verifizierten öffentlichen Phase-2B-Head `9d11c67`. Dessen vier Windows-/
+Ubuntu-Test- und Native-Buildjobs sind erfolgreich. PR #11 und #12 sind weiterhin offen;
+Main wurde nicht gemergt oder überschrieben.
+Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
+
+## Nachlauf Phase 3.2 am 21. November 2026
+
+Ein einzelner beaufsichtigter nativer Windows-Lauf ist jetzt mit **20 Minuten
+54,51 Sekunden**, 251 Fünfsekundenproben und unveränderten App-/Dienstprozess-
+lebensdauern nachgewiesen. Zehn Original-/Mixzyklen schließen zehn Contexts
+und trennen 90 Nodes; Pause/Resume, Seeking, zwei A/B-Bereiche, zwei Songwechsel
+und echte Offline-CLAP-Neuberechnung ergänzt. Originale, Modelle und produktive
+Daten unverändert; beide SQLite intakt, eigene Prozesse beendet, Testports frei.
+
+**Phase 3 bleibt teilweise bestanden.** Atmosphäre erklärt einen Teil der
+Private-Bytes-Erhöhung; zusätzlicher nativer Speicherverbleib nach wiederholten
+Graphfreigaben bleibt ungeklärt. Sechs Proactor-Callbacks bei laufenden Prozessen
+zeitlich mit Streamingabbrüchen eingegrenzt, kein sicherer Minimalreproduzierer,
+kein Datenverlust oder fehlgeschlagener Analyseabschluss beobachtet. Keine
+Anwendungskorrektur auf Verdacht. Die übrigen Freigabegrenzen bleiben erhalten.
+
+Alle bisherigen PR-Heads #11–#16 erneut mit erfolgreicher CI bestätigt.
+Empfehlung nach Review: #11, #12, dann #13, #14, #16 in kleinen Schritten;
+Basen, Restdiffs und Pflichtchecks jeweils erneut prüfen. #15 ist die alternative
+Sammellinie mit demselben Head wie #14 und darf in dieser Route nicht zusätzlich
+integriert werden. Kein Merge, keine Schließung und kein Force-Push ausgeführt.
+[Messwerte, Integrationsweg und Phase-4-Übergabe](PHASE3-PERFORMANCE-ACCEPTANCE.md#phase-32-ununterbrochener-nachlauf-und-speicherdiagnose).
+
+Neu bestanden: 399 Backend-, 156 Frontend-, neun Rust- und fünf Node-Tests,
+TypeScript/Vite und locked/offline Windows-Releasebuild ohne Bundle. Breite
+Musiklast, physische Audioausgabe, vollständige native Kreuzmatrix, weitere
+DPI/Plattformen und Installation/Update/Deinstallation bleiben offen. Phase 4
+ist vorbereitet, keine Releasefreigabe und keine externe Datenbankphase.
 
 ## Entwicklungsphasen
 
@@ -85,7 +261,9 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   Windows-Releasebuild bestanden. Eigene Prozesse beendet, Testports frei.
   Audioausgabe, vollständige Wechselmatrix und breite Langzeitlast bleiben offen.
   [Messkonzept, Ergebnisse und zentrale Freigabematrix](PHASE3-PERFORMANCE-ACCEPTANCE.md).
-- **Phase 4 – Installer und Plattformabnahme:** geplant.
+- **Phase 4.2 – Installer und Backend-Runtime:** teilweise bestanden; lokale autonome
+  Windows-/Linux-Kandidaten und Datenerhalt geprüft. Lizenz-, Modell- und weitere
+  Plattformgates offen; maßgeblicher aktueller Umfang steht oben.
 - **Phase 5 – Releaseentscheidung:** geplant; vollständige Kernfreigabe offen.
 - **Externe Datenbanken:** bis zur dokumentierten Kernfreigabe gesperrt. SQLite bleibt Standard.
 

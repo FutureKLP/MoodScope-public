@@ -9,7 +9,12 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-GIT = shutil.which('git.exe') or shutil.which('git')
+def git_executable():
+    # WSL can expose Windows git.exe on PATH. It cannot operate on Linux cwd paths.
+    return (shutil.which('git.exe') or shutil.which('git')) if os.name == 'nt' else shutil.which('git')
+
+
+GIT = git_executable()
 ALLOWED_ROOTS = {'.github', '.githooks', 'backend', 'docs', 'scripts', 'src', 'src-tauri', 'tests'}
 ALLOWED_TOP = {'.gitattributes', '.gitignore', 'README.md', 'LICENSE', 'Start-MoodScope.cmd',
                'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts', 'pytest.ini'}

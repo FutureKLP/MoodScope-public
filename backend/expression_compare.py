@@ -8,9 +8,10 @@ import sys
 import time
 import math
 from . import cancellation, worker_workspace
+from .paths import model_dir
 
 ROOT=Path(__file__).resolve().parents[1]
-WEIGHTS=ROOT/'models/music2emo'
+WEIGHTS=model_dir()/'music2emo'
 METHOD='music2emo-curve-v1'
 
 
@@ -37,9 +38,23 @@ def project_analysis(analysis,result):
 
 
 def ready():
+    if getattr(sys,'frozen',False) and not worker_python():return False
     return all((WEIGHTS/name).is_file() for name in (
         'installation.json','provenance.json','J_all.ckpt','btc_model_large_voca.pt',
         'mert/pytorch_model.bin','source/music2emo.py','packages/music21/__init__.py'))
+
+
+def worker_python():
+    # Packaged builds must never execute their own frozen server as a Python CLI.
+    # An optional compatibility environment is installed separately, never guessed.
+    if getattr(sys,'frozen',False):return None
+    configured=os.environ.get('MOODSCOPE_MUSIC2EMO_PYTHON')
+    if configured:
+        candidate=Path(configured)
+        return str(candidate) if candidate.is_absolute() and candidate.is_file() else None
+    if getattr(sys,'frozen',False):return None
+    base=ROOT/'.venv'/('Scripts/python.exe' if os.name=='nt' else 'bin/python')
+    return str(base) if base.is_file() else sys.executable
 
 
 def fingerprint():
@@ -54,8 +69,8 @@ def analyse(audio,data,device,progress):
         with (output/'worker.log').open('wb') as log:
             # The optional research adapter is verified with the base environment;
             # the service may independently use the newer transcription runtime.
-            base_python=ROOT/'.venv'/('Scripts/python.exe' if os.name=='nt' else 'bin/python')
-            interpreter=str(base_python) if base_python.is_file() else sys.executable
+            interpreter=worker_python()
+            if not interpreter:raise RuntimeError('Music2Emo-Kompatibilitätsworker fehlt.')
             process=subprocess.Popen([interpreter,'-m','backend.expression_worker',str(output),'scripts.music2emo_curve','--audio',str(audio),
                 '--weights',str(WEIGHTS),'--output',str(output),'--device',device],cwd=ROOT,
                 stdout=log,stderr=log,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))

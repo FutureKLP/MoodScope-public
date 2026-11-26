@@ -3,12 +3,83 @@
 Fachlicher Überblick und datierte Nachweise. Aktueller Projekt- und Integrationsstatus:
 [STATUS.md](STATUS.md); Navigation: [Dokumentationsübersicht](README.md).
 
+## Nachtrag Phase 4.4 (23./24. November 2026)
+
+Phase 4 bleibt **teilweise bestanden**, Binärverteilung blockiert. Fünf konkrete
+Lizenz-Sammlungslücken für neue Kandidaten behoben, vollständige FFmpeg-/native
+Quellen-, Build- und Weiterverteilungsprüfung offen. glib-Advisory weiterhin
+offen; kein kompatibles Einzelupdate im GTK-0.18-Graphen, kein ungeprüfter Fix.
+
+Echte installierte Windows-/Linux-CPU-Inferenz mit vorhandenen Testkopien von CLAP,
+XLM-EMO, Demucs und Faster-Whisper erstmals nachgewiesen; selbst verfasster
+Texttest getrennt von tatsächlicher Musik. Gespeicherte Kurven nach Neustart
+nativ geöffnet, Demucs-Spuren im passenden Hörstudiomodell angezeigt, echter
+Abbruch und reguläres Ende mit Datenerhalt belegt. Windows zusätzlich neuer
+nativer CLAP-/XLM-EMO-Auftrag in 14,24 s mit zehn Audio-/zwei Testtextsegmenten;
+Whisper auf beiden Systemen ohne erkannte Textsegmente, keine Qualitätsfreigabe.
+WSLg-Monitorprobe mit synthetischem Signal erfolgreich, keine physische Ausgabe.
+Windows 412 Backendtests plus ein Skip / Linux 413, jeweils 156 Frontend-, zehn
+Rust- und fünf Node-Tests sowie Web-/Release-/Paketbuilds bestanden; alle 10.071
+geschützten Dateien unverändert. Die übrigen Plattform-, Modell-/Lyrics-,
+CPU-Hashlock-, Versionsupdate- und früheren Qualitäts-/Ressourcengates bleiben
+offen. Keine Kern-/Endnutzerfreigabe oder externe Datenbankphase.
+[Belege und genaue Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
 ## Entscheidung
 
 Die Anwendung bleibt eine Entwicklungsversion. Die Veröffentlichung geprüfter
 Quellverbesserungen bedeutet keine vollständige Kern-, Plattform- oder
 Qualitätsfreigabe. Die externe Datenbankphase ist weiterhin gesperrt; SQLite
 bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
+
+## Phase 4.3 am 23. November 2026
+
+**Weiterhin teilweise bestanden.** Neue Windows-/Linux-Kandidaten aus
+`25b4dc0` enthalten den autonomen Backendstand einschließlich der finalen
+Modellpfadkorrektur und einer verständlichen Offline-Whisper-Fehlgewichtshilfe.
+Beide installierten APIs bestehen die Modellpfadregression mit eigenen
+Wegwerfmarkern. Keine echte installierte Modellinferenz behauptet.
+
+Windows startet ohne Python im PATH, trotz ungültiger Python-Overrides und
+schreibgeschützter Runtime. Nativer Musikimport, Wiedergabefortschritt,
+samplegleicher WAV-Export und reguläres Ende sind bestätigt. Worker-/Client-
+Crash, Neustart und Supervisorverlust mit Exit 1 sind im getrennten finalen
+Lauf bestanden. Eine überlappende Reinstallation war ein ungültiger
+Testhalterversuch; die sequenzielle Wiederholung erhält zehn Datendateien.
+
+Linux-Debian ist einschließlich GStreamer-bad in einer isolierten Kopie der
+Ubuntu-Systemdateien vollständig konfiguriert. Hostpakete unverändert.
+Schreibgeschützter autonomer Start als UID 1000, GTK-Musikimport, samplegleicher
+WAV-Export und Alt-F4 mit vollständigem Cleanup sind bestätigt. Die neue
+Audiowiederholung bleibt offen: zunächst unpassende Temp-Rechte im Testhalter,
+beim späteren Nachlauf verweigert der WSLg-PulseAudio-Server die Verbindung.
+Frühere Monitormessungen sind kein Nachweis für diesen Kandidaten. Auch die
+finale installierte Linux-Crash-/Neustart-/Supervisorverlustmatrix als UID 1000
+ist bestanden. Beide eigenen Testinstallationen sind entfernt; Benutzerdateien,
+Exporte und fremde Sentineldateien blieben erhalten.
+
+409 Backendtests plus ein POSIX-Skip auf Windows, 410 unter Linux; jeweils
+156 Frontend-, zehn Rust- und fünf Node-Tests, Web-/Release-/Paketbuilds.
+Binärlizenzen/Quellbereitstellung, glib-Advisory, CPU-Distributionslocks,
+versionswechselndes Update, installierte Modell-/Lyricsmatrix, Windows 10,
+unabhängiger Linux-Desktop und frühere Ressourcen-/Qualitätsgrenzen bleiben
+offen. Die folgenden Phase-4.1-Aussagen sind historische Clientpaketnachweise.
+[Aktuelle Paketmatrix und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
+## Historischer Phase-4.1-Stand am 21./22. November 2026
+
+**Teilweise bestanden.** Isolierter Windows-NSIS-Installations-/Deinstallationslauf
+mit Datenerhalt und nativen WAV-Dialogen; tatsächlicher Ubuntu-WSL2-Build samt
+Debian-Paket und WSLg-GUI mit GTK-Dateidialogen, Seeking/Loop/Pause, numerisch
+geprüftem WAV-Export und Signal am WSLg-Ausgabemonitor. Eigene Bibliotheken nach
+beaufsichtigten Neustarts identisch, geschützte Produktionsdateien unverändert.
+
+Beide Installationspakete enthalten nur den Client. Eigenständiger Backendstart
+ohne Entwicklungsumgebung bleibt blockiert; externe Prüfdienste schließen diese
+Lücke nicht. Echte Linux-Paketinstallation, regulärer Linux-Quitpfad, physische
+Audioausgabe, vollständige Lyrics-/Modellmatrix und weitere Plattform-/DPI-Fälle
+offen. Frühere Ressourcen-, Proactor- und Qualitätsbefunde bleiben erhalten.
+[Getrennte Plattformmatrix und Nachweise](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
 
 ## Phase 3 am 20./21. November 2026
 

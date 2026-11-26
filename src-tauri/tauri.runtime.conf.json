@@ -1,0 +1,14 @@
+{
+  "build": { "features": ["packaged-backend"] },
+  "app": {
+    "windows": [{
+      "label": "main", "create": false, "title": "MoodScope 0.3",
+      "width": 1440, "height": 980, "minWidth": 900, "minHeight": 680,
+      "dragDropEnabled": false, "maximized": true, "fullscreen": false
+    }]
+  },
+  "bundle": {
+    "resources": { "../.tools/backend-runtime/": "backend-runtime/" },
+    "linux": { "deb": { "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "gstreamer1.0-plugins-base", "gstreamer1.0-plugins-good", "gstreamer1.0-plugins-bad"] } }
+  }
+}

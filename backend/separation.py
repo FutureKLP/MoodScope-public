@@ -63,7 +63,7 @@ def separate(data,identity,model_name,engine,progress):
     import torch
     from . import catalog
     catalog.unload_models(engine)
-    torch.hub.set_dir(str(catalog.ROOT/'models'/'demucs'))
+    torch.hub.set_dir(str(catalog.model_dir()/'demucs'))
     progress('Lade lokales Demucs-Modell; beim ersten Mal Modelldownload',5)
     actual_model='htdemucs_ft' if model_name=='htdemucs_auto' else model_name
     model=load_model(actual_model,progress).to(engine.device('separation')).eval()

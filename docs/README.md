@@ -6,6 +6,8 @@
 
 - [Installation und lokaler Start](SETUP.md) – Windows, CPU, Linux, Desktop und Modelle.
 - [Entwicklungsumgebung](ENVIRONMENT.md) – Laufzeiten und Systembibliotheken.
+- [Paketierte Backend-Runtime](BACKEND-RUNTIME.md) – Architektur, Prozessbesitz,
+  Benutzerverzeichnisse und Lizenzgrenzen des zusätzlichen Runtimebuilds.
 - [Mitwirkung und Projektstruktur](CONTRIBUTING.md) – Einstieg, Tests und Review.
 - [Technischer Überblick 0.3](DEVELOPMENT.md) und [Funktionen und Bedienung](USER-GUIDE.md).
 - [Designsystem](DESIGN-SYSTEM.md) – Palette, kontinuierliche Bewegung und Synchronisierung.
@@ -39,6 +41,7 @@
 - [Phase 2B: KI, Modelle, Atmosphäre und API](PHASE2B-ACCEPTANCE.md) – Teilabnahme und offene native Kriterien.
 - [Phase 2C: Hörstudio, Mixer und WAV-Export](PHASE2C-ACCEPTANCE.md) – native Teilabnahme, numerische WAV-Prüfung und Gesamtzyklus.
 - [Phase 3: Performance und Ressourcen](PHASE3-PERFORMANCE-ACCEPTANCE.md) – wiederholte native Musik-/Mixprüfung, echte Offline-Worker und zentrale Freigabematrix.
+- [Phase 4: Installer und Plattformen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md) – isolierter NSIS-Lauf, Ubuntu/WSLg, Debian-Build und fehlende Backendverteilung.
 - [Performancebaseline](PERFORMANCE-BASELINE.md) – historische synthetische Messungen; keine Musikabnahme.
 
 ## Release und Veröffentlichung

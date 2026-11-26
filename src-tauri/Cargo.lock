@@ -1804,6 +1804,7 @@ name = "moodscope"
 version = "0.3.0"
 dependencies = [
  "reqwest",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

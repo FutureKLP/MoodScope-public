@@ -1,6 +1,31 @@
 from scripts.check_publication import content_problems, path_problem
 
 
+def test_linux_uses_native_git_when_windows_git_is_on_path(monkeypatch):
+    import types
+    from scripts import check_publication as publication
+    monkeypatch.setattr(publication, 'os', types.SimpleNamespace(name='posix'))
+    monkeypatch.setattr(publication.shutil, 'which', lambda name: {
+        'git': '/usr/bin/git', 'git.exe': '/mnt/c/tools/git.exe'}.get(name))
+    assert publication.git_executable() == '/usr/bin/git'
+
+
+def test_linux_does_not_fall_back_to_windows_git(monkeypatch):
+    import types
+    from scripts import check_publication as publication
+    monkeypatch.setattr(publication, 'os', types.SimpleNamespace(name='posix'))
+    monkeypatch.setattr(publication.shutil, 'which', lambda name: '/mnt/c/tools/git.exe' if name == 'git.exe' else None)
+    assert publication.git_executable() is None
+
+
+def test_windows_keeps_git_exe_selection(monkeypatch):
+    import types
+    from scripts import check_publication as publication
+    monkeypatch.setattr(publication, 'os', types.SimpleNamespace(name='nt'))
+    monkeypatch.setattr(publication.shutil, 'which', lambda name: 'native-git' if name == 'git.exe' else 'shell-wrapper')
+    assert publication.git_executable() == 'native-git'
+
+
 def test_private_music_and_cache_are_rejected():
     assert path_problem('for test only music files/subfolder/song.mp3')
     assert path_problem('data/results.json')
