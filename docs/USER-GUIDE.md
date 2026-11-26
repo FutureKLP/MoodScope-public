@@ -23,6 +23,14 @@ Referenzvergleich belegt noch keine präzise Erkennung von Stimmungswechseln.
 
 ## Funktionen
 
+Die Desktop-App öffnet für Audio- und LRC-Dateien einen nativen Dateidialog.
+Im Browser bleiben die üblichen Dateiauswahldialoge erhalten. Ein abgebrochener
+Dateidialog verändert weder Bibliothek noch Lyrics. Eine ausgewählte LRC-Datei
+erscheint zunächst im Editor; die reguläre Analyse aktualisiert die Zeilenanzeige.
+Fehlende oder beschädigte verwaltete Audiokopien erhalten einen Wiederimport-
+Hinweis; gespeicherte Daten bleiben erhalten. Die native Phase-2A-Abnahme gilt
+für den dokumentierten synthetischen Windows-Prüfumfang.
+
 Neu in Version 0.3: ausführlichere Gesamt- und Zeilendeutung, automatisches Wiederanzeigen gespeicherter KI-Deutungen, lokales Hörstudio mit Demucs, SoundCloud-Suchtreffer-Auswahl, automatische Recherche-Fallbacks und gemeinsame Anbieterprofile einschließlich Gemini und DeepSeek. Technischer Überblick: [DEVELOPMENT.md](DEVELOPMENT.md); aktueller Abnahmestand: [STATUS.md](STATUS.md).
 
 ### Hörstudio und Diagnose

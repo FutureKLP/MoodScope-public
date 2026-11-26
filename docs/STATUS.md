@@ -1,18 +1,21 @@
 # Aktueller Entwicklungs- und Abnahmestand
 
-Stand: 18. November 2026. Dies ist die einzige aktuelle Statusübersicht.
+Stand: 26. November 2026. Dies ist die einzige aktuelle Statusübersicht.
 Prüfberichte halten datierte Nachweise fest; frühere Sitzungsstände sind keine
 weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsversion.
 
 ## Verifizierter öffentlicher und lokaler Stand
 
-Öffentlicher Main: `1717ffd074041dd5db4e129f9f3aed3fb1a072dc`,
-[PR #10](https://github.com/FutureKLP/MoodScope-public/pull/10) gemergt.
-Die Phase-2A-Änderungen sind noch nicht öffentlich in Main integriert.
-Ihr erhaltener lokaler Branch ist `codex/phase2a-native-library-player-lyrics`:
-`9b7e4f3` (Importpicker), `9d44a4a` (Main-Integration), `c539444` (Abnahme).
-Diese Dokumentationsorganisation basiert separat auf öffentlichem Main und
-übernimmt keine unveröffentlichten Anwendungsänderungen.
+Ausgangs-Main der kontrollierten Integration:
+`19f83432ac303626c27d786bee4f4c1592a96c72`,
+[PR #11](https://github.com/FutureKLP/MoodScope-public/pull/11) regulär gemergt.
+Diese Quelllinie verbindet dessen Dokumentationsorganisation mit dem geprüften
+Phase-2A-Head `5d459f054f3f3440510d4be125412c8b21c3ea9d` aus
+[PR #12](https://github.com/FutureKLP/MoodScope-public/pull/12).
+Die Konfliktauflösung erhält die kurze README, verschiebt die Importhinweise
+in den Bedienleitfaden und bewahrt den datierten Abnahmebericht.
+Anwendungscode und Abhängigkeiten entsprechen unverändert dem Phase-2A-Head.
+Main-Integration erfolgt ausschließlich nach den Pflichtchecks des neuen Heads.
 Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
 ## Entwicklungsphasen
@@ -23,8 +26,8 @@ Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
   [Nachweis und Grenzen](WINDOWS-DESKTOP-TESTING.md).
 - **Phase 2A – Bibliothek, Player und Lyrics:** erfolgreich im definierten synthetischen
   Windows-Prüfumfang abgenommen; Desktoptests am 17., Abschluss am 18. November.
-  Alle zuvor blockierten Importfälle geschlossen. Dies gilt für den lokalen
-  Phase-2A-Branch, nicht als Behauptung über den öffentlichen Main.
+  Alle zuvor blockierten Importfälle geschlossen. Der zugehörige Code ist in
+  dieser Quelllinie enthalten; breitere Plattform- und Releasegates bleiben offen.
   [27-Fälle-Abnahme](PHASE2A-ACCEPTANCE.md).
 - **Phase 2B – KI, Modelle, Atmosphäre und API:** nächste Entwicklungssitzung;
   breitere Local/API/Local-, Modell-/Songwechsel-, Fehler- und Neustartmatrix

@@ -21,6 +21,31 @@ bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
 
 ## Noch erforderliche Abnahmen
 
+### Phase 2A und Phase 2A.2 am 17./18. November 2026
+
+**Phase 2A im festgelegten synthetischen Windows-Prüfumfang vollständig bestanden.**
+Die zunächst blockierten Audio-, Wieder-, Fehlquell- und LRC-Dateiimporte wurden
+mit dem neu gebauten Windows-Programm tatsächlich nativ ausgeführt. Der bestehende
+Tauri-Dialog ist nun explizit an das Hauptfenster gebunden; bildgebundene Eingaben
+vermeiden die nachgewiesene WebView2-Prozess- und Accessibility-Indexgrenze.
+Browserimporte verwenden weiterhin die bisherigen HTML-Dateiinputs.
+
+Beide Reparaturfälle erhalten Trackidentität, Analyse und Notiz; ungültige Quellen
+zeigen den Dekodierhinweis ohne SQLite-Änderung. Audio-/LRC-Abbruch, neu importierte
+Lyrics mit 10,25-s-Navigation in Player und Kurve sowie vollständiger App-/Dienst-
+neustart mit unveränderten Bibliothekszeilen und Audiohashes bestanden. Frühere
+Wiedergabe-, Seeking-, Songwechsel- und A/B-Nachweise bleiben getrennt erhalten.
+Originalbestand, synthetische Quellen und produktive SQLite unverändert; eigene
+Prüfprozesse beendet. Nur synthetische Signale und verfasste Texte; keine neue
+Musikqualitätsabnahme. Eine lokale Verarbeitung der importierten LRC wurde über
+die UI ausgeführt, danach aus gespeichertem Ergebnis wieder geöffnet.
+
+Desktoptests am 17., Abschluss am 18. November. PR #10 war beim Testbeginn offen,
+ist beim Abschlussabgleich bereits gemergt; tatsächlicher Main `1717ffd` in den
+Entwicklungsbranch übernommen. Kein automatischer öffentlicher Main-Merge.
+Die breitere Kernfreigabe und das externe Datenbank-Gate bleiben offen.
+[Vollständige 27-Fälle-Matrix, historische Fehler und Grenzen](PHASE2A-ACCEPTANCE.md).
+
 ### Windows-Exportprüfung am 17. November 2026
 
 Die gezielte Phase-1-Prüfung hat keinen Anwendungsfehler beim Abbruch des

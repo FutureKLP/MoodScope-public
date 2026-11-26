@@ -93,6 +93,7 @@ def prepare():
               'production_databases': production_databases(), 'exports': files(area / 'exports')}
     (area / 'workspace.json').write_text(json.dumps(marker, indent=2))
     print(area, flush=True)
+    return area
 
 
 def environment(area):
@@ -129,7 +130,8 @@ def run(area, binary):
                         library.raise_for_status()
                         tracks = library.json()['tracks']
                         _, marker = workspace(area)
-                        if [t['id'] for t in tracks] != [marker['track_id']]:
+                        expected = marker.get('library_track_ids', [marker['track_id']])
+                        if sorted(t['id'] for t in tracks) != sorted(expected):
                             raise RuntimeError('Unexpected backend library; refusing native launch')
                         break
                 except httpx.TransportError:
@@ -214,8 +216,10 @@ def geometry(area):
     import ctypes as c
     from ctypes import wintypes as w
     import platform
+    import psutil
     user = c.WinDLL('user32', use_last_error=True)
     process = json.loads((area / 'evidence' / 'processes.json').read_text())
+    family = {process['native'], *(p.pid for p in psutil.Process(process['native']).children(recursive=True))}
     user.GetForegroundWindow.restype = w.HWND
     user.GetWindow.argtypes = [w.HWND, w.UINT]
     user.GetWindow.restype = w.HWND
@@ -236,14 +240,14 @@ def geometry(area):
     def visit(handle, _):
         pid = w.DWORD()
         user.GetWindowThreadProcessId(handle, c.byref(pid))
-        if pid.value != process['native']: return True
+        if pid.value not in family: return True
         title, kind = c.create_unicode_buffer(512), c.create_unicode_buffer(256)
         user.GetWindowTextW(handle, title, 512)
         user.GetClassNameW(handle, kind, 256)
         rect, client = w.RECT(), w.RECT()
         user.GetWindowRect(handle, c.byref(rect))
         user.GetClientRect(handle, c.byref(client))
-        windows.append({'handle': handle, 'pid': pid.value, 'title': title.value, 'class': kind.value,
+        windows.append({'handle': handle, 'pid': pid.value, 'process_name': psutil.Process(pid.value).name(), 'title': title.value, 'class': kind.value,
             'owner': user.GetWindow(handle, 4), 'visible': bool(user.IsWindowVisible(handle)),
             'minimized': bool(user.IsIconic(handle)), 'foreground': handle == foreground,
             'dpi': user.GetDpiForWindow(handle), 'window_rect': [rect.left, rect.top, rect.right, rect.bottom],

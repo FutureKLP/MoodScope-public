@@ -35,3 +35,28 @@ test('never retries failed native input with stale coordinates',async()=>{
  await assert.rejects(driver.clickAt({token:observed.token,screenshotId:'dialog',x:884,y:502,next:'dialog'}),/Stale/);
  assert.equal(calls.length,1);
 });
+
+test('binds owned import dialogs through a disabled parent and forbids indexed filename edits',async()=>{
+ const {sky,calls}=fixture();
+ for(const [kind,title] of [['audio','Audio importieren'],['lyrics','Import LRC']]){
+  const line=`9 window (dialog) ${title} Secondary Actions: Raise`;
+  sky.list_windows=async()=>[{app:'fixture',id:2,title:'MoodScope 0.3'}];
+  sky.get_window_state=async()=>({window:{app:'fixture',id:2},accessibility:{tree:`0 window (disabled) MoodScope 0.3\n${line}\n${line}`},screenshots:[{id:'picker',width:946,height:533,url:'excluded'}]});
+  const driver=createDesktopDriver(sky,{app:'fixture',exportDirectory:'C:/project/.tools/desktop-fixture/exports',importDirectory:'C:/project/.tools/desktop-fixture/sources'});
+  const observed=await driver.observe(kind);
+  assert.ok(observed.tree.includes(title));
+  await assert.rejects(driver.setFilename({token:observed.token,path:'C:/project/.tools/desktop-fixture/sources/source.wav'}),/indexed edits are disabled/);
+ }
+ assert.equal(calls.length,0);
+});
+
+test('fails closed for a foreign, unknown or ambiguous owned dialog',async()=>{
+ const {sky,calls}=fixture();
+ sky.list_windows=async()=>[{app:'fixture',id:2,title:'MoodScope 0.3'},{app:'other-process',id:3,title:'Audio importieren'}];
+ for(const tree of ['0 window MoodScope 0.3\n9 window (dialog) Audio importieren','0 window (disabled) MoodScope 0.3\n9 window (dialog) Unknown','0 window (disabled) MoodScope 0.3\n9 window (dialog) Audio importieren\n10 window (dialog) Audio importieren']){
+  sky.get_window_state=async()=>({window:{app:'fixture',id:2},accessibility:{tree},screenshots:[{id:'picker',width:946,height:533,url:'excluded'}]});
+  const driver=createDesktopDriver(sky,{app:'fixture',exportDirectory:'C:/project/.tools/desktop-fixture/exports',timeoutMs:1});
+  await assert.rejects(driver.observe('audio'),/readiness deadline/);
+ }
+ assert.equal(calls.length,0);
+});

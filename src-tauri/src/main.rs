@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod export;
+mod import;
 
 #[tauri::command]
 fn exit_app(app: tauri::AppHandle) {
@@ -21,7 +22,7 @@ fn toggle_fullscreen(window: tauri::WebviewWindow) -> Result<(), String> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![exit_app, restart_app, toggle_fullscreen, export::save_wave_export])
+        .invoke_handler(tauri::generate_handler![exit_app, restart_app, toggle_fullscreen, export::save_wave_export, import::import_source])
         .run(tauri::generate_context!())
         .expect("MoodScope desktop runtime failed");
 }

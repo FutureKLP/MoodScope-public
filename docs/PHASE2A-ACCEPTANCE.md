@@ -1,10 +1,9 @@
 # Phase 2A: native Bibliothek, Player und Lyrics
 
-Datierter Nachweis des lokalen Phase-2A-Branches; kein Nachweis seiner öffentlichen Integration.
-Aktueller Projekt- und Integrationsstatus: [STATUS.md](STATUS.md).
-Die unten beschriebenen neuen Importfunktionen, Testhalter und Befehle setzen
-den genannten lokalen Phase-2A-Quellstand voraus; sie gehören nicht allein durch
-diesen Dokumentationsnachweis zum öffentlichen Main.
+Datierter Nachweis des Phase-2A-Quellstands. Die zugehörigen Importfunktionen,
+Testhalter und Regressionen gehören zu dieser Quelllinie; ihr aktueller
+Integrationsstatus steht in [STATUS.md](STATUS.md). Die historischen Teststände
+und Abnahmegrenzen unten bleiben erhalten.
 
 **Entscheidung: Phase 2A im festgelegten synthetischen Windows-Prüfumfang vollständig bestanden.**
 Die vier zunächst blockierten Importfälle wurden in Phase 2A.2 tatsächlich nativ
