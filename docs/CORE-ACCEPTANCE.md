@@ -10,6 +10,21 @@ Quellverbesserungen bedeutet keine vollständige Kern-, Plattform- oder
 Qualitätsfreigabe. Die externe Datenbankphase ist weiterhin gesperrt; SQLite
 bleibt Standard. Kein MariaDB-, Supabase- oder Firebase-Adapter wurde ergänzt.
 
+## Phase 3 am 20./21. November 2026
+
+**Teilweise bestanden.** Zehn wiederholte native Original-/Live-Mixzyklen
+sowie ein zusätzlicher Ansichts-/Songwechselgraph geben elf Contexts,
+99 Nodes und acht Mixerlistener frei. Echte lokale CLAP-, XLM-EMO-,
+Music2Emo- und Demucs-Wiederholungen, gezielte Abbrüche/Neuläufe und Cacheaufrufe
+sind von den automatisierten Regressionen getrennt dokumentiert.
+
+Die [zentrale Freigabematrix](PHASE3-PERFORMANCE-ACCEPTANCE.md#zentrale-freigabematrix)
+führt offene Phase-2B-/2C-Kriterien fort. Zweites echtes Textemotionsmodell,
+vollständige native Kreuzmatrix, tatsächliche Audioausgabe und breitere
+Langzeit-/Musiklast bleiben offen; weitere DPI-/Plattform-/Installerprüfungen
+gehören zu Phase 4, abschließende Qualität und Releaseentscheidung zu Phase 5.
+Historische Berichte werden dadurch nicht rückwirkend umgeschrieben.
+
 ## Phase 2C am 20. November 2026
 
 Teilweise bestanden: echte native Demucs-Trennung mit Abbruch/Neulauf, Live-Mix,
@@ -139,3 +154,14 @@ Die folgenden offenen Kriterien gelten mit diesen begrenzten Ergänzungen weiter
    Emotionsverläufen erhalten. Modellschätzungen sind keine bestätigten Fakten.
 
 [Automatisierte Prüfungen](TEST-BASELINE.md) und [Sicherheitsgrenzen](SECURITY.md).
+
+## Begrenzte Ergänzung Phase 3.2 am 21. November 2026
+
+Das einzelne 20-Minuten-Ziel ist mit einem ununterbrochenen nativen Windows-Lauf
+von 20 Minuten 54,51 Sekunden und 251 Ressourcenproben im engen lokalen
+Musikumfang geschlossen. Zehn Contexts/90 Nodes freigegeben. Zusätzlicher nativer
+Speicherverbleib nach Wiederholungen und die genaue Proactor-Ursache bleiben offen;
+keine Kern- oder Releasefreigabe. Physische Audioausgabe, zweites echtes
+Textemotionsmodell, vollständige native Lyrics-/API-/Audiokreuzmatrix, weitere
+DPI/Mehrmonitor, Windows 10/Linux, Installation/Update/Deinstallation und
+Musik-/Modellqualität unverändert offen. [Nachweis und Phase-4-Übergabe](PHASE3-PERFORMANCE-ACCEPTANCE.md#phase-32-ununterbrochener-nachlauf-und-speicherdiagnose).

@@ -7,6 +7,25 @@ Die automatisierte Prüfung ist von tatsächlichen Musik- und nativen
 Bedienabnahmen getrennt. Tests nutzen deterministische, synthetische Fixtures.
 Produktive Daten, Modelle, Musik, Lyrics und Prüfausgaben bleiben ausgeschlossen.
 
+## Phase 3 am 20./21. November 2026
+
+Neu auf unverändertem Anwendungscode bestanden: 399 Backendtests (38,37 s),
+156 Frontendtests in 29 Dateien (19,32 s), neun Rusttests locked/offline,
+fünf Node-Drivertests sowie TypeScript/Vite. Ein erster Sandbox-Backendlauf
+ohne Fortschritt wurde beendet; die vollständige isolierte Wiederholung
+mit lokalen Prozess-/Socketrechten bestand. Keine neuen Regressionen ohne
+bestätigten Anwendungsfehler ergänzt.
+
+Tatsächliche native Musik-/Mixzyklen, Offline-CPU-/CUDA-Modellwiederholungen,
+Workerabbrüche und Cachetests sind getrennt von diesen deterministischen
+Tests in [Phase 3](PHASE3-PERFORMANCE-ACCEPTANCE.md) ausgewiesen. Die begrenzte
+Sitzungsserie ersetzt keine mehrstündige, Plattform- oder Ausgangsaudioabnahme.
+Weitere Build-/Abschlussnachweise stehen im datierten Phase-3-Bericht.
+Windows-Releasebuild locked/offline mit `tauri/custom-protocol` bestanden
+(18,48 s); der Buildhalter wiederholt neun erfolgreiche Rusttests. Kein neuer
+Installerlauf. Nach zwei getrennten nativen Sitzungen eigene Prozesse beendet,
+Testports frei und Neustartvergleich der SQLite-/Medienstände identisch.
+
 ## Phase 2C am 20. November 2026
 
 Nach bestätigter Solo-Exportkorrektur 399 Backendtests bestanden (38,48 s),
