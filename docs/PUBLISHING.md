@@ -18,6 +18,11 @@ Gezielt ausgewählte App-Quellen regelmäßig lokal committen. Nur funktionieren
 
 Die Remote-Zuordnung und URLs bleiben lokale Git-Einstellungen. Der normale Push des Veröffentlichungsbranches zielt auf `origin`. Pushes zum früheren privaten Remote sind lokal gesperrt; archivierte Entwicklungsbranches bleiben erhalten.
 
+Die lokale Veröffentlichungsroute benötigt keinen dauerhaft gleichnamigen
+öffentlichen Remote-Branch. Ein vollständig in Main enthaltener alter Remote-Ref
+kann nach der unten beschriebenen Prüfung entfernt werden; der lokale Ref bleibt
+für weitere geprüfte Quellübernahmen erhalten.
+
 ## Vor jeder öffentlichen Übernahme
 
 1. Änderungen gezielt vormerken; keine ignorierten Dateien erzwingen.
