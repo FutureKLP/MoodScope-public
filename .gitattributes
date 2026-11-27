@@ -7,3 +7,4 @@
 *.png binary
 *.ico binary
 .githooks/* text eol=lf
+docs/distribution-licenses/** -text

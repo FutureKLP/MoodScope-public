@@ -996,5 +996,6 @@
   "Audio-Modellserver meldet HTTP ": "Audio model server returned HTTP ",
   "Audiofähigkeit, Modell-ID, Key und Kontingent prüfen. Keine automatische Wiederholung.": "Check audio support, model ID, key and quota. No automatic retry.",
   "Keine automatische Wiederholung.": "No automatic retry.",
-  " Fehler-ID: ": " Error ID: "
+  " Fehler-ID: ": " Error ID: ",
+  "Whisper-Modellgewichte fehlen im lokalen Modellordner. In Modelle & API die Installation prüfen oder ein installiertes Whisper-Modell auswählen. Es wurden keine Texte erkannt und keine Ersatzwerte erzeugt.": "Whisper model weights are missing from local model storage. Check the installation under Models & API or select an installed Whisper model. No text was recognized and no substitute results were generated."
 }

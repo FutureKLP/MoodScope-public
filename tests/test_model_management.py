@@ -4,6 +4,11 @@ import pytest
 from backend import custom_models,catalog,cancellation
 
 
+@pytest.fixture(autouse=True)
+def isolated_model_directory(tmp_path,monkeypatch):
+    monkeypatch.setenv('MOODSCOPE_MODELS',str(tmp_path/'models'))
+
+
 @pytest.mark.parametrize('url',['http://huggingface.co/a/b','https://evil.example/a/b','https://huggingface.co/a/b/file.safetensors','https://huggingface.co/a/b?token=private','https://huggingface.co/../b'])
 def test_custom_model_rejects_untrusted_or_incomplete_links(url):
     with pytest.raises(ValueError):custom_models.repository(url)
@@ -23,7 +28,8 @@ def custom_entry(data):
 
 
 def test_custom_selection_requires_download_and_delete_removes_owned_files(tmp_path,monkeypatch):
-    monkeypatch.setattr(catalog,'ROOT',tmp_path)
+    # Installed resources and writable user models are separate directories.
+    monkeypatch.setattr(catalog,'ROOT',tmp_path/'read-only-resources')
     key=custom_entry(tmp_path/'data')
     with pytest.raises(ValueError):catalog.select(tmp_path/'data',key)
     weights=tmp_path/'models/managed'/key;weights.mkdir(parents=True);(weights/'model.safetensors').write_bytes(b'authored fixture')

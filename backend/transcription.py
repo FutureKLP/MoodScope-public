@@ -82,6 +82,7 @@ def owned_segments(segments,window_start,owner_start,owner_end,duration):
 
 def transcribe(engine,path,progress,quality='standard',language=None):
     from faster_whisper import WhisperModel
+    from huggingface_hub.errors import LocalEntryNotFoundError
     from . import catalog,diagnostics
     device=device_for(engine)
     from .runtime_devices import resolve
@@ -89,8 +90,11 @@ def transcribe(engine,path,progress,quality='standard',language=None):
     device_index=int(chosen.split(':')[1]) if device=='cuda' and ':' in chosen else 0
     progress('Whisper: lokale Texterkennung auf '+('NVIDIA CUDA' if device=='cuda' else 'CPU'),5)
     catalog.unload_models(engine)
-    model=WhisperModel(catalog.model_source(engine.data,'whisper'),device=device,device_index=device_index,
-        compute_type='float16' if device=='cuda' else 'int8',download_root=str(catalog.ROOT/'models'/'whisper'))
+    try:
+        model=WhisperModel(catalog.model_source(engine.data,'whisper'),device=device,device_index=device_index,
+            compute_type='float16' if device=='cuda' else 'int8',download_root=str(catalog.model_dir()/'whisper'))
+    except LocalEntryNotFoundError:
+        raise ValueError('Whisper-Modellgewichte fehlen im lokalen Modellordner. In Modelle & API die Installation prüfen oder ein installiertes Whisper-Modell auswählen. Es wurden keine Texte erkannt und keine Ersatzwerte erzeugt.') from None
     try:
         from .cancellation import check
         check()

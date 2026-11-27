@@ -41,12 +41,32 @@ Nach einem nativen Build kann auch **Start-MoodScope.cmd** per Doppelklick verwe
 
 Auf einem bereits eingerichteten Entwicklungsrechner kann ein separater Build unter `src-tauri/target/v03/release/` oder `src-tauri/target/v02/release/` liegen. Der Projektstarter wählt die neuere EXE aus diesen Ordnern und `src-tauri/target/release/`. Eine bereits geöffnete ältere App und ihr Backend müssen für Version 0.3 neu gestartet werden; ein älterer Dienst wird vom Starter erkannt.
 
+## Stand der Installationspakete
+
+Phase 4.2 ergänzt einen gesonderten Entwicklungsbuild mit CPU-Python-Backend als
+Tauri-Ressource. Bau, Benutzerverzeichnisse und Grenzen stehen unter
+[Backend-Runtime](BACKEND-RUNTIME.md). Lokale NSIS-/Debian-Kandidaten wurden mit
+eigener Testkennung installiert, ohne Projektserver gestartet und mit Datenerhalt
+deinstalliert. Phase 4.3 baut beide Kandidaten nach der finalen Modellpfadkorrektur
+neu; das Debianpaket ist mit vollständigen GStreamer-Abhängigkeiten in einer
+isolierten Systemkopie konfiguriert. Modellgewichte sind nicht enthalten.
+Phase 4.4 ergänzt versionsgebundene Original-Lizenztexte und echte installierte
+Windows-/Linux-CPU-Inferenz mit vorhandenen Testgewichten. Die synthetische WSLg-Monitorprobe
+ist erneut gelungen; sie ersetzt keine physische Audioabnahme. Unabhängige
+Linux-Desktopabnahme, vollständige Modellmatrix, Distributionsquellen/-rechte
+und weitere Releasegates bleiben offen; keine Endnutzer-/Releasefreigabe.
+Die früheren Phase-4.1-Pakete und der Standardbuild enthalten weiterhin nur den
+Client und benötigen den eingerichteten Projektstarter beziehungsweise Dienst.
+[Nachweise und Grenzen](PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
+
 ## Installation und Start unter Linux
 
 Nach Einrichtung der oben genannten Systemvoraussetzungen:
 
 ```bash
 bash scripts/setup.sh
+# Explizite CPU-Umgebung, auch Torchaudio ohne CUDA:
+# bash scripts/setup.sh --cpu
 bash scripts/start.sh
 # Native Entwicklung:
 bash scripts/start.sh --desktop
@@ -55,6 +75,19 @@ npm run tauri build -- --no-bundle
 ```
 
 Windows- und Linux-Builds müssen auf ihren jeweiligen Zielsystemen geprüft werden. Ein erfolgreicher Windows-Build bestätigt keinen Linux-Build.
+
+`--cpu` wählt Torch und Torchaudio vom selben CPU-Paketindex. Beide müssen zur
+gewählten Umgebung passen; ein CUDA-Torchaudio neben CPU-Torch kann bereits den
+CLAP-Import verhindern. Das Setup prüft diese Importe, bevor es die Umgebung als
+validiert markiert. Bei einem fehlgeschlagenen Setup bleibt kein alter
+Validierungsmarker bestehen.
+
+Unter WSL2 zuerst die tatsächliche Ubuntu-Version, Werkzeuge und WSLg-Sockets
+prüfen. Eine separate Quellkopie im Linux-Dateisystem verwenden; Windows-venv,
+produktive SQLite, private Musik und Modelle nicht ungeprüft kopieren. Die
+Tauri-Systempakete werden nicht vom Setupskript installiert. Die Phase-4-Prüfung
+verwendete Ubuntu 24.04.4 LTS, GTK 3 und WebKitGTK 4.1. WSLg-Anzeige und PulseAudio-
+Anschluss ersetzen keine Abnahme an einem eigenständigen Ubuntu-Desktop.
 
 ## YouTube- und SoundCloud-Links
 

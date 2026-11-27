@@ -28,17 +28,110 @@ unter Windows insbesondere MSVC, Windows SDK und WebView2. CUDA ist optional.
 
 ## Installation und lokaler Start
 
-Im ausgecheckten Projektordner unter Windows:
+Alle folgenden Befehle im ausgecheckten Projektordner ausführen. Die Skripte
+richten Python- und Node-Pakete projektlokal ein; Betriebssystempakete und
+GPU-Treiber müssen vorher vorhanden sein.
+
+### Windows
 
 ```powershell
 .\scripts\setup.ps1
 .\scripts\start.ps1
 ```
 
-Im Browser anschließend [MoodScope öffnen](http://127.0.0.1:8765).
-Das Windows-Standardsetup verwendet einen CUDA-PyTorch-Build; CPU-Einrichtung,
-Linux, native Builds, Modelle und Linkimport stehen in der
-[Installationsanleitung](docs/SETUP.md).
+Das Standardsetup richtet NVIDIA-CUDA ein: derzeit PyTorch 2.15.0 mit CUDA 13.2
+und zusätzliche Whisper-CUDA-Pakete. Ein geeigneter NVIDIA-Treiber und eine vom
+Build unterstützte GPU sind erforderlich; das Skript prüft einen echten
+CUDA-Rechenschritt. Es installiert keinen Treiber. Für eine CPU-Einrichtung
+stattdessen:
+
+```powershell
+.\scripts\setup_runtime.ps1 -Cpu
+npm ci
+npm run build
+.\scripts\start.ps1
+```
+
+Für das native Desktopfenster nach der Einrichtung:
+
+```powershell
+npm run tauri build -- --no-bundle
+.\scripts\start.ps1 -Desktop
+```
+
+Danach kann auch **Start-MoodScope.cmd** per Doppelklick verwendet werden.
+
+### Linux
+
+Python ab 3.11 einschließlich `venv` und Node.js ab 22.12 mit npm bereitstellen.
+Für das native Fenster zusätzlich Rust und die Linux-Systempakete aus den
+[Tauri-Voraussetzungen](https://v2.tauri.app/start/prerequisites/) installieren,
+insbesondere WebKitGTK 4.1, GTK 3, OpenSSL und die Build-Werkzeuge.
+Die Setupskripte installieren diese Systempakete nicht.
+
+```bash
+# CPU-Einrichtung mit passenden Torch-/Torchaudio-Paketen:
+bash scripts/setup.sh --cpu
+bash scripts/start.sh
+```
+
+Für eine entsprechend vorbereitete GPU-Umgebung steht alternativ
+`bash scripts/setup.sh` ohne `--cpu` bereit. Das Linux-Skript installiert die
+Projektanforderungen, wählt aber keinen zur eigenen GPU geprüften CUDA-Build
+aus. Torch und Torchaudio müssen zusammenpassen; Treiber, GPU-Architektur und
+gewählte CUDA-Wheels vorher gemäß der
+[offiziellen PyTorch-Einrichtung](https://pytorch.org/get-started/locally/)
+abgleichen. Ein erfolgreiches Setup allein bestätigt unter Linux keine GPU-Inferenz.
+Für das native Desktopfenster nach der Einrichtung:
+
+```bash
+bash scripts/start.sh --desktop
+# Separaten nativen Client bauen:
+npm run tauri build -- --no-bundle
+```
+
+### GPU prüfen und in der App auswählen
+
+Für NVIDIA zunächst `nvidia-smi` im Terminal prüfen. Anschließend in der
+eingerichteten Projektumgebung einen echten PyTorch-CUDA-Schritt ausführen:
+
+```powershell
+# Windows
+.\.venv-modern\Scripts\python.exe -c "import torch; assert torch.cuda.is_available(); print(torch.cuda.get_device_name(0)); print((torch.ones(1, device='cuda') * 2).sum().item())"
+```
+
+```bash
+# Linux
+.venv-modern/bin/python -c "import torch; assert torch.cuda.is_available(); print(torch.cuda.get_device_name(0)); print((torch.ones(1, device='cuda') * 2).sum().item())"
+```
+
+Unter **Modelle & API → Wo deine Modelle rechnen** pro Aufgabe **CPU**,
+**Automatisch** oder eine erkannte GPU wählen und speichern. Automatik prüft
+CUDA und kann auf CPU zurückfallen. Eine ausdrücklich gewählte GPU meldet
+Gerätefehler; sie wechselt dabei nicht unbemerkt auf CPU. Genügend RAM/VRAM für
+das jeweilige Modell ist zusätzlich nötig. AMD-/Intel-GPU-Beschleunigung ist
+über diese CUDA-Auswahl nicht implementiert.
+
+Whisper verwendet CTranslate2 und benötigt für GPU-Inferenz zusätzlich passende
+cuBLAS-/cuDNN-Bibliotheken. Ein bestandener PyTorch-Test bestätigt Whisper-CUDA
+noch nicht; dessen CPU-Betrieb bleibt separat auswählbar. Unter Linux installiert
+`setup.sh` diese zusätzlichen Whisper-CUDA-Pakete nicht automatisch.
+[Hardware- und Runtimegrenzen](docs/ENVIRONMENT.md) · [Ausführliche Einrichtung](docs/SETUP.md).
+
+### Nach dem Start
+
+Beim Browserstart [MoodScope öffnen](http://127.0.0.1:8765); Strg+C beendet den
+Dienst. Im nativen Modus öffnet sich das Appfenster. Unter **Modelle & API**
+lokale Modelle herunterladen und auswählen; Modellgewichte werden nicht mit
+dem Quellcode geliefert. Für optionale Linkimporte ist eine zusätzliche
+Einrichtung erforderlich. [Modelle, Linkimporte und weitere Setupdetails](docs/SETUP.md).
+
+Der zusätzliche [Runtimebuild](docs/BACKEND-RUNTIME.md) bündelt ein eigenes
+CPU-Python-/FastAPI-Backend. Lokale NSIS-/Debian-Testkandidaten starten es selbst;
+der normale Entwicklungsbuild verwendet weiterhin den Projektstarter.
+Lizenzen, vollständige Modellprüfung und weitere Plattformfälle bleiben offen.
+Keine Endnutzer-Installerfreigabe.
+[Plattformabnahme und Grenzen](docs/PHASE4-PLATFORM-INSTALLER-ACCEPTANCE.md).
 
 ## Entwicklungsstatus
 
