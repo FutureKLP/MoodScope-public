@@ -28,3 +28,23 @@ LRC-Tags und Katalogzusätze werden ohne wiederholtes Durchsuchen ungepaarter
 Klammern entfernt. Regressionen prüfen große fehlerhafte Eingaben in begrenzten
 Unterprozessen sowie den Erhalt von Zeitstempeln, unvollständigen Tags und
 Aufnahmebezeichnungen. Die vorhandenen API-Eingabelimits bleiben zusätzlich aktiv.
+
+## Begrenzte Modellantworten und verbleibende Zielgrenze
+
+Modelllisten und reine Anbietertextantworten werden während des Empfangs auf
+2.000.000 Bytes begrenzt. Ein zu großer Content-Length-Wert wird vor dem Körper
+abgewiesen; fehlende oder falsche Größenangaben ersetzen das laufende Bytebudget
+nicht. Fehlerantwortkörper werden nicht gelesen, Streams auch bei Abbruch und
+Zeitüberschreitung geschlossen. Diese Aufrufe fordern `Accept-Encoding: identity`
+an und weisen unerwartet komprimierte Antworten vor dem Lesen ab. Das begrenzt
+auch den Dekompressionspfad; Server müssen die angeforderte Identitätskodierung
+unterstützen. Audio-/Modelldownloads besitzen getrennte Verträge.
+
+Die Anbieter-Zielprüfung bindet eine DNS-Vorabprüfung derzeit nicht an die
+spätere Verbindung. Kontrollierte eigene Loopbackserver bestätigen unterschiedliche
+Auflösungen bei Prüfung und Verbindung sowie die Berücksichtigung eines
+Umgebungsproxys. Redirects werden nicht verfolgt. Dies ist keine Freigabe für
+feindliche Modellservernamen und keine Auflösung von CodeQL `py/full-ssrf`.
+Lokale/LAN-Server bleiben bewusst unterstützt. Eine getrennte Korrektur muss
+Zielbindung, TLS-Hostprüfung, IPv4/IPv6, Proxyverhalten und bestehende
+Empfänger-/Zustimmungssnapshots gemeinsam prüfen.

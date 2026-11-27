@@ -50,11 +50,31 @@ def endpoint(value):
     return value
 
 
+def _bounded_response(method,url,**kwargs):
+    # Request identity encoding so decompression cannot bypass the receive budget.
+    # Audio/model transfers have their own contracts and do not use this helper.
+    limit=2_000_000
+    kwargs['headers']={**kwargs.get('headers',{}),'Accept-Encoding':'identity'}
+    with httpx.stream(method,url,**kwargs) as response:
+        if response.status_code!=200:return httpx.Response(response.status_code)
+        if response.headers.get('content-encoding','identity').strip().lower() not in {'','identity'}:
+            raise ValueError('Unexpected response encoding')
+        try:declared=int(response.headers.get('content-length',''))
+        except ValueError:declared=None
+        if declared is not None and declared>limit:raise ValueError('Response too large')
+        content=bytearray()
+        for chunk in response.iter_raw(chunk_size=65536):
+            if len(chunk)>limit-len(content):raise ValueError('Response too large')
+            content.extend(chunk)
+        return httpx.Response(response.status_code,content=bytes(content))
+
+
 def discover_models(base_url,key=''):
     """Read metadata only: never load models or submit text/audio."""
     base=endpoint(base_url)
-    try:response=httpx.get(base+'/models',headers={'Authorization':'Bearer '+key} if key else {},timeout=httpx.Timeout(15,connect=5),follow_redirects=False)
+    try:response=_bounded_response('GET',base+'/models',headers={'Authorization':'Bearer '+key} if key else {},timeout=httpx.Timeout(15,connect=5),follow_redirects=False)
     except httpx.HTTPError:raise ValueError('Modellserver nicht erreichbar. Adresse, Port, Serverfreigabe und Firewall prüfen.') from None
+    except ValueError:raise ValueError('Server lieferte keine gültige kompatible Modellliste.') from None
     if response.status_code!=200:raise ValueError(f'Modellliste meldet HTTP {response.status_code}. Basis-URL mit /v1 und gegebenenfalls Sitzungs-Key prüfen.')
     try:
         if len(response.content)>2_000_000:raise ValueError()
@@ -148,8 +168,9 @@ def generate_snapshot(p,key,prompt,max_tokens=1800):
         # Many local compatible servers accept max_tokens rather than max_completion_tokens.
         if urlsplit(base).hostname not in {'api.openai.com'}:
             payload['max_tokens']=payload.pop('max_completion_tokens')
-    try:response=httpx.post(url,headers=headers,json=payload,timeout=httpx.Timeout(180,connect=10),follow_redirects=False)
+    try:response=_bounded_response('POST',url,headers=headers,json=payload,timeout=httpx.Timeout(180,connect=10),follow_redirects=False)
     except httpx.HTTPError:raise RuntimeError('Modellserver nicht erreichbar oder Zeitlimit überschritten. Adresse, Dienst und Firewall prüfen.') from None
+    except ValueError:raise RuntimeError('Server lieferte keine gültige Textantwort; keine Ersatzdeutung erzeugt.') from None
     if response.status_code!=200:raise RuntimeError(f'Modellserver meldet HTTP {response.status_code}. Key, Modell-ID, Kontingent und API-Protokoll prüfen; keine automatische Wiederholung.')
     try:
         value=response.json()

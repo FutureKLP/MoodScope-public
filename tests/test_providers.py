@@ -25,7 +25,7 @@ def test_server_adapter_and_memory_only_keys(tmp_path,monkeypatch,protocol):
             assert 'max_tokens' in json
             value={'choices':[{'message':{'content':'Eine vorsichtige Deutung des vorliegenden Textes.'},'finish_reason':'stop'}]}
         return SimpleNamespace(status_code=200,json=lambda:value)
-    monkeypatch.setattr(providers.httpx,'post',post)
+    monkeypatch.setattr(providers,'_bounded_response',lambda method,url,**kwargs:post(url,**kwargs))
     assert providers.generate(tmp_path,profile['id'],'Text evidence')['text']
     providers.remove(tmp_path,profile['id'])
     assert providers.status(tmp_path)['profiles']==[]
@@ -33,7 +33,7 @@ def test_server_adapter_and_memory_only_keys(tmp_path,monkeypatch,protocol):
 
 def test_provider_errors_never_echo_response_body(tmp_path,monkeypatch):
     profile=providers.save(tmp_path,{'name':'Test','protocol':'openai','base_url':'https://api.openai.com/v1','model':'test','api_key':'fixture-key'})
-    monkeypatch.setattr(providers.httpx,'post',lambda *a,**k:SimpleNamespace(status_code=401,text='PRIVATE RESPONSE'))
+    monkeypatch.setattr(providers,'_bounded_response',lambda *a,**k:SimpleNamespace(status_code=401,text='PRIVATE RESPONSE'))
     with pytest.raises(RuntimeError,match='HTTP 401') as error:providers.generate(tmp_path,profile['id'],'test')
     assert 'PRIVATE' not in str(error.value)
 
@@ -47,7 +47,7 @@ def test_gemini_profile_uses_native_api_and_removal_clears_audio_key(tmp_path,mo
         assert url.endswith('/models/gemini-test:generateContent')
         assert headers['x-goog-api-key']=='fixture-key'
         return SimpleNamespace(status_code=200,json=lambda:{'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':'Eine vorsichtige vollständige Testdeutung.'}]}}]})
-    monkeypatch.setattr(providers.httpx,'post',post)
+    monkeypatch.setattr(providers,'_bounded_response',lambda method,url,**kwargs:post(url,**kwargs))
     assert providers.generate(tmp_path,p['id'],'Authored text')['text']
     providers.activate_audio(tmp_path,p['id'])
     assert cloud.settings()['configured']
