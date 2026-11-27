@@ -6,7 +6,7 @@ from backend import providers
 
 @pytest.mark.parametrize('value',['https://example.com/v1?token=value','http://example.com/v1','http://169.254.169.254/v1','http://[::ffff:169.254.169.254]/v1','file:///tmp/model','https://'+':'.join(['user','password'])+chr(64)+'example.com'])
 def test_invalid_model_server_endpoints(value,monkeypatch):
-    monkeypatch.setattr(providers.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',('8.8.8.8',80))])
+    monkeypatch.setattr(providers.provider_http.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',('8.8.8.8',80))])
     with pytest.raises(ValueError):providers.endpoint(value)
 
 
@@ -77,7 +77,7 @@ def test_audio_profile_requires_explicit_capability_and_terms_and_edit_deactivat
 
 @pytest.mark.parametrize('addresses,accepted',[(['192.168.1.20'],True),(['192.168.1.20','8.8.8.8'],False),(['169.254.169.254'],False)])
 def test_http_home_server_names_require_private_resolved_addresses(monkeypatch,addresses,accepted):
-    monkeypatch.setattr(providers.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',(ip,11434)) for ip in addresses])
+    monkeypatch.setattr(providers.provider_http.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',(ip,11434)) for ip in addresses])
     if accepted:assert providers.endpoint('http://authored-server.local:11434/v1')=='http://authored-server.local:11434/v1'
     else:
         with pytest.raises(ValueError):providers.endpoint('http://authored-server.local:11434/v1')

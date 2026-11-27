@@ -1,12 +1,11 @@
 """User-configured model servers. Only non-secret profile settings are persisted."""
 import json
-import ipaddress
 from pathlib import Path
 import threading
 from urllib.parse import urlsplit
 import uuid
-import socket
 import httpx
+from . import provider_http
 from contextvars import ContextVar
 from contextlib import contextmanager
 
@@ -30,24 +29,7 @@ def session_key(data,identity):
 
 
 def endpoint(value):
-    value=value.strip().rstrip('/')
-    p=urlsplit(value)
-    if p.scheme not in {'http','https'} or not p.hostname or p.username or p.password or p.query or p.fragment:
-        raise ValueError('Basis-URL ohne Zugangsdaten, Query oder Fragment eingeben.')
-    try:
-        address=ipaddress.ip_address(p.hostname)
-        address=getattr(address,'ipv4_mapped',None) or address
-    except ValueError:address=None
-    if address and (address.is_link_local or address.is_unspecified or address.is_multicast):raise ValueError('Diese Serveradresse ist nicht unterstützt.')
-    if p.scheme=='http' and p.hostname!='localhost' and not (address and (address.is_private or address.is_loopback)):
-        if address:raise ValueError('Entfernte Internetserver benötigen HTTPS; HTTP ist für lokale/LAN-Server erlaubt.')
-        try:
-            resolved={ipaddress.ip_address(row[4][0]) for row in socket.getaddrinfo(p.hostname,p.port or 80,type=socket.SOCK_STREAM)}
-            resolved={getattr(a,'ipv4_mapped',None) or a for a in resolved}
-        except (OSError,ValueError):raise ValueError('Heimserver-Name nicht auflösbar. Netzwerkverbindung oder lokale IP-Adresse prüfen.') from None
-        if not resolved or any(not (a.is_private or a.is_loopback) or a.is_link_local or a.is_unspecified or a.is_multicast for a in resolved):
-            raise ValueError('Entfernte Internetserver benötigen HTTPS; HTTP ist für lokale/LAN-Server erlaubt.')
-    return value
+    return provider_http.endpoint(value)
 
 
 def _bounded_response(method,url,**kwargs):
@@ -55,7 +37,7 @@ def _bounded_response(method,url,**kwargs):
     # Audio/model transfers have their own contracts and do not use this helper.
     limit=2_000_000
     kwargs['headers']={**kwargs.get('headers',{}),'Accept-Encoding':'identity'}
-    with httpx.stream(method,url,**kwargs) as response:
+    with provider_http.stream(method,url,**kwargs) as response:
         if response.status_code!=200:return httpx.Response(response.status_code)
         if response.headers.get('content-encoding','identity').strip().lower() not in {'','identity'}:
             raise ValueError('Unexpected response encoding')

@@ -123,3 +123,30 @@ Ein uebliches Ollama-Textmodell kann nicht allein durch Aktivieren der
 Audio-Checkbox Musik hoeren. Fuer Audio muss der eigene Server tatsaechlich
 input_audio und ein passendes Audiomodell bereitstellen. Ein Heimserver kann
 seinerseits Cloud-Modelle aufrufen; seine Konfiguration bestimmt, wo die KI rechnet.
+
+## Direkte Verbindung und DNS-Pruefung
+
+Modelllisten, Textdeutung und Audioanbieter verwenden einen gemeinsamen direkten
+Transport. Umgebungsproxies (HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, NO_PROXY und
+Kleinschreibvarianten) werden nicht uebernommen. Einen bewusst vorgeschalteten
+Modellgateway als eigenes Profilziel konfigurieren; es gibt keinen impliziten
+Proxy-Fallback. SSL_CERT_FILE/SSL_CERT_DIR werden ebenfalls nicht als
+auftragsbezogene Vertrauenskonfiguration uebernommen. Gueltige Zertifikatskette
+und korrekter HTTPS-Hostname bleiben erforderlich.
+
+Alle DNS-Ergebnisse werden unmittelbar am Transport geprueft. Der TCP-Aufruf
+verwendet danach eine gepruefte numerische IP; Host-Header und TLS-Hostname
+bleiben die eingetragene Adresse. Bei mehreren Ergebnissen wird IPv4 bevorzugt;
+keine automatische Wiederholung auf einer anderen Adresse. HTTP erlaubt
+Loopback, RFC1918 und IPv6-ULA; HTTPS zusaetzlich globale Unicastadressen.
+Linklokale, Multicast-, nicht angegebene und andere unzulaessige Sonderadressen
+werden auch hinter DNS-Namen abgewiesen. Localhost muss auf Loopback zeigen.
+Eigene IPv4-/IPv6-Modellserver bleiben unter diesen Bedingungen unterstuetzt.
+DNS-Ziele werden pro Aufruf geprueft, nicht dauerhaft als Sitzungs-IP gespeichert.
+
+Der Empfaenger bleibt eine bewusste Vertrauensentscheidung. HTTP im Heimnetz
+verschluesselt weder Inhalte noch Sitzungsschluessel. Ziel-/Protokollwechsel
+loeschen weiterhin alte Keys; Modell-/Faehigkeits-/Sitzungswechsel erfordern die
+bestehende erneute Zustimmung. Es gibt keine automatische Anbieterumleitung.
+Das Empfangsbudget von 2.000.000 Bytes fuer Modelllisten und Textdeutungen bleibt
+erhalten; Audio-/Modelltransfers werden nicht pauschal damit begrenzt.

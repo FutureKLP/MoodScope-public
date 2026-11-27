@@ -487,7 +487,7 @@ def test_compatible_audio_profile_drives_curve_lyrics_and_details_without_local_
         prompt=body['messages'][0]['content'][0]['text']
         value={'instruments':['guitar']} if 'List only plausible audible instrument' in prompt else {'estimates':[{'id':0,'valence':.6,'arousal':.8,'confidence':.4,'scores':strengths}]}
         return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':json.dumps(value)}}]})
-    monkeypatch.setattr(module.cloud.httpx,'post',post)
+    monkeypatch.setattr(module.cloud.provider_http,'post',post)
     def forbidden(*a,**kw):raise AssertionError('Local model called')
     for name in ['audio','lyrics','instruments','transcribe']:monkeypatch.setattr(module.engines,name,forbidden)
     module.jobs['api-profile']={'status':'running'}

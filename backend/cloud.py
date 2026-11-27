@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from urllib.parse import urlsplit
 
 import httpx
+from . import provider_http
 import librosa
 import soundfile as sf
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -118,9 +119,9 @@ def request_json(prompt, schema, audio=None):
                                  'maxOutputTokens':32768}}
     # No tools, URL context, automatic retries or paid-provider fallback.
     try:
-        response=httpx.post(f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+        response=provider_http.post(f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
             headers={'x-goog-api-key':key},json=payload,timeout=httpx.Timeout(180,connect=15),follow_redirects=False)
-    except httpx.HTTPError:
+    except (httpx.HTTPError, ValueError):
         raise CloudError('API nicht erreichbar oder Zeitlimit überschritten. Es wurde nicht auf ein anderes Modell gewechselt.') from None
     if response.status_code==429:
         raise CloudError('Gemini-Gratis-Kontingent oder Ratenlimit erreicht. Später erneut versuchen oder lokal analysieren.')
@@ -153,9 +154,9 @@ def compatible_json(profile,key,prompt,schema,audio):
              'max_completion_tokens' if host=='api.openai.com' else 'max_tokens':16000}
     if host=='api.openai.com':payload.update(modalities=['text'],store=False)
     try:
-        response=httpx.post(base+'/chat/completions',headers={'Authorization':'Bearer '+key} if key else {},
+        response=provider_http.post(base+'/chat/completions',headers={'Authorization':'Bearer '+key} if key else {},
                             json=payload,timeout=httpx.Timeout(180,connect=10),follow_redirects=False)
-    except httpx.HTTPError:raise CloudError('Audio-Modellserver nicht erreichbar oder Zeitlimit überschritten.') from None
+    except (httpx.HTTPError, ValueError):raise CloudError('Audio-Modellserver nicht erreichbar oder Zeitlimit überschritten.') from None
     if response.status_code!=200:raise CloudError(f'Audio-Modellserver meldet HTTP {response.status_code}. Audiofähigkeit, Modell-ID, Key und Kontingent prüfen. Keine automatische Wiederholung.')
     try:
         value=response.json()['choices'][0]

@@ -16,7 +16,7 @@ def test_model_metadata_stops_oversize_receive(monkeypatch,length):
     body=Body([b' '*65536]*64)
     headers={} if length is None else {'content-length':length}
     with httpx.Client(transport=httpx.MockTransport(lambda request:httpx.Response(200,headers=headers,stream=body))) as client:
-        monkeypatch.setattr(providers.httpx,'stream',client.stream)
+        monkeypatch.setattr(providers.provider_http,'stream',client.stream)
         monkeypatch.setattr(providers.httpx,'get',client.get)
         with pytest.raises(ValueError,match='gültige kompatible Modellliste'):
             providers.discover_models('http://127.0.0.1:11434/v1')
@@ -26,7 +26,7 @@ def test_model_metadata_stops_oversize_receive(monkeypatch,length):
 def test_model_metadata_rejects_declared_oversize_before_body(monkeypatch):
     body=Body([b' '*65536]*64)
     with httpx.Client(transport=httpx.MockTransport(lambda request:httpx.Response(200,headers={'content-length':'4000000'},stream=body))) as client:
-        monkeypatch.setattr(providers.httpx,'stream',client.stream)
+        monkeypatch.setattr(providers.provider_http,'stream',client.stream)
         monkeypatch.setattr(providers.httpx,'get',client.get)
         with pytest.raises(ValueError):providers.discover_models('http://127.0.0.1:11434/v1')
     assert body.closed and body.reads==0
@@ -35,7 +35,7 @@ def test_model_metadata_rejects_declared_oversize_before_body(monkeypatch):
 def test_model_metadata_closes_regular_error_and_interrupted_responses(monkeypatch,status,error):
     body=Body([b'{"data":[',b'{"id":"fixture-model"}]}'],error)
     with httpx.Client(transport=httpx.MockTransport(lambda request:httpx.Response(status,stream=body))) as client:
-        monkeypatch.setattr(providers.httpx,'stream',client.stream)
+        monkeypatch.setattr(providers.provider_http,'stream',client.stream)
         monkeypatch.setattr(providers.httpx,'get',client.get)
         if status==200 and error is None:
             assert providers.discover_models('http://127.0.0.1:11434/v1')['models']==['fixture-model']
@@ -55,7 +55,7 @@ def test_text_generation_uses_same_receive_budget(monkeypatch,payload,expected):
         return httpx.Response(200,stream=body)
     profile={'base_url':'http://127.0.0.1:11434/v1','protocol':'openai','model':'fixture','name':'Fixture'}
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        monkeypatch.setattr(providers.httpx,'stream',client.stream)
+        monkeypatch.setattr(providers.provider_http,'stream',client.stream)
         if expected:assert providers.generate_snapshot(profile,'','Authored text')['text'].startswith('A cautious')
         else:
             with pytest.raises(RuntimeError,match='gültige Textantwort'):providers.generate_snapshot(profile,'','Authored text')
@@ -64,6 +64,6 @@ def test_text_generation_uses_same_receive_budget(monkeypatch,payload,expected):
 def test_metadata_rejects_unrequested_compression_without_reading(monkeypatch):
     body=Body([b'compressed fixture'])
     with httpx.Client(transport=httpx.MockTransport(lambda request:httpx.Response(200,headers={'content-encoding':'gzip'},stream=body))) as client:
-        monkeypatch.setattr(providers.httpx,'stream',client.stream)
+        monkeypatch.setattr(providers.provider_http,'stream',client.stream)
         with pytest.raises(ValueError):providers.discover_models('http://127.0.0.1:11434/v1')
     assert body.closed and body.reads==0
