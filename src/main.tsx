@@ -234,7 +234,7 @@ export function App(){
     }finally{setActiveJob('');setCancelRequested(false)}
   }
 
-  async function importLink(value=link){await perform(async()=>{const u=new URL(value);if(u.hostname.endsWith('soundcloud.com')&&u.pathname==='/search'){setLinkResults(await api('/links/search',json({url:value})));setMessage(tr("Bitte einen einzelnen Suchtreffer auswählen."));return}const t:Track=await runJob('/tracks/link',{url:value});setLink('');setLinkResults(null);await acceptTrack(t)})}
+  async function importLink(value=link){await perform(async()=>{const u=new URL(value);if(['soundcloud.com','www.soundcloud.com'].includes(u.hostname)&&u.pathname==='/search'){setLinkResults(await api('/links/search',json({url:value})));setMessage(tr("Bitte einen einzelnen Suchtreffer auswählen."));return}const t:Track=await runJob('/tracks/link',{url:value});setLink('');setLinkResults(null);await acceptTrack(t)})}
   async function runAnalysis(selected:Track,text:string,force=false){
     const request=trackRequest.current;
     const needsRecognition=localRecognition&&whisper&&!/\[\d{1,3}:\d{2}(?:[.:]\d+)?\]/.test(text||'');

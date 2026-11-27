@@ -21,7 +21,8 @@ def test_supported_single_track_urls_are_canonicalized():
     assert links.validate_url('https://soundcloud.com/artist/track?utm_source=test')=='https://soundcloud.com/artist/track'
 
 
-def test_downloader_uses_argument_array_and_does_not_load_user_config(tmp_path,monkeypatch):
+@pytest.mark.parametrize('url,platform',[('https://youtu.be/BaW_jenozKc','YouTube'),('https://soundcloud.com/artist/track','SoundCloud')])
+def test_downloader_uses_argument_array_and_does_not_load_user_config(tmp_path,monkeypatch,url,platform):
     monkeypatch.setattr(links,'downloader',lambda:'downloader')
     def run(command,**kwargs):
         assert isinstance(command,list)
@@ -31,9 +32,9 @@ def test_downloader_uses_argument_array_and_does_not_load_user_config(tmp_path,m
         (tmp_path/'source.webm').write_bytes(b'test media')
         return SimpleNamespace(returncode=0,communicate=lambda **k:(json.dumps({'title':'Public test','artist':'Test'}).encode(),b''),poll=lambda:0)
     monkeypatch.setattr(links.subprocess,'Popen',run)
-    source,metadata=links.download('https://youtu.be/BaW_jenozKc',tmp_path,lambda *a:None)
+    source,metadata=links.download(url,tmp_path,lambda *a:None)
     assert source.name=='source.webm'
-    assert metadata['source']=='YouTube'
+    assert metadata['source']==platform
 
 
 def test_downloader_diagnostics_are_not_exposed(tmp_path,monkeypatch):

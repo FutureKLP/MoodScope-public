@@ -58,6 +58,14 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
 
 describe('workspace flows',()=>{
+  it.each(['soundcloud.com','www.soundcloud.com','notsoundcloud.com','soundcloud.com.example'])('routes search only for an exact supported host: %s',async(host)=>{
+    render(<App/>);
+    fireEvent.change(screen.getByLabelText('YouTube- oder SoundCloud-Link'),{target:{value:`https://${host}/search?q=authored`}});
+    await userEvent.click(screen.getByRole('button',{name:'Link importieren'}));
+    const supported=['soundcloud.com','www.soundcloud.com'].includes(host);
+    await waitFor(()=>expect(requests.some(r=>r.path===(supported?'/links/search':'/tracks/link'))).toBe(true));
+    expect(requests.some(r=>r.path===(supported?'/tracks/link':'/links/search'))).toBe(false);
+  });
   it('keeps local analysis independent of an unavailable provider-routing status',async()=>{
     const original=vi.mocked(fetch).getMockImplementation()!;
     vi.stubGlobal('fetch',vi.fn(async(input:any,init?:RequestInit)=>String(input).endsWith('/provider-routes')?

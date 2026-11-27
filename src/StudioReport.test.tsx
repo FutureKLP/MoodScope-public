@@ -4,6 +4,7 @@ import {beforeEach,afterEach,it,expect,vi} from 'vitest';
 import {render,screen,within,waitFor,cleanup,fireEvent} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {SourceStudio} from './SongTools';
+import {API} from './api';
 import {AnalysisReport} from './AnalysisReport';
 import {Atmosphere,atmosphereStyle} from './Atmosphere';
 import {setLanguage} from './i18n';
@@ -11,6 +12,20 @@ const track={id:'authored',name:'Authored fixture',duration:10};
 let info:any,calls:any[];
 beforeEach(()=>{setLanguage('de');calls=[];info={ready:true,sources:['vocals','piano','drums'],audible_sources:['vocals','drums'],hidden_sources:[],shown_sources:[],activity:{vocals:.8,drums:.2,piano:0}};vi.stubGlobal('fetch',vi.fn(async(url,init)=>{const body=init?.body?JSON.parse(init.body):null;calls.push({url:String(url),body});if(String(url).includes('/visibility'))info={...info,hidden_sources:body.hidden,shown_sources:body.shown};return new Response(JSON.stringify(String(url).includes('/stems')?info:null),{status:200})}));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals()});
+it.each(['htdemucs_ft','htdemucs&sources=other#fragment','\"><img src=x onerror=alert(1)>','%26sources%3Dother'])('keeps model input inside one media query value: %s',async(model)=>{
+ const source=vi.fn();const {container}=render(<SourceStudio track={track} busy={false} perform={async f=>f()} job={vi.fn()} onSource={source}/>);
+ await screen.findByRole('heading',{name:'Gesang / Stimmen'});
+ const field=screen.getByLabelText('Trennmodell') as HTMLSelectElement;
+ if(!Array.from(field.options).some(option=>option.value===model))field.add(new Option(model,model));
+ fireEvent.change(field,{target:{value:model}});
+ await screen.findByRole('heading',{name:'Gesang / Stimmen'});
+ await userEvent.click(within(screen.getByRole('heading',{name:'Gesang / Stimmen'}).closest('article')!).getByRole('button',{name:'Solo hören'}));
+ const url=new URL(source.mock.calls.at(-1)![0]);
+ expect(url.origin).toBe(new URL(API).origin);expect(url.pathname).toBe('/api/tracks/authored/mix');
+ expect(url.searchParams.get('model')).toBe(model);expect(url.searchParams.get('sources')).toBe('vocals');
+ expect(url.searchParams.get('gains')).toBe('1');expect(url.hash).toBe('');
+ expect(container.querySelector('img')).toBeNull();
+});
 it('restores manually hidden and automatically quiet stems, including after remount',async()=>{
  const source=vi.fn(),props={track,busy:false,perform:async(f:()=>Promise<void>)=>f(),job:vi.fn(),onSource:source};
  const view=render(<SourceStudio {...props}/>);

@@ -6,6 +6,28 @@ import {afterEach, expect, it, vi} from 'vitest';
 import {Select} from './Select';
 
 afterEach(cleanup);
+it('closes on focus loss and returns to the original value through the native change contract',async()=>{
+ const user=userEvent.setup();render(<><Fixture/><button>Weiter</button></>);
+ const field=screen.getByRole('combobox') as HTMLSelectElement;
+ await user.click(field);await user.click(screen.getByRole('button',{name:'Weiter'}));
+ expect(screen.queryByRole('listbox')).toBeNull();expect(field.value).toBe('original');
+ for(const name of ['Gesang','Originalmix']){
+  await user.click(field);await user.click(within(screen.getByRole('listbox')).getByRole('option',{name}));
+ }
+ expect(field.value).toBe('original');expect(screen.getByRole('status').textContent).toBe('original');
+});
+it('refreshes changed options and refuses a dynamically disabled active option',async()=>{
+ const change=vi.fn();const user=userEvent.setup();
+ const options=(disabled:boolean)=><Select aria-label="Dynamisch" defaultValue="original" onChange={change}><option value="original">Originalmix</option><option value="vocals" disabled={disabled}>Gesang</option></Select>;
+ const view=render(options(false));await user.click(screen.getByRole('combobox'));await user.keyboard('{ArrowDown}');
+ view.rerender(options(true));expect(within(screen.getByRole('listbox')).getByRole('option',{name:'Gesang'}).getAttribute('aria-disabled')).toBe('true');
+ await user.keyboard('{Enter}');expect(change).not.toHaveBeenCalled();
+ expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('original');
+ await user.keyboard('{Escape}');
+ view.rerender(<Select aria-label="Dynamisch" defaultValue="original"><option value="original">Originalmix</option><option value="bass">Bass</option></Select>);
+ await user.click(screen.getByRole('combobox'));expect(within(screen.getByRole('listbox')).queryByRole('option',{name:'Gesang'})).toBeNull();
+ expect(within(screen.getByRole('listbox')).getByRole('option',{name:'Bass'})).toBeTruthy();
+});
 function Fixture({disabled = false}: {disabled?: boolean}) {
   const [value, setValue] = useState('original');
   return <label>Quelle<Select disabled={disabled} value={value} onChange={event => setValue(event.target.value)}>
