@@ -6,7 +6,7 @@ from backend import providers
 
 @pytest.mark.parametrize('value',['https://example.com/v1?token=value','http://example.com/v1','http://169.254.169.254/v1','http://[::ffff:169.254.169.254]/v1','file:///tmp/model','https://'+':'.join(['user','password'])+chr(64)+'example.com'])
 def test_invalid_model_server_endpoints(value,monkeypatch):
-    monkeypatch.setattr(providers.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',('8.8.8.8',80))])
+    monkeypatch.setattr(providers.provider_http.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',('8.8.8.8',80))])
     with pytest.raises(ValueError):providers.endpoint(value)
 
 
@@ -25,7 +25,7 @@ def test_server_adapter_and_memory_only_keys(tmp_path,monkeypatch,protocol):
             assert 'max_tokens' in json
             value={'choices':[{'message':{'content':'Eine vorsichtige Deutung des vorliegenden Textes.'},'finish_reason':'stop'}]}
         return SimpleNamespace(status_code=200,json=lambda:value)
-    monkeypatch.setattr(providers.httpx,'post',post)
+    monkeypatch.setattr(providers,'_bounded_response',lambda method,url,**kwargs:post(url,**kwargs))
     assert providers.generate(tmp_path,profile['id'],'Text evidence')['text']
     providers.remove(tmp_path,profile['id'])
     assert providers.status(tmp_path)['profiles']==[]
@@ -33,7 +33,7 @@ def test_server_adapter_and_memory_only_keys(tmp_path,monkeypatch,protocol):
 
 def test_provider_errors_never_echo_response_body(tmp_path,monkeypatch):
     profile=providers.save(tmp_path,{'name':'Test','protocol':'openai','base_url':'https://api.openai.com/v1','model':'test','api_key':'fixture-key'})
-    monkeypatch.setattr(providers.httpx,'post',lambda *a,**k:SimpleNamespace(status_code=401,text='PRIVATE RESPONSE'))
+    monkeypatch.setattr(providers,'_bounded_response',lambda *a,**k:SimpleNamespace(status_code=401,text='PRIVATE RESPONSE'))
     with pytest.raises(RuntimeError,match='HTTP 401') as error:providers.generate(tmp_path,profile['id'],'test')
     assert 'PRIVATE' not in str(error.value)
 
@@ -47,7 +47,7 @@ def test_gemini_profile_uses_native_api_and_removal_clears_audio_key(tmp_path,mo
         assert url.endswith('/models/gemini-test:generateContent')
         assert headers['x-goog-api-key']=='fixture-key'
         return SimpleNamespace(status_code=200,json=lambda:{'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':'Eine vorsichtige vollständige Testdeutung.'}]}}]})
-    monkeypatch.setattr(providers.httpx,'post',post)
+    monkeypatch.setattr(providers,'_bounded_response',lambda method,url,**kwargs:post(url,**kwargs))
     assert providers.generate(tmp_path,p['id'],'Authored text')['text']
     providers.activate_audio(tmp_path,p['id'])
     assert cloud.settings()['configured']
@@ -77,7 +77,7 @@ def test_audio_profile_requires_explicit_capability_and_terms_and_edit_deactivat
 
 @pytest.mark.parametrize('addresses,accepted',[(['192.168.1.20'],True),(['192.168.1.20','8.8.8.8'],False),(['169.254.169.254'],False)])
 def test_http_home_server_names_require_private_resolved_addresses(monkeypatch,addresses,accepted):
-    monkeypatch.setattr(providers.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',(ip,11434)) for ip in addresses])
+    monkeypatch.setattr(providers.provider_http.socket,'getaddrinfo',lambda *a,**k:[(2,1,6,'',(ip,11434)) for ip in addresses])
     if accepted:assert providers.endpoint('http://authored-server.local:11434/v1')=='http://authored-server.local:11434/v1'
     else:
         with pytest.raises(ValueError):providers.endpoint('http://authored-server.local:11434/v1')

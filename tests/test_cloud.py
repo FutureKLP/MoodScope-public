@@ -25,7 +25,7 @@ def test_key_requires_free_project_confirmation():
 
 def test_rate_limit_error_never_echoes_provider_secrets(monkeypatch):
     cloud.configure(fake_key(),True)
-    monkeypatch.setattr(cloud.httpx,'post',lambda *a,**k:httpx.Response(429,text=fake_key()))
+    monkeypatch.setattr(cloud.provider_http,'post',lambda *a,**k:httpx.Response(429,text=fake_key()))
     with pytest.raises(cloud.CloudError) as error:cloud.request_json('test',{'type':'object'})
     assert 'Kontingent' in str(error.value)
     assert fake_key() not in str(error.value)
@@ -38,9 +38,9 @@ def test_cloud_success_uses_header_not_url_and_requires_complete_output(monkeypa
         assert kwargs['headers']['x-goog-api-key']==fake_key()
         assert 'tools' not in kwargs['json']
         return httpx.Response(200,json={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':'{"answer":1}'}]}}]})
-    monkeypatch.setattr(cloud.httpx,'post',post)
+    monkeypatch.setattr(cloud.provider_http,'post',post)
     assert cloud.request_json('test',{'type':'object'})=={'answer':1}
-    monkeypatch.setattr(cloud.httpx,'post',lambda *a,**k:httpx.Response(200,json={'candidates':[{'finishReason':'MAX_TOKENS'}]}))
+    monkeypatch.setattr(cloud.provider_http,'post',lambda *a,**k:httpx.Response(200,json={'candidates':[{'finishReason':'MAX_TOKENS'}]}))
     with pytest.raises(cloud.CloudError):cloud.request_json('test',{'type':'object'})
 
 
@@ -86,10 +86,10 @@ def test_compatible_audio_uses_wav_and_rejects_truncation(monkeypatch,base):
         assert body['model']=='audio-fixture'
         if 'api.openai.com' in base:assert body['store'] is False and body['modalities']==['text']
         return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':'{"answer":1}'}}]})
-    monkeypatch.setattr(cloud.httpx,'post',post)
+    monkeypatch.setattr(cloud.provider_http,'post',post)
     assert cloud.request_json('Authored question',{'type':'object'},cloud.encode_audio(np.zeros(16000),16000))=={'answer':1}
     assert len(payloads)==1
-    monkeypatch.setattr(cloud.httpx,'post',lambda *a,**k:httpx.Response(200,json={'choices':[{'finish_reason':'length','message':{'content':'{"answer":1}'}}]}))
+    monkeypatch.setattr(cloud.provider_http,'post',lambda *a,**k:httpx.Response(200,json={'choices':[{'finish_reason':'length','message':{'content':'{"answer":1}'}}]}))
     with pytest.raises(cloud.CloudError):cloud.request_json('test',{'type':'object'})
 
 

@@ -99,7 +99,7 @@ def test_admitted_job_keeps_recipient_key_cache_and_model_snapshot(tmp_path, mon
     def post(url, **kwargs):
         seen.append((url, kwargs['headers']['Authorization']))
         return httpx.Response(200, json={'choices': [{'finish_reason': 'stop', 'message': {'content': '{"ok":true}'}}]})
-    monkeypatch.setattr(cloud.httpx, 'post', post)
+    monkeypatch.setattr(cloud.provider_http, 'post', post)
     def worker(job_id):
         assert routing.status(tmp_path)['version'] == before
         assert cloud.version() == version
