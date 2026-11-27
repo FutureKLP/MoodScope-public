@@ -88,7 +88,9 @@ def test_revalidation_blocks_change_after_endpoint_preflight(server, monkeypatch
     ('http', ['127.0.0.1', '8.8.8.8']), ('http', ['::1', '2001:4860:4860::8888']),
     ('https', ['169.254.169.254']), ('https', ['::ffff:169.254.169.254']),
     ('https', ['fe80::1']), ('https', ['0.0.0.0']), ('https', ['::']),
-    ('https', ['224.0.0.1']), ('http', ['100.64.0.1']),
+    ('https', ['224.0.0.1']), ('https', ['fec0::1']),
+    ('https', ['::127.0.0.1']), ('https', ['64:ff9b::a9fe:a9fe']),
+    ('http', ['100.64.0.1']),
     ('http', ['192.0.2.1']), ('https', []),
 ])
 def test_unsafe_or_mixed_dns_sets_fail_before_transport(monkeypatch, scheme, addresses):

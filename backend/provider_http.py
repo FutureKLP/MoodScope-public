@@ -54,7 +54,8 @@ def _check_addresses(url: httpx.URL, addresses: list) -> None:
         raise ValueError('Serveradresse nicht unterstützt.')
     for address in addresses:
         if not (_local(address) or (url.scheme == 'https' and address.is_global
-                                   and not address.is_multicast)):
+                                   and not address.is_multicast and not address.is_reserved
+                                   and not getattr(address, 'is_site_local', False))):
             raise ValueError('Internetserver benötigen HTTPS; nur lokale/LAN-Adressen dürfen HTTP nutzen.')
         if url.host == 'localhost' and not address.is_loopback:
             raise ValueError('Localhost muss auf Loopback zeigen.')
