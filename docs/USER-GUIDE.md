@@ -241,7 +241,7 @@ Jede erzeugte Spur lässt sich als WAV exportieren. Die Desktop-App öffnet eine
 
 Rechtsklick auf die Stimmungskurve oder die untere Positionsleiste setzt zuerst A, dann B; beide Ansichten teilen dieselben Markierungen. Der Bereich wird bei Wiedergabe wiederholt; ein dritter Rechtsklick entfernt beide Markierungen. Zwei Punkte in umgekehrter Reihenfolge werden geordnet. Die A/B-Schaltfläche setzt den Punkt an der aktuellen Position und ist auch per Tab und Enter/Leertaste erreichbar. Neben **Song importieren** steht zusätzlich **Song neu analysieren**.
 
-Dropdowns verwenden in aktuellen Chromium-/WebView2-Browsern ein gestaltetes natives Auswahlmenü; Tastatur- und Fokussteuerung bleiben erhalten. Ältere Browser behalten die dunkel gestaltete Standardauswahl. Animationen respektieren die Betriebssystemoption für reduzierte Bewegung.
+Dropdowns verwenden unter Windows und Linux dasselbe dunkle App-Menü mit Mint-Markierung. Das beschriftete Auswahlfeld und sein gespeicherter Wert bleiben erhalten. Enter oder Leertaste öffnet das Menü; Pfeiltasten, Pos1/Ende und Texteingabe navigieren, Enter bestätigt. Escape verwirft die offene Auswahl, Tab wechselt weiter. Nicht verfügbare Einträge bleiben gesperrt. Linux-Dateidialoge verwenden die dunkle GTK-Anwendungsvariante. Animationen respektieren die Betriebssystemoption für reduzierte Bewegung.
 
 ## Importierte Audiodaten und Nutzungsrechte
 
