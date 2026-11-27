@@ -50,9 +50,11 @@ tatsächliche Musiktests und Modellqualität sind getrennte Nachweise.
 ## Branches, Pull Requests und Veröffentlichung
 
 Es gelten ausschließlich die Git-Regeln aus [PUBLISHING.md](PUBLISHING.md):
-öffentliche Abstammung, Veröffentlichungsbranch `codex/public-release`, geprüfte
-PRs und Pflichtchecks für Main. Keine private Archivhistorie übernehmen,
-Branches löschen, Historie umschreiben oder Branchschutz umgehen.
+Main als langfristige Hauptlinie, wenige abgegrenzte öffentliche Quellbranches,
+geprüfte PRs und Pflichtchecks. Keine private Archivhistorie übernehmen,
+Historie umschreiben oder Branchschutz umgehen. Branchbereinigung nur im
+autorisierten Umfang nach vollständiger Integration und gesicherten
+Abstammungs-/CI-/Abhängigkeitsnachweisen; lokale und private Arbeit erhalten.
 Funktionsänderungen und Dokumentationsorganisation nachvollziehbar trennen.
 Keine automatischen Main-Merges aus einem Dokumentationsauftrag ableiten.
 
@@ -61,7 +63,7 @@ vollständige erreichbare Veröffentlichungshistorie prüfen:
 
 ```text
 python scripts/check_publication.py
-python scripts/check_publication.py --ref codex/public-release
+python scripts/check_publication.py --ref HEAD
 ```
 
 Scans ersetzen nicht das Lesen des Diffs. Bei unklarer Publikationssicherheit
@@ -81,7 +83,8 @@ identifizierenden Testergebnisse in öffentliche Berichte übernehmen.
 
 ## Dokumentationsregeln
 
-README bleibt die kurze Projektstartseite; Fachdetails gehören in die
+README bleibt die übersichtliche Projektstartseite mit direkten Windows-/Linux-,
+CPU-/GPU- und Startanleitungen; weiterführende Fachdetails gehören in die
 [Dokumentationsübersicht](README.md). Aktuellen Status ausschließlich in
 [STATUS.md](STATUS.md) pflegen. Datierte Abnahmen mit Quelle, Plattform,
 Prüfumfang und Grenzen erhalten; historische Aussagen als solche kennzeichnen.

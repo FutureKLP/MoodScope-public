@@ -29,6 +29,14 @@ fn main() {
     tauri::Builder::default()
         .manage(Mutex::new(None::<backend::Backend>))
         .setup(|app| {
+            #[cfg(target_os = "linux")]
+            {
+                use gtk::prelude::GtkSettingsExt;
+                if let Some(settings) = gtk::Settings::default() {
+                    settings.set_gtk_theme_name(Some("Adwaita"));
+                    settings.set_gtk_application_prefer_dark_theme(true);
+                }
+            }
             // Development launchers remain supported. Packaged builds opt in
             // through their resource manifest, never a renderer-supplied path.
             let resources = app.path().resource_dir()?;

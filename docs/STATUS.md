@@ -1,17 +1,87 @@
 # Aktueller Entwicklungs- und Abnahmestand
 
-Stand: 26. November 2026. Dies ist die einzige aktuelle Statusübersicht.
+Stand: 27. November 2026. Dies ist die einzige aktuelle Statusübersicht.
 Prüfberichte halten datierte Nachweise fest; frühere Sitzungsstände sind keine
 weiterhin gültigen Arbeitsanweisungen. MoodScope 0.3 bleibt eine Entwicklungsversion.
 
 ## Verifizierter öffentlicher und lokaler Stand
 
-Kontrollierte Quellintegration am 26. November 2026. Diese Quelllinie enthält
-die geprüften Vorgänger bis Phase 3 sowie den Phase-4-Quellhead
-`0c1d40e6679dbdd065f96dd4e8cb4dfda46e5842`.
-Die folgenden datierten Berichte halten historische Prüfstände und ihre
-damaligen Grenzen fest. Aktuelle Merge- und CI-Nachweise werden bei Abschluss
-ergänzt. Keine Installer-, Distributions- oder Endnutzerfreigabe.
+### Sicherheitsnachlauf vom 27. November 2026
+
+[PR #19](https://github.com/FutureKLP/MoodScope-public/pull/19) bleibt Draft.
+Quellhead `11e80978fc2ae320c6b8c6cda4689a0b52e60a95` besteht die vier
+Pflichtjobs, vier CodeQL-Sprachanalysen und den CodeQL-Gesamtcheck.
+[PR-Prüfungen](https://github.com/FutureKLP/MoodScope-public/actions/runs/45995343835),
+[CodeQL](https://github.com/FutureKLP/MoodScope-public/actions/runs/45995337942).
+Alert #12 (`js/xss-through-dom`, high) meldete den Weg vom Trennmodellfeld
+zum Audio-src. Dort wird eine Medien-URL verwendet, kein HTML geparst;
+eine ausnutzbare XSS-Ausführung wurde nicht nachgewiesen. Dynamische Modell-,
+Spur- und Trackwerte werden nun passend zum URL-Kontext kodiert. Regressionen
+zeigen, dass Querytrenner, Fragmente und bereits kodierte Zeichen Werte bleiben.
+CodeQL führt die PR-Instanz von #12 nach dieser Änderung als fixed.
+SoundCloud-Suchrouting und Plattformzuordnung prüfen exakt geparste Hosts;
+auch der feste OpenAI-Testfall verwendet einen exakten Vergleich.
+Keine Sicherheitsprüfung wurde abgeschwächt oder unterdrückt.
+
+Neu lokal: 171 Frontendtests und 41 gezielte Backend-/Publikationsschutztests
+bestanden; TypeScript/Vite erfolgreich. Drei neue Regressionen scheitern am
+vorherigen Quellstand und bestehen mit der Korrektur. Fokusverlust, Escape,
+Tab, Außenklick, dynamisch deaktivierte/geänderte Optionen und Rückkehr zur
+Originalauswahl sind abgedeckt. Die native Linux-Accessibility-Struktur enthält
+benannte Combobox, Listbox und Optionen; keine vollständige Screenreader-Abnahme.
+
+Der identifizierte private Linux-Kandidat bleibt bei der Originalwiedergabe
+erneut bei 0:00. Backend-Voll- und Rangeantworten liefern die korrekten Audiodaten.
+Separate GStreamer-/WebKit-Kontrollen bestehen; derselbe lokale Ausschnitt läuft
+im separaten WebKit über sieben Sekunden. Im installierten Client treten
+Pulse-Unterlauf und ausbleibende Accessibility-Antworten auf. Die Ursache und
+die Unabhängigkeit von der Oberflächenänderung sind nicht abschließend geklärt.
+Pause-/Fortsetzen-/Seeking-/Loop-/Live-Mix-Gesamtfolge bleibt offen; daher keine
+Main-Integration oder neue Paketfreigabe. Regulärer Fensterschluss mit Exit 0,
+vollständiger Folgestart, gespeicherte Bibliothek und eigene Prozess-/Portfreigabe
+sind separat bestätigt. WSLg-Monitorwerte sind keine physische Audioabnahme.
+
+Die öffentlichen Altbranches `codex/public-release` und
+`codex/musical-expression-analysis` wurden nach vollständigem Main-Einschluss
+und ohne offene PR-Abhängigkeit entfernt. Lokale Branches und die lokale
+Veröffentlichungsroute bleiben erhalten. Öffentlich verbleiben Main und der
+aktive PR-#19-Branch. Main bleibt `ba10356208deb12bdab59141ada3a4bc43f16405`.
+Der glib-Dependabot-Alert bleibt auf Main offen; der separat geprüfte lokale
+Backport ist damit nicht öffentlich integriert.
+
+Die geprüften öffentlichen Quellstände bis Phase 4 wurden am 26./27. November
+schrittweise in Main integriert. Die vier erforderlichen Plattformprüfungen
+und CodeQL bestanden auf den jeweils vorgesehenen PR-Ständen; Branchschutz
+und Reviewthreads wurden vor jedem Merge geprüft.
+
+| Umfang | Integrierter PR | Merge-Commit |
+|---|---|---|
+| Dokumentation | [#11](https://github.com/FutureKLP/MoodScope-public/pull/11) | `19f83432ac303626c27d786bee4f4c1592a96c72` |
+| Import und Bibliothekswiederherstellung | [#12](https://github.com/FutureKLP/MoodScope-public/pull/12) | `886d05542d2a306a60959571ed57915ab13fa382` |
+| Workerbesitz und Zustimmung | [#13](https://github.com/FutureKLP/MoodScope-public/pull/13) | `9b0e3b02d022fb1a682ac107a4e2d4494c838c6e` |
+| Endliche Solo-WAV-Daten | [#15](https://github.com/FutureKLP/MoodScope-public/pull/15) | `7032fb1db0a72947734b5a2d5d626d94a61fd28c` |
+| Datierte Performancenachweise | [#16](https://github.com/FutureKLP/MoodScope-public/pull/16) | `d78c0e955be7aef47197d7bf6fe6e8cdedd68490` |
+| Optionale Backendpaketierung und Setupanleitung | [#18](https://github.com/FutureKLP/MoodScope-public/pull/18) | `ba10356208deb12bdab59141ada3a4bc43f16405` |
+
+Die alternativen Routen #14 und #17 sind nach vollständiger Übernahme über
+#15 und #18 geschlossen. Elf vollständig enthaltene öffentliche Altbranches
+wurden nach erneuter Abstammungs-/Abhängigkeitsprüfung entfernt; lokale
+Branches und Wiederherstellungsbelege blieben erhalten. Prüfungen der Main-
+und nachfolgenden Quellstände sind in [GitHub Actions](https://github.com/FutureKLP/MoodScope-public/actions) einsehbar.
+
+Die Oberflächennacharbeit verwendet plattformübergreifend gestaltete
+Auswahlmenüs mit bestehendem Feld-/Änderungsvertrag und Tastatursteuerung.
+GTK-Dateidialoge erhalten unter Linux die dunkle Anwendungsvariante.
+Windows und Linux bestehen je 161 Frontendtests; die Linux-Darstellung und
+der Sprachwechsel wurden an einem eigenen Testclient geprüft. Die README
+enthält direkte Windows-/Linux-/CPU-/NVIDIA- und Desktopstart-Anleitungen.
+
+Die folgenden Berichte halten ihre datierten Prüfstände und Grenzen fest.
+Native Audio-/Modellqualität, unabhängige Linux-Desktopprüfung und vollständige
+Distributionsnachweise bleiben offen. Das bekannte
+[glib-Advisory](https://github.com/advisories/GHSA-wrw7-89jp-8q8g)
+ist durch diese öffentliche Oberflächenänderung nicht behoben oder unterdrückt.
+Keine Installer-, Distributions- oder Endnutzerfreigabe.
 Veröffentlichungsbranch und Regeln: [PUBLISHING.md](PUBLISHING.md).
 
 ## Phase 4.4: Distributions- und Sicherheitsnachprüfung

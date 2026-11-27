@@ -84,7 +84,7 @@ def test_compatible_audio_uses_wav_and_rejects_truncation(monkeypatch,base):
         part=body['messages'][0]['content'][1]['input_audio']
         assert part['format']=='wav' and base64.b64decode(part['data']).startswith(b'RIFF')
         assert body['model']=='audio-fixture'
-        if 'api.openai.com' in base:assert body['store'] is False and body['modalities']==['text']
+        if base=='https://api.openai.com/v1':assert body['store'] is False and body['modalities']==['text']
         return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':'{"answer":1}'}}]})
     monkeypatch.setattr(cloud.httpx,'post',post)
     assert cloud.request_json('Authored question',{'type':'object'},cloud.encode_audio(np.zeros(16000),16000))=={'answer':1}

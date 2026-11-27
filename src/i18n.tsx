@@ -1,3 +1,4 @@
+import {Select} from './Select';
 import {useSyncExternalStore} from 'react';
 import translations from '../backend/locales/en.json';
 export type Language='de'|'en';
@@ -32,4 +33,4 @@ export function t(value:string,args:unknown[]=[]):string{
   }
   return translated.replace(/\{(\d+)\}/g,(match,index)=>index in args?String(args[Number(index)]):match);
 }
-export function LanguageSelect({disabled=false}:{disabled?:boolean}){const selected=useLanguage();return <label className="language-select"><span>{t('App-Sprache')}</span><select aria-label={t('App-Sprache')} value={selected} disabled={disabled} onChange={e=>setLanguage(e.target.value as Language)}><option value="de">Deutsch</option><option value="en">English</option></select></label>}
+export function LanguageSelect({disabled=false}:{disabled?:boolean}){const selected=useLanguage();return <label className="language-select"><span>{t('App-Sprache')}</span><Select aria-label={t('App-Sprache')} value={selected} disabled={disabled} onChange={e=>setLanguage(e.target.value as Language)}><option value="de">Deutsch</option><option value="en">English</option></Select></label>}
