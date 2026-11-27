@@ -1803,6 +1803,7 @@ dependencies = [
 name = "moodscope"
 version = "0.3.0"
 dependencies = [
+ "gtk",
  "reqwest",
  "serde_json",
  "tauri",
