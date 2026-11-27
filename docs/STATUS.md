@@ -21,7 +21,7 @@ und Reviewthreads wurden vor jedem Merge geprüft.
 | Optionale Backendpaketierung und Setupanleitung | [#18](https://github.com/FutureKLP/MoodScope-public/pull/18) | `ba10356208deb12bdab59141ada3a4bc43f16405` |
 
 Die alternativen Routen #14 und #17 sind nach vollständiger Übernahme über
-#15 und #18 geschlossen. Neun vollständig enthaltene öffentliche Altbranches
+#15 und #18 geschlossen. Elf vollständig enthaltene öffentliche Altbranches
 wurden nach erneuter Abstammungs-/Abhängigkeitsprüfung entfernt; lokale
 Branches und Wiederherstellungsbelege blieben erhalten. Prüfungen der Main-
 und nachfolgenden Quellstände sind in [GitHub Actions](https://github.com/FutureKLP/MoodScope-public/actions) einsehbar.
